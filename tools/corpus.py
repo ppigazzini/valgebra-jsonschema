@@ -77,6 +77,7 @@ CACHE = ROOT / "results" / f"jsonschemabench-{COMMIT[:12]}"
 #: Seconds one schema may take; none of the corpus needs more than one.
 TIMEOUT = 60
 VALIDATORS = {
+    2019: jsonschema.Draft201909Validator,
     7: jsonschema.Draft7Validator,
     6: jsonschema.Draft6Validator,
     4: jsonschema.Draft4Validator,

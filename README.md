@@ -53,7 +53,9 @@ can prove neither, which is never a wrong proof, and a keyword this package does
 
 ## What it reads
 
-Drafts 2020-12, 07, 06 and 04, the last three through `upgrade`. Patterns follow ECMA-262, as the
+Drafts 2020-12, 2019-09, 07, 06 and 04, all but the first through `upgrade`, and a document
+naming any other dialect fails saying so, as the Model Context Protocol asks
+([`docs/05-mcp.md`](docs/05-mcp.md)). Patterns follow ECMA-262, as the
 specification requires, and numbers compare by value: `1` and `1.0` are one number, and `true` is
 none. [`docs/02-compiler.md`](docs/02-compiler.md) says how each keyword becomes a set, and
 [`docs/03-conformance.md`](docs/03-conformance.md) holds the inventory and the ledger of differences.
@@ -67,12 +69,12 @@ uv run python tools/containment.py --check docs/studies/containment.json
 ```
 
 - **Against the official JSON-Schema-Test-Suite**: draft 2020-12 with the four optional files on
-  regular expressions and large numbers, 1071 of the 1071 cases it runs; draft-07, 870 of 870;
-  draft-06, 790 of 790; draft-04, 587 of 587. Skipped: `unevaluated*`, dynamic, anchor and
-  remote references.
+  regular expressions and large numbers, 1071 of the 1071 cases it runs; draft 2019-09, 961 of
+  961; draft-07, 870 of 870; draft-06, 790 of 790; draft-04, 587 of 587. Skipped: `unevaluated*`,
+  dynamic, anchor and remote references.
 - **Real-world schemas** (JSONSchemaBench, 9558 schemas from GitHub, the JSON Schema Store,
-  Kubernetes and function-calling data): 9429 compile, none crashes; membership differs from the
-  `jsonschema` package's on 12 of 402633 values, each a reading the ledger records.
+  Kubernetes and function-calling data): 9434 compile, none crashes; membership differs from the
+  `jsonschema` package's on 12 of 402824 values, each a reading the ledger records.
 - **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 5746 proven,
   none against a label; each of the 234 refutations against a label is a wrong label, which
   [`docs/04-results.md`](docs/04-results.md) names.

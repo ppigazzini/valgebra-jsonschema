@@ -66,11 +66,11 @@
   {
    "subset": "JsonSchemaStore",
    "schemas": 492,
-   "compiled": 450,
-   "refused": 42,
+   "compiled": 455,
+   "refused": 37,
    "crashed": 0,
    "timed_out": 0,
-   "values": 17679,
+   "values": 17870,
    "disagreed": 0
   },
   {
@@ -107,10 +107,6 @@
  "refusals": [
   {
    "reason": "a $ref outside the document, to an anchor, or through an embedded $id",
-   "schemas": 5
-  },
-  {
-   "reason": "a $schema it does not read",
    "schemas": 5
   },
   {

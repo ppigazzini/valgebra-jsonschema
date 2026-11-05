@@ -39,6 +39,8 @@ dev = [
     # schemas, and `tools/suite.py --reference` runs it on the optional suite files.
     "jsonschema>=4.26.0",
     "pre-commit>=4.7.0",
+    # What the Python SDK and FastMCP emit: `tests/test_mcp.py` reads its schemas as written.
+    "pydantic>=2.14.3",
     "pytest>=9.2.0",
     "ruff>=0.17.4",
     "ty>=0.0.99",

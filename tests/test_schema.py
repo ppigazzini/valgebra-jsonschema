@@ -176,8 +176,8 @@ class TestRefusals:
             compile_schema(schema)
 
     def test_it_refuses_a_draft_it_does_not_read(self):
-        with pytest.raises(Unsupported, match="2020-12, 07, 06 and 04"):
-            compile_schema({"$schema": "https://json-schema.org/draft/2019-09/schema"})
+        with pytest.raises(Unsupported, match="2020-12, 2019-09, 07, 06 and 04"):
+            compile_schema({"$schema": "http://json-schema.org/draft-03/schema#"})
 
 
 _DRAFTS = {

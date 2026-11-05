@@ -120,12 +120,21 @@ DRAFT7 = frozenset(
         "https://json-schema.org/draft-07/schema",
     }
 )
+#: Draft 2019-09, which `OLDER` names by the year its URIs carry.
+DRAFT2019 = 2019
 #: The older drafts `upgrade` rewrites, by the ``$schema`` URIs that name them.
-OLDER = {uri.replace("07", draft): int(draft) for draft in ("07", "06", "04") for uri in DRAFT7}
+OLDER = {
+    **{uri.replace("07", draft): int(draft) for draft in ("07", "06", "04") for uri in DRAFT7},
+    **{
+        f"{scheme}://json-schema.org/draft/2019-09/schema{end}": DRAFT2019
+        for scheme in ("http", "https")
+        for end in ("", "#")
+    },
+}
 
 
 def older(schema: object) -> int | None:
-    """Return the older draft -- 7, 6 or 4 -- a document's ``$schema`` names, or None."""
+    """Return the older draft -- 2019, 7, 6 or 4 -- a document's ``$schema`` names, or None."""
     uri = schema.get("$schema") if isinstance(schema, dict) else None
     return OLDER.get(uri) if isinstance(uri, str) else None
 
@@ -193,6 +202,14 @@ REFUSED = frozenset(
 
 class Unsupported(ValueError):  # noqa: N818 - the name is the sentence a caller reads
     """A schema uses a keyword or form this compiler does not translate."""
+
+
+class UnsupportedDialect(Unsupported):
+    """A document's ``$schema`` names a dialect this compiler does not read.
+
+    The Model Context Protocol has an implementation fail on such a schema with an error
+    saying the dialect is not supported, so a server can tell it from a refused keyword.
+    """
 
 
 #: The kind each family of assertion keywords constrains, and the ``type`` names in it.
@@ -322,13 +339,17 @@ class Compiler:
         if schema is self.root and (draft := older(schema)) is not None:
             # Read as 2020-12, an older document asserts what its draft ignores: the
             # siblings of a `$ref`, the keywords later drafts added.
-            msg = f"a draft-0{draft} document compiles through `upgrade` (`compile_schema` does it)"
+            name = "2019-09" if draft == DRAFT2019 else f"0{draft}"
+            msg = f"a draft-{name} document compiles through `upgrade` (`compile_schema` does it)"
             raise Unsupported(msg)
         if schema is self.root:
             _check_nesting(schema)
         if schema is self.root and schema.get("$schema", DRAFT) != DRAFT:
-            msg = f"$schema {schema['$schema']!r}: drafts 2020-12, 07, 06 and 04 are supported"
-            raise Unsupported(msg)
+            msg = (
+                f"$schema {schema['$schema']!r}: this dialect is not supported; "
+                "drafts 2020-12, 2019-09, 07, 06 and 04 are"
+            )
+            raise UnsupportedDialect(msg)
         try:
             return self._compile_object(schema)
         except Unsupported:
@@ -1429,7 +1450,7 @@ def _same(a: object, b: object) -> bool:
 
 _ONE = frozenset({"not", "if", "then", "else", "additionalProperties", "contains", "propertyNames"})
 _MANY = frozenset({"allOf", "anyOf", "oneOf"})
-_MAP = frozenset({"properties", "patternProperties", "definitions", "$defs"})
+_MAP = frozenset({"properties", "patternProperties", "definitions", "$defs", "dependentSchemas"})
 #: Keywords drafts after 07 added. No older draft knows them, so in an older schema they
 #: are annotations, and `upgrade` drops them rather than let draft 2020-12 assert them.
 #: ``$defs`` stays: it asserts nothing in either draft, and a pointer may name it.
@@ -1456,6 +1477,8 @@ _LATER = frozenset(
 #: them rather than let draft 2020-12 assert them. Draft-06 added `const`, `contains` and
 #: `propertyNames`; draft-07 added `if`, `then` and `else`.
 _UNKNOWN = {
+    # Draft 2019-09 knows all but what 2020-12 added and the anchor it read recursion by.
+    DRAFT2019: frozenset({"prefixItems", "$dynamicRef", "$dynamicAnchor", "$recursiveAnchor"}),
     7: _LATER,
     6: _LATER | {"if", "then", "else"},
     4: _LATER | {"if", "then", "else", "const", "contains", "propertyNames"},
@@ -1463,7 +1486,7 @@ _UNKNOWN = {
 
 
 def upgrade(schema: object, draft: int = 7) -> object:
-    """Rewrite a draft-07, -06 or -04 schema into the draft 2020-12 one with the same meaning.
+    """Rewrite an older schema into the draft 2020-12 one with the same meaning.
 
     The keywords whose meaning changed: an ``items`` array is ``prefixItems``, with
     ``additionalItems`` as ``items``; ``dependencies`` splits into ``dependentRequired``
@@ -1475,6 +1498,11 @@ def upgrade(schema: object, draft: int = 7) -> object:
     and ``$id`` as ``id``. Only the keywords that hold subschemas are descended into: a
     property named ``items`` is a name, not a keyword. A keyword holding a value of the
     wrong shape is copied as it is, for the compiler's shape check to name.
+
+    Draft 2019-09 differs less: a ``$ref`` keeps its siblings, ``dependencies`` is no keyword,
+    and the array ``items`` is the one change of meaning, beside ``$recursiveRef``. That is
+    ``$ref: "#"`` where one resource holds it, which is every document the compiler reads,
+    since it refuses a reference inside an embedded ``$id``.
     """
     _check_nesting(schema)
     return _upgrade(schema, draft)
@@ -1483,17 +1511,16 @@ def upgrade(schema: object, draft: int = 7) -> object:
 def _upgrade(schema: object, draft: int) -> object:
     if not isinstance(schema, dict):
         return schema
-    if "$ref" in schema:
+    if "$ref" in schema and draft != DRAFT2019:
         return _upgrade_ref(schema, draft)
-    if draft == 4:  # noqa: PLR2004
-        schema = _upgrade_draft4(schema)
+    schema = _in_later_words(schema, draft)
     out: dict[str, Any] = {}
     for key, value in ((k, v) for k, v in schema.items() if k not in _UNKNOWN[draft]):
         if key == "$schema":
             out[key] = DRAFT
         elif key in {"items", "additionalItems"}:
             out |= _upgrade_items(schema, draft) if key == "items" or "items" not in schema else {}
-        elif key == "dependencies":
+        elif key == "dependencies" and draft != DRAFT2019:
             out |= _upgrade_dependencies(value, draft)
         elif key in _ONE:
             out[key] = _upgrade(value, draft)
@@ -1504,6 +1531,19 @@ def _upgrade(schema: object, draft: int) -> object:
         else:
             out[key] = value
     return out
+
+
+def _in_later_words(schema: dict[str, Any], draft: int) -> dict[str, Any]:
+    """Return a schema object with what its draft spelled apart in the words 2020-12 reads."""
+    if draft == 4:  # noqa: PLR2004
+        return _upgrade_draft4(schema)
+    if draft == DRAFT2019 and "$recursiveRef" in schema:
+        target = schema["$recursiveRef"]
+        if target != "#" or "$ref" in schema:
+            msg = f"keyword '$recursiveRef' holds {target!r:.60} beside {sorted(schema)!r:.60}"
+            raise Unsupported(msg)
+        return {("$ref" if key == "$recursiveRef" else key): v for key, v in schema.items()}
+    return schema
 
 
 def _upgrade_ref(schema: dict[str, Any], draft: int) -> dict[str, Any]:
@@ -1580,7 +1620,11 @@ def _check_nesting(document: object) -> None:
 
 
 def compile_schema(schema: object) -> Validator[Any]:
-    """Compile a root schema document, upgrading a draft-07, -06 or -04 one first."""
+    """Compile a root schema document, upgrading a 2019-09, -07, -06 or -04 one first.
+
+    A document with no ``$schema`` is draft 2020-12, as the Model Context Protocol states,
+    and one naming any other dialect raises `UnsupportedDialect`.
+    """
     if (draft := older(schema)) is not None:
         schema = upgrade(schema, draft)
     return Compiler(schema).compile(schema)

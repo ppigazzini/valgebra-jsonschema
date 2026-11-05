@@ -13,7 +13,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from valgebra_jsonschema.schema import Compiler, Unsupported, upgrade
+from valgebra_jsonschema.schema import Compiler, Unsupported, older, upgrade
 
 
 @dataclass(slots=True)
@@ -32,7 +32,11 @@ def run_file(path: Path, *, draft: int | None = None) -> Outcome:
     """Run every case of one suite file; an older draft's schemas are upgraded first."""
     out = Outcome()
     for group in json.loads(path.read_text(encoding="utf-8")):
-        schema = group["schema"] if draft is None else upgrade(group["schema"], draft)
+        schema = group["schema"]
+        # A group naming a dialect of its own is that dialect's, so it reaches the refusal.
+        declared = schema.get("$schema") if isinstance(schema, dict) else None
+        if draft is not None and (declared is None or older(schema) == draft):
+            schema = upgrade(schema, draft)
         compiler = Compiler(schema)
         try:
             compiled = compiler.compile(schema)

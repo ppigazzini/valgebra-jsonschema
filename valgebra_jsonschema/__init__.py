@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from valgebra_jsonschema.mcp import Tool, read_tool
 from valgebra_jsonschema.schema import (
     ANNOTATIONS,
     ARRAY,
@@ -17,6 +18,7 @@ from valgebra_jsonschema.schema import (
     Compiler,
     Interval,
     Unsupported,
+    UnsupportedDialect,
     branches,
     compile_schema,
     ecma,
@@ -42,7 +44,9 @@ __all__ = [
     "SUPPORTED",
     "Compiler",
     "Interval",
+    "Tool",
     "Unsupported",
+    "UnsupportedDialect",
     "branches",
     "compile_schema",
     "ecma",
@@ -50,6 +54,7 @@ __all__ = [
     "interval",
     "json_key",
     "older",
+    "read_tool",
     "spellings",
     "upgrade",
 ]

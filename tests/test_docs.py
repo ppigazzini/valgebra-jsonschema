@@ -36,11 +36,12 @@ def test_the_pages_quote_the_draft_2020_12_totals():
     assert f"{t['opaque']} of the run cases" in _page("docs/02-compiler.md")
 
 
-@pytest.mark.parametrize("draft", ["7", "6", "4"])
+@pytest.mark.parametrize("draft", ["2019-09", "7", "6", "4"])
 def test_the_pages_quote_the_older_drafts_totals(draft):
     t = _suite(f"json-schema-test-suite-draft{draft}.json")
     run = t["passed"] + t["failed"]
-    assert f"draft-0{draft}, {t['passed']} of {run}" in _page("README.md")
+    name = "draft 2019-09" if draft == "2019-09" else f"draft-0{draft}"
+    assert f"{name}, {t['passed']} of {run}" in _page("README.md")
     assert f"{t['passed']} of the {run} cases run pass" in _page("docs/04-results.md")
     assert (
         f"{run} cases run, {t['passed']} passed, {t['failed']} failed; {t['skipped']} skipped"
@@ -75,7 +76,7 @@ def test_the_pages_quote_the_containment_totals():
     assert f"each of the {grand['refuted_against']} refutations against a label" in readme
 
 
-@pytest.mark.parametrize("page", ["README.md"])
+@pytest.mark.parametrize("page", ["README.md", "docs/05-mcp.md"])
 def test_the_examples_run_as_written(page):
     text = (ROOT / page).read_text(encoding="utf-8")
     blocks = re.findall(r"^```python\n(.*?)^```$", text, re.MULTILINE | re.DOTALL)

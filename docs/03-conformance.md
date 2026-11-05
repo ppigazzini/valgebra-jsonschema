@@ -13,10 +13,11 @@ gives the verdict the specification gives. A keyword it cannot translate raises
 
 - **The specification**, as the official JSON-Schema-Test-Suite encodes it, vendored at
   commit `89e83a740146` with its MIT license: draft 2020-12 with the optional files on
-  regular expressions and on large numbers, and drafts 07, 06 and 04 through `upgrade`.
+  regular expressions and on large numbers, and drafts 2019-09, 07, 06 and 04 through `upgrade`.
 
   ```bash
   uv run python tools/suite.py --check docs/studies/json-schema-test-suite.json
+  uv run python tools/suite.py --draft 2019-09 --check docs/studies/json-schema-test-suite-draft2019-09.json
   uv run python tools/suite.py --draft 7 --check docs/studies/json-schema-test-suite-draft7.json
   uv run python tools/suite.py --draft 6 --check docs/studies/json-schema-test-suite-draft6.json
   uv run python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
@@ -49,14 +50,19 @@ is a ledger entry against the package.
 ## The inventory
 
 Every keyword of the draft 2020-12 vocabularies is in exactly one class, and
-`tests/test_boundaries.py` fails on a keyword left out or counted twice.
+`tests/test_boundaries.py` holds this table against the code in both directions.
 
 | class | keywords |
 |---|---|
-| translated exactly | `type`, `enum`, `const`, the four bounds, an integral `multipleOf`, `minLength`, `maxLength`, `pattern`, `prefixItems`, `items`, `contains`, `minItems`, `maxItems`, `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`, `dependentRequired`, `dependentSchemas`, `allOf`, `anyOf`, `oneOf`, `not`, `if`/`then`/`else`, `$ref` (local pointers), a root `$id`, an embedded `$id` whose resource holds no reference or anchor and declares no other `$schema` |
+| translated exactly | `type`, `enum`, `const`, `maximum`, `exclusiveMaximum`, `minimum`, `exclusiveMinimum`, an integral `multipleOf`, `minLength`, `maxLength`, `pattern`, `prefixItems`, `items`, `contains`, `minItems`, `maxItems`, `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`, `dependentRequired`, `dependentSchemas`, `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`, `else`, `$ref`, `$id` |
 | translated as an opaque predicate | `patternProperties`, `propertyNames`, `uniqueItems`, `minContains`, `maxContains`, a fractional `multipleOf` |
-| annotations | `title`, `description`, `default`, `examples`, `deprecated`, `readOnly`, `writeOnly`, `format`, the three `content*` keywords, `$schema`, `$vocabulary`, `$comment`, `$defs` |
-| refused | `unevaluatedProperties`, `unevaluatedItems`, `$anchor`, `$dynamicRef`, `$dynamicAnchor`; an embedded `$id` whose resource holds a reference or an anchor or declares another `$schema`, and a pointer through any embedded `$id`; a reference outside the document |
+| annotations | `title`, `description`, `default`, `examples`, `deprecated`, `readOnly`, `writeOnly`, `format`, `contentEncoding`, `contentMediaType`, `contentSchema`, `$schema`, `$vocabulary`, `$comment`, `$defs`, `definitions` |
+| refused | `unevaluatedProperties`, `unevaluatedItems`, `$anchor`, `$dynamicRef`, `$dynamicAnchor`, `$recursiveRef`, `$recursiveAnchor`, `additionalItems`, `dependencies` |
+
+`$ref` is read for a local pointer, and a reference outside the document is refused and never
+fetched. `$id` is read at the root and on an embedded resource that holds no reference or
+anchor and declares no other `$schema`; any other embedded `$id`, and a pointer through one, is
+refused.
 
 A keyword outside the vocabularies is an annotation, as draft 2020-12 says to treat it,
 and `Compiler.ignored` records it: `x-label` or OpenAPI's `nullable` assert nothing. Two

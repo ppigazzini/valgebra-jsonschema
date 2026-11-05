@@ -2,9 +2,12 @@
 
 import ast
 import json
+import re
 from pathlib import Path
 
-from valgebra_jsonschema.schema import ANNOTATIONS, REFUSED, SUPPORTED
+import pytest
+
+from valgebra_jsonschema.schema import ANNOTATIONS, REFUSED, SUPPORTED, Compiler
 
 PACKAGE = Path(__file__).parent.parent / "valgebra_jsonschema"
 
@@ -110,3 +113,58 @@ def test_the_inventory_names_no_keyword_outside_the_vocabularies():
     )
     assert extra == set()
     assert json.dumps(sorted(SUPPORTED))
+
+
+def _inventory():
+    """Read the page's table: each class, and the keywords its row names."""
+    page = (Path(__file__).parent.parent / "docs" / "03-conformance.md").read_text(encoding="utf-8")
+    table = page[page.index("| class | keywords |") :]
+    rows = {}
+    for line in table.splitlines()[2:]:
+        if not line.startswith("|"):
+            break
+        name, words = line.strip("|").split("|", 1)
+        rows[name.strip()] = set(re.findall(r"`([^`]+)`", words))
+    return rows
+
+
+def test_the_page_lists_each_class_as_the_code_does():
+    rows = _inventory()
+    exact, opaque = rows["translated exactly"], rows["translated as an opaque predicate"]
+    assert exact | opaque == set(SUPPORTED)
+    assert exact & opaque == {"multipleOf"}, "a step is exact where it is whole"
+    assert rows["annotations"] == set(ANNOTATIONS)
+    assert rows["refused"] == set(REFUSED)
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [
+        {"patternProperties": {"a": {"type": "integer"}}},
+        {"propertyNames": {"maxLength": 1}},
+        {"uniqueItems": True},
+        {"contains": {"type": "integer"}, "minContains": 2},
+        {"contains": {"type": "integer"}, "maxContains": 2},
+        {"multipleOf": 0.5},
+    ],
+)
+def test_what_the_page_calls_opaque_is_opaque(schema):
+    compiler = Compiler(schema)
+    compiler.compile(schema)
+    assert compiler.opaque, schema
+
+
+@pytest.mark.parametrize(
+    "schema",
+    [
+        {"multipleOf": 2},
+        {"type": "integer", "minimum": 1},
+        {"pattern": "a"},
+        {"properties": {"a": {"type": "string"}}, "required": ["a"]},
+        {"if": {"type": "string"}, "then": {"minLength": 1}},
+    ],
+)
+def test_what_the_page_calls_exact_is_not_opaque(schema):
+    compiler = Compiler(schema)
+    compiler.compile(schema)
+    assert not compiler.opaque, schema

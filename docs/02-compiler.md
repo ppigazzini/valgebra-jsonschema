@@ -1,7 +1,7 @@
 # The compiler
 
-`valgebra_jsonschema/schema.py` compiles JSON Schema draft 2020-12, and drafts 07, 06 and 04
-through `upgrade`, into valgebra sets. [`03-conformance.md`](03-conformance.md) holds the keyword inventory
+`valgebra_jsonschema/schema.py` compiles JSON Schema draft 2020-12, and drafts 2019-09, 07, 06
+and 04 through `upgrade`, into valgebra sets. [`03-conformance.md`](03-conformance.md) holds the keyword inventory
 and the ledger of differences. The universe is
 what `json.loads` returns — `None`, `bool`, `int`, `float`, `str`, `list`, and `dict` with
 `str` keys, nested. On it the translation is exact for every keyword it accepts, with
@@ -41,8 +41,9 @@ the base URI it sets is one nothing inside resolves against.
 
 ## Older drafts
 
-A schema whose `$schema` names draft-07, draft-06 or draft-04 is rewritten by `upgrade` into the
-draft 2020-12 schema with the same meaning before it is compiled: an `items` array becomes
+A schema whose `$schema` names draft 2019-09, draft-07, draft-06 or draft-04 is rewritten by
+`upgrade` into the draft 2020-12 schema with the same meaning before it is compiled: an
+`items` array becomes
 `prefixItems` and `additionalItems` becomes `items`; `dependencies` splits into
 `dependentRequired` and `dependentSchemas`; a `$ref` drops its siblings, which those
 drafts ignore, but for `definitions` and `$defs`; and a keyword the draft does not know is
@@ -52,6 +53,12 @@ dropped, since it reads it as an annotation: `prefixItems`, `minContains` or
 `exclusiveMinimum` and `exclusiveMaximum` as flags on `minimum` and `maximum`, and `$id`
 as `id`; both are rewritten. Only keywords that hold subschemas are descended into, so a
 property named `items` stays a name.
+
+Draft 2019-09 differs less. A `$ref` keeps its siblings, `dependencies` is no keyword, so it is
+refused as in 2020-12, and two keywords read apart from 2020-12: an array `items`, and
+`$recursiveRef`. `$recursiveRef: "#"` is `$ref: "#"` wherever one resource holds it, which is
+every document compiled here, since a reference inside an embedded `$id` is refused. Any other
+value is refused.
 
 ## Opaque keywords
 
@@ -91,8 +98,15 @@ the run cases go through an opaque predicate. Draft-07, through `upgrade`:
 uv run python tools/suite.py --draft 7 --check docs/studies/json-schema-test-suite-draft7.json
 ```
 
-870 cases run, 870 passed, 0 failed; 59 skipped (remote references and `$id` scopes).
-Draft-06 and draft-04, through `upgrade`:
+870 cases run, 870 passed, 0 failed; 59 skipped (remote references and `$id` scopes). Draft
+2019-09, through `upgrade`:
+
+```bash
+uv run python tools/suite.py --draft 2019-09 --check docs/studies/json-schema-test-suite-draft2019-09.json
+```
+
+961 cases run, 961 passed, 0 failed; 300 skipped, by the same refusals. Draft-06 and draft-04,
+through `upgrade`:
 
 ```bash
 uv run python tools/suite.py --draft 6 --check docs/studies/json-schema-test-suite-draft6.json

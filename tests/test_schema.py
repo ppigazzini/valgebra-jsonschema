@@ -591,3 +591,49 @@ def test_a_nullable_number_keeps_its_non_integral_part():
     assert meet.is_valid(0.5)
     assert not meet.is_empty()
     assert not intersection(meet, JSON).is_empty()
+
+
+_HEADERS = {
+    "type": "object",
+    "patternProperties": {"^x-": {"type": "string"}},
+    "additionalProperties": False,
+}
+
+
+class TestKeys:
+    def test_a_pattern_is_a_clause_a_relation_reads(self):
+        headers = compile_schema(_HEADERS)
+        strings = compile_schema({"type": "object", "additionalProperties": {"type": "string"}})
+        assert headers.is_valid({"x-a": "s"})
+        assert not headers.is_valid({"y": "s"})
+        assert not headers.is_valid({"x-a": 1})
+        assert headers.relation_to(strings) == "subset"
+        assert strings.relation_to(headers) == "not_subset"
+
+    def test_a_key_takes_every_pattern_it_matches(self):
+        both = compile_schema(
+            {
+                "type": "object",
+                "patternProperties": {"^a": {"type": "integer"}, "z$": {"minimum": 3}},
+            }
+        )
+        assert both.is_valid({"az": 3})
+        assert not both.is_valid({"az": 2}), "the two schemas are a conjunction"
+        assert both.is_valid({"a": 2})
+
+    def test_a_schema_past_valgebras_limit_reads_by_predicate(self):
+        def level(depth):
+            value = {"type": "string"} if depth == 0 else level(depth - 1)
+            return {
+                "type": "object",
+                "patternProperties": {f"^{c}": value for c in "abcd"},
+                "additionalProperties": False,
+            }
+
+        deep = level(4)
+        with pytest.raises(Unsupported, match="valgebra refuses"):
+            Compiler(deep).compile(deep)
+        compiled = compile_schema(deep)
+        leaf = {"a": {"b": {"c": {"d": {"a": "s"}}}}}
+        assert compiled.is_valid(leaf)
+        assert not compiled.is_valid({"e": 1})

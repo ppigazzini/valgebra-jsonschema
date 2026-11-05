@@ -37,7 +37,12 @@ class Sampler:
 
     def draw(self, schema: object, tries: int = 40) -> list[Any]:
         """Return up to ``tries`` distinct candidates that the compiled schema admits."""
-        target = self.compiler.compile(schema)
+        try:
+            target = self.compiler.compile(schema)
+        except Unsupported:
+            # A schema past valgebra's limit reads by predicate, as `compile_schema` has it.
+            self.compiler = Compiler(self.root, by_clauses=False)
+            target = self.compiler.compile(schema)
         found: list[Any] = []
         seen: set[str] = set()
         for _ in range(tries):

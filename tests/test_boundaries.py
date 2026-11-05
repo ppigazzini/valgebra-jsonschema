@@ -132,7 +132,8 @@ def test_the_page_lists_each_class_as_the_code_does():
     rows = _inventory()
     exact, opaque = rows["translated exactly"], rows["translated as an opaque predicate"]
     assert exact | opaque == set(SUPPORTED)
-    assert exact & opaque == {"multipleOf"}, "a step is exact where it is whole"
+    # A step is exact where it is whole, and a key where it is words in few enough cells.
+    assert exact & opaque == {"multipleOf", "patternProperties", "propertyNames"}
     assert rows["annotations"] == set(ANNOTATIONS)
     assert rows["refused"] == set(REFUSED)
 
@@ -140,8 +141,8 @@ def test_the_page_lists_each_class_as_the_code_does():
 @pytest.mark.parametrize(
     "schema",
     [
-        {"patternProperties": {"a": {"type": "integer"}}},
-        {"propertyNames": {"maxLength": 1}},
+        {"patternProperties": {letter: {"type": "integer"} for letter in "abcde"}},
+        {"propertyNames": {"enum": ["a"]}},
         {"uniqueItems": True},
         {"contains": {"type": "integer"}, "minContains": 2},
         {"contains": {"type": "integer"}, "maxContains": 2},
@@ -158,6 +159,8 @@ def test_what_the_page_calls_opaque_is_opaque(schema):
     "schema",
     [
         {"multipleOf": 2},
+        {"patternProperties": {letter: {"type": "integer"} for letter in "abcd"}},
+        {"propertyNames": {"maxLength": 1}},
         {"type": "integer", "minimum": 1},
         {"pattern": "a"},
         {"properties": {"a": {"type": "string"}}, "required": ["a"]},

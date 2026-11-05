@@ -15,7 +15,7 @@
    "passed": 21,
    "failed": 0,
    "skipped": 0,
-   "opaque": 10
+   "opaque": 0
   },
   {
    "file": "allOf",
@@ -246,21 +246,21 @@
    "passed": 23,
    "failed": 0,
    "skipped": 0,
-   "opaque": 23
+   "opaque": 0
   },
   {
    "file": "properties",
    "passed": 28,
    "failed": 0,
    "skipped": 0,
-   "opaque": 8
+   "opaque": 0
   },
   {
    "file": "propertyNames",
    "passed": 22,
    "failed": 0,
    "skipped": 0,
-   "opaque": 22
+   "opaque": 11
   },
   {
    "file": "recursiveRef",

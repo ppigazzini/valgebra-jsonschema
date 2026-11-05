@@ -74,16 +74,24 @@ refused as in 2020-12, and two keywords read apart from 2020-12: an array `items
 every document compiled here, since a reference inside an embedded `$id` is refused. Any other
 value is refused.
 
+## Keys
+
+`patternProperties` and a `propertyNames` of words are clauses over keys narrowed by a pattern, so a
+relation reads them: `{"patternProperties": {"^x-": {"type": "string"}}, "additionalProperties": false}`
+is `subset` of an object of strings and the converse is `not_subset`. A key takes the schema of every
+pattern it matches, a conjunction, and valgebra reads two clauses over one key as a disjunction, so the
+keys are split where the patterns part, into up to sixteen cells, and no two clauses share a key.
+
 ## Opaque keywords
 
-Five keywords have no counterpart in valgebra's set language, so they compile to
+These have no counterpart in valgebra's set language, so they compile to
 predicates: membership is exact, and a relation that has to look inside one answers
 "undecided", never a wrong proof. `Compiler.opaque` lists those a schema used.
 
 | keyword | why |
 |---|---|
-| `patternProperties` | a valgebra map key is a key type or a literal, not a pattern-narrowed string |
-| `propertyNames` | the same |
+| `patternProperties`, past four patterns or in a schema past valgebra's limit | a clause per cell of keys, and the cells number two to the patterns |
+| `propertyNames`, reading more than `pattern`, `minLength`, `maxLength`, `type` | a key is narrowed by words, and no other schema names them |
 | `uniqueItems` | needs equality across elements |
 | `minContains`, `maxContains` | need counting |
 | `multipleOf` with a fractional step | `0.0075 % 0.0001` is not zero in binary floating point |
@@ -93,9 +101,9 @@ predicates: membership is exact, and a relation that has to look inside one answ
 `Unsupported` names the keyword: `unevaluatedProperties`, `unevaluatedItems`,
 `$dynamicRef`, `$dynamicAnchor`, `$anchor` references, references outside the document, an
 embedded `$id` whose resource holds a reference or an anchor or declares another `$schema`,
-a pointer through any embedded `$id`, a draft other than 2020-12, 07, 06 and 04, and a property name ending in `?`
-(valgebra reads that suffix as "optional"). A keyword outside the vocabularies is an
-annotation, as draft 2020-12 says, and `Compiler.ignored` records it.
+a pointer through any embedded `$id`, a draft other than 2020-12, 2019-09, 07, 06 and 04, and a
+property name ending in `?` (valgebra reads that suffix as "optional"). A keyword outside the
+vocabularies is an annotation, as draft 2020-12 says, and `Compiler.ignored` records it.
 
 ## Measured
 
@@ -105,7 +113,7 @@ uv run python tools/suite.py --check docs/studies/json-schema-test-suite.json
 
 The official JSON-Schema-Test-Suite at commit `89e83a740146`, vendored with its MIT
 license. Draft 2020-12, with the four optional files on regular expressions and large
-numbers: 1071 cases run, 1071 passed, 0 failed; 327 skipped by the refusals above; 176 of
+numbers: 1071 cases run, 1071 passed, 0 failed; 327 skipped by the refusals above; 99 of
 the run cases go through an opaque predicate. Draft-07, through `upgrade`:
 
 ```bash

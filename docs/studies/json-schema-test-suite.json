@@ -8,7 +8,7 @@
    "passed": 21,
    "failed": 0,
    "skipped": 0,
-   "opaque": 10
+   "opaque": 0
   },
   {
    "file": "allOf",
@@ -246,7 +246,7 @@
    "passed": 26,
    "failed": 0,
    "skipped": 0,
-   "opaque": 26
+   "opaque": 0
   },
   {
    "file": "prefixItems",
@@ -260,14 +260,14 @@
    "passed": 28,
    "failed": 0,
    "skipped": 0,
-   "opaque": 8
+   "opaque": 0
   },
   {
    "file": "propertyNames",
    "passed": 22,
    "failed": 0,
    "skipped": 0,
-   "opaque": 22
+   "opaque": 11
   },
   {
    "file": "ref",
@@ -337,7 +337,7 @@
    "passed": 74,
    "failed": 0,
    "skipped": 0,
-   "opaque": 17
+   "opaque": 0
   },
   {
    "file": "optional/float-overflow",
@@ -351,7 +351,7 @@
    "passed": 12,
    "failed": 0,
    "skipped": 0,
-   "opaque": 5
+   "opaque": 0
   }
  ]
 }

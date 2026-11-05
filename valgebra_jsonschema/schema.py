@@ -23,10 +23,11 @@ Two places where JSON Schema's model is not Python's are handled rather than inh
   ``(?s:.*)(?:p)(?s:.*)``, after `ecma` reads ``p`` by ECMA-262's grammar under the
   ``u`` flag and writes it back with nothing valgebra's engine reads otherwise.
 
-Five keywords have no counterpart in valgebra's set language -- ``patternProperties`` and
-``propertyNames`` need map keys narrowed by a pattern, ``uniqueItems`` and
-``minContains``/``maxContains`` need counting, and ``multipleOf`` with a fractional step
-needs decimal arithmetic. They compile to *opaque* predicates: membership stays exact,
+Some keywords have no counterpart in valgebra's set language -- ``uniqueItems`` and
+``minContains``/``maxContains`` need counting, ``multipleOf`` with a fractional step needs
+decimal arithmetic, and ``patternProperties`` past four patterns, or in a schema past
+valgebra's limit, is more cells of keys than it holds, as is a ``propertyNames`` reading more
+than words. They compile to *opaque* predicates: membership stays exact,
 while a relation that has to look inside one answers "undecided", never a wrong proof.
 `Compiler.opaque` lists the ones a schema used.
 
@@ -37,6 +38,7 @@ every inclusion decided from it would be wrong.
 
 from __future__ import annotations
 
+import itertools
 import math
 import re
 from collections.abc import Callable, Mapping
@@ -205,6 +207,10 @@ class Unsupported(ValueError):  # noqa: N818 - the name is the sentence a caller
     """A schema uses a keyword or form this compiler does not translate."""
 
 
+#: How a refusal of valgebra's own starts, which `compile_schema` reads.
+_PAST_VALGEBRAS_LIMIT = "valgebra refuses the schema"
+
+
 class UnsupportedDialect(Unsupported):
     """A document's ``$schema`` names a dialect this compiler does not read.
 
@@ -293,8 +299,13 @@ class Compiler:
     denotes rather than looping. A target is compiled once and reused.
     """
 
-    def __init__(self, root: object, *, assert_format: bool = False) -> None:
+    def __init__(
+        self, root: object, *, assert_format: bool = False, by_clauses: bool = True
+    ) -> None:
         self.root = root
+        #: Read a key narrowed by a pattern as a clause, which a relation can read, rather than
+        #: as a predicate. `compile_schema` turns it off for a schema past valgebra's limit.
+        self.by_clauses = by_clauses
         #: Read ``format`` as an assertion, which draft 2020-12 leaves to the caller's request.
         self.assert_format = assert_format
         self.opaque: set[str] = set()
@@ -360,7 +371,7 @@ class Compiler:
         except ValueError as exc:
             # valgebra's own refusals -- its nesting limit, a key that is no Unicode text --
             # are refusals of the schema, and a caller handles them as one.
-            msg = f"valgebra refuses the schema: {exc}"
+            msg = f"{_PAST_VALGEBRAS_LIMIT}: {exc}"
             raise Unsupported(msg) from exc
 
     def _compile_object(self, schema: dict[str, Any]) -> Validator[Any]:
@@ -464,7 +475,7 @@ class Compiler:
             except Unsupported:
                 raise
             except ValueError as exc:
-                msg = f"valgebra refuses the schema: $ref {pointer!r}: {exc}"
+                msg = f"{_PAST_VALGEBRAS_LIMIT}: $ref {pointer!r}: {exc}"
                 raise Unsupported(msg) from exc
             finally:
                 # Sets built around this fixpoint's placeholder mean nothing once it closes.
@@ -1061,13 +1072,57 @@ def _search(pattern: str) -> Validator[Any]:
         raise Unsupported(msg) from exc
 
 
+#: How many patterns one object group splits its keys by: the cells number two to this.
+_CELLS_FROM = 4
+
+
+def _object_by_cells(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
+    """Compile an object group with ``patternProperties`` to one clause per cell of keys.
+
+    A key takes the schema of every pattern it matches, a conjunction, and valgebra reads
+    two clauses over one key as a disjunction. So the keys are split where the patterns
+    part: one clause over the keys exactly these patterns match, keyed by their meet with
+    the others' complements, and no two clauses share a key.
+    """
+    patterns = [(_search(p), c.compile(v)) for p, v in s["patternProperties"].items()]
+    props: dict[str, Any] = s.get("properties", {})
+    required = set(s.get("required", []))
+    extra = c.compile(s.get("additionalProperties", True))
+    record: dict[object, object] = {}
+
+    def reading(key: str, named: list[Validator[Any]]) -> Validator[Any]:
+        matched = [sub for regex, sub in patterns if regex.is_valid(key)]
+        return intersection(*named, *matched) if named or matched else extra
+
+    for key, sub in props.items():
+        field = _field(key) if key in required else f"{_field(key)}?"
+        record[field] = reading(key, [c.compile(sub)])
+    for key in sorted(required - set(props)):
+        record[_field(key)] = reading(key, [])
+    for chosen in itertools.product((True, False), repeat=len(patterns)):
+        keys = intersection(
+            str,
+            *(
+                regex if taken else complement(regex)
+                for taken, (regex, _) in zip(chosen, patterns, strict=True)
+            ),
+        )
+        taken = [sub for take, (_, sub) in zip(chosen, patterns, strict=True) if take]
+        value = intersection(*taken) if taken else extra
+        if not value.is_empty():
+            record[keys] = value
+    return c.guard("object", record)
+
+
 def _object_by_pattern(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
-    """Compile an object group with ``patternProperties`` to an opaque predicate.
+    """Compile an object group with ``patternProperties``.
 
     A key takes the schema of every pattern it matches, and of ``properties`` if named
-    there; ``additionalProperties`` governs only a key matched by neither. valgebra's map
-    keys are key types or literals, so a key narrowed by a pattern has no clause to sit in.
+    there; ``additionalProperties`` governs only a key matched by neither. Up to
+    `_CELLS_FROM` patterns are clauses over cells of keys, and past it a predicate.
     """
+    if c.by_clauses and len(s["patternProperties"]) <= _CELLS_FROM:
+        return _object_by_cells(c, s)
     c.opaque.add("patternProperties")
     props = {k: c.closed(v) for k, v in s.get("properties", {}).items()}
     patterns = [(_search(p), c.closed(v)) for p, v in s["patternProperties"].items()]
@@ -1090,7 +1145,23 @@ def _object_by_pattern(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     return c.guard("object", opaque(dict[str, Any], admits))
 
 
+#: What a property name's schema may hold and keep a clause: words, read over strings.
+_NAMES = frozenset({"pattern", "minLength", "maxLength", "type", "title", "description"})
+
+
 def _property_names(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
+    schema = s["propertyNames"]
+    words = isinstance(schema, dict) and set(schema) <= _NAMES
+    if c.by_clauses and words and schema.get("type") in (None, "string"):
+        parts: list[object] = [str]
+        if "pattern" in schema:
+            parts.append(_search(schema["pattern"]))
+        low, high = schema.get("minLength"), schema.get("maxLength")
+        if low is not None:
+            parts.append(Annotated[str, MinLen(_count(schema, "minLength"))])
+        if high is not None:
+            parts.append(Annotated[str, MaxLen(_count(schema, "maxLength"))])
+        return c.guard("object", Validator({intersection(*parts): JSON}))
     c.opaque.add("propertyNames")
     named = c.closed(s["propertyNames"])
 
@@ -1648,4 +1719,11 @@ def compile_schema(schema: object, *, assert_format: bool = False) -> Validator[
     """
     if (draft := older(schema)) is not None:
         schema = upgrade(schema, draft)
-    return Compiler(schema, assert_format=assert_format).compile(schema)
+    try:
+        return Compiler(schema, assert_format=assert_format).compile(schema)
+    except Unsupported as exc:
+        if not str(exc).startswith(_PAST_VALGEBRAS_LIMIT):
+            raise
+    # A clause per cell of keys is more nodes than the predicate it reads, so a schema past
+    # valgebra's limit keeps its membership that way, and its relations go undecided.
+    return Compiler(schema, assert_format=assert_format, by_clauses=False).compile(schema)

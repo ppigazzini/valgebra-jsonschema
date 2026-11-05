@@ -15,7 +15,7 @@
    "passed": 16,
    "failed": 0,
    "skipped": 0,
-   "opaque": 8
+   "opaque": 0
   },
   {
    "file": "allOf",
@@ -169,14 +169,14 @@
    "passed": 18,
    "failed": 0,
    "skipped": 0,
-   "opaque": 18
+   "opaque": 0
   },
   {
    "file": "properties",
    "passed": 24,
    "failed": 0,
    "skipped": 0,
-   "opaque": 8
+   "opaque": 0
   },
   {
    "file": "ref",

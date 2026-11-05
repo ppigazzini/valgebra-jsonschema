@@ -54,8 +54,8 @@ Every keyword of the draft 2020-12 vocabularies is in exactly one class, and
 
 | class | keywords |
 |---|---|
-| translated exactly | `type`, `enum`, `const`, `maximum`, `exclusiveMaximum`, `minimum`, `exclusiveMinimum`, an integral `multipleOf`, `minLength`, `maxLength`, `pattern`, `prefixItems`, `items`, `contains`, `minItems`, `maxItems`, `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`, `dependentRequired`, `dependentSchemas`, `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`, `else`, `$ref`, `$id` |
-| translated as an opaque predicate | `patternProperties`, `propertyNames`, `uniqueItems`, `minContains`, `maxContains`, a fractional `multipleOf` |
+| translated exactly | `type`, `enum`, `const`, `maximum`, `exclusiveMaximum`, `minimum`, `exclusiveMinimum`, an integral `multipleOf`, `minLength`, `maxLength`, `pattern`, `prefixItems`, `items`, `contains`, `minItems`, `maxItems`, `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`, `patternProperties`, `propertyNames`, `dependentRequired`, `dependentSchemas`, `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`, `else`, `$ref`, `$id` |
+| translated as an opaque predicate | `uniqueItems`, `minContains`, `maxContains`, a fractional `multipleOf`, `patternProperties` past four patterns or in a schema past valgebra's limit, a `propertyNames` reading more than words |
 | annotations | `title`, `description`, `default`, `examples`, `deprecated`, `readOnly`, `writeOnly`, `format`, `contentEncoding`, `contentMediaType`, `contentSchema`, `$schema`, `$vocabulary`, `$comment`, `$defs`, `definitions` |
 | refused | `unevaluatedProperties`, `unevaluatedItems`, `$anchor`, `$dynamicRef`, `$dynamicAnchor`, `$recursiveRef`, `$recursiveAnchor`, `additionalItems`, `dependencies` |
 

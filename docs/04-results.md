@@ -83,18 +83,18 @@ the four the suite study runs.
 
 | draft | questions | refused | proven | refuted | undecided | proven against the label | refuted against the label |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 2020-12 | 3645 | 738 | 1760 | 736 | 411 | 0 | 2 |
-| 7 | 2788 | 96 | 1666 | 688 | 338 | 0 | 2 |
-| 6 | 2524 | 96 | 1482 | 614 | 332 | 0 | 2 |
-| 4 | 1933 | 66 | 838 | 739 | 290 | 0 | 228 |
+| 2020-12 | 3645 | 738 | 1800 | 741 | 366 | 0 | 2 |
+| 7 | 2788 | 96 | 1711 | 694 | 287 | 0 | 2 |
+| 6 | 2524 | 96 | 1527 | 620 | 281 | 0 | 2 |
+| 4 | 1933 | 66 | 866 | 765 | 236 | 0 | 241 |
 
-- No proof contradicts a label: 5746 proofs of the 10890 questions, 0 against one.
-- Each of the 234 refutations against a label is a wrong label. In every draft
+- No proof contradicts a label: 5904 proofs of the 10890 questions, 0 against one.
+- Each of the 247 refutations against a label is a wrong label. In every draft
   two: in `universal/items.json` the generator leaves `type` and `items: false` outside the
   `not` it writes, so the schema it labels universal leaves out the value `1`; in
   `unsatisfiable/ref.json` it rewrites a `$ref` inside an `enum` value, so the two `enum`s
   differ and the schema it labels empty holds `{"$ref": "#/allOf/0/$defs/a_string"}`.
-  In draft-04, 226 more pairs put `const`, which draft-06 added, in a draft-04 schema: the
+  In draft-04, 239 more pairs put `const`, which draft-06 added, in a draft-04 schema: the
   draft reads it as an annotation, so the first schema admits every value.
 - A question is refused where the compiler refuses a schema of its pair, as the inventory
   of [`03-conformance.md`](03-conformance.md) lists; an undecided one is kept and counted.

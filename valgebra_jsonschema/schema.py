@@ -65,6 +65,7 @@ from valgebra_jsonschema._valgebra import (
     recursive,
     union,
 )
+from valgebra_jsonschema.formats import LANGUAGES, PREDICATES
 
 #: Every value ``json.loads`` can return.
 JSON = recursive(lambda j: union(None, bool, int, float, str, [j], {str: j}))
@@ -292,8 +293,10 @@ class Compiler:
     denotes rather than looping. A target is compiled once and reused.
     """
 
-    def __init__(self, root: object) -> None:
+    def __init__(self, root: object, *, assert_format: bool = False) -> None:
         self.root = root
+        #: Read ``format`` as an assertion, which draft 2020-12 leaves to the caller's request.
+        self.assert_format = assert_format
         self.opaque: set[str] = set()
         #: Keywords outside draft 2020-12's vocabularies, which it says to treat as
         #: annotations: they assert nothing, and each one met is recorded here.
@@ -390,6 +393,8 @@ class Compiler:
 
     def _keywords(self, schema: dict[str, Any], parts: list[object]) -> None:
         seen: set[str] = set()
+        if self.assert_format and "format" in schema:
+            parts.append(self._format(schema["format"]))
         for keyword in schema:
             if keyword in ANNOTATIONS or (keyword == "$id" and self._inert(schema)):
                 continue
@@ -405,6 +410,20 @@ class Compiler:
                 self.ignored.add(keyword)
                 continue
             parts.append(handler(self, schema))
+
+    def _format(self, name: object) -> Validator[Any]:
+        """Return the values a ``format`` admits: every other kind, and strings of its form.
+
+        A format this does not read is refused, since an assertion left out would admit what
+        the schema refuses, and the format-assertion vocabulary has it fail too.
+        """
+        if isinstance(name, str) and name in LANGUAGES:
+            return guard(str, Annotated[str, Regex(LANGUAGES[name])])
+        if isinstance(name, str) and name in PREDICATES:
+            self.opaque.add(f"format {name}")
+            return guard(str, opaque(str, PREDICATES[name]))
+        msg = f"keyword 'format' holds {name!r:.60}, which is not asserted here"
+        raise Unsupported(msg)
 
     def ref(self, pointer: str) -> Validator[Any]:
         """Return the set a local JSON pointer names.
@@ -1619,12 +1638,14 @@ def _check_nesting(document: object) -> None:
             stack.extend((child, depth + 1) for child in children)
 
 
-def compile_schema(schema: object) -> Validator[Any]:
+def compile_schema(schema: object, *, assert_format: bool = False) -> Validator[Any]:
     """Compile a root schema document, upgrading a 2019-09, -07, -06 or -04 one first.
 
     A document with no ``$schema`` is draft 2020-12, as the Model Context Protocol states,
-    and one naming any other dialect raises `UnsupportedDialect`.
+    and one naming any other dialect raises `UnsupportedDialect`. With ``assert_format``, a
+    ``format`` this package reads asserts rather than annotates, and any other raises
+    `Unsupported`.
     """
     if (draft := older(schema)) is not None:
         schema = upgrade(schema, draft)
-    return Compiler(schema).compile(schema)
+    return Compiler(schema, assert_format=assert_format).compile(schema)

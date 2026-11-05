@@ -57,7 +57,8 @@ Drafts 2020-12, 2019-09, 07, 06 and 04, all but the first through `upgrade`, and
 naming any other dialect fails saying so, as the Model Context Protocol asks
 ([`docs/05-mcp.md`](docs/05-mcp.md)). Patterns follow ECMA-262, as the
 specification requires, and numbers compare by value: `1` and `1.0` are one number, and `true` is
-none. [`docs/02-compiler.md`](docs/02-compiler.md) says how each keyword becomes a set, and
+none. `format` is an annotation, as 2020-12 makes it, and `assert_format=True` reads nine of them as
+assertions. [`docs/02-compiler.md`](docs/02-compiler.md) says how each keyword becomes a set, and
 [`docs/03-conformance.md`](docs/03-conformance.md) holds the inventory and the ledger of differences.
 
 ## Measured

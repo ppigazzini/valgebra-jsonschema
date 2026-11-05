@@ -1,0 +1,70 @@
+{
+ "format": 1,
+ "draft": "format",
+ "suite_commit": "89e83a74014617ffbe79a56d83d14d054cd11417",
+ "files": [
+  {
+   "file": "date-time",
+   "passed": 47,
+   "failed": 0,
+   "skipped": 0,
+   "opaque": 47
+  },
+  {
+   "file": "date",
+   "passed": 81,
+   "failed": 0,
+   "skipped": 0,
+   "opaque": 0
+  },
+  {
+   "file": "duration",
+   "passed": 52,
+   "failed": 0,
+   "skipped": 0,
+   "opaque": 0
+  },
+  {
+   "file": "email",
+   "passed": 71,
+   "failed": 0,
+   "skipped": 0,
+   "opaque": 71
+  },
+  {
+   "file": "hostname",
+   "passed": 43,
+   "failed": 23,
+   "skipped": 0,
+   "opaque": 66
+  },
+  {
+   "file": "ipv4",
+   "passed": 41,
+   "failed": 0,
+   "skipped": 0,
+   "opaque": 0
+  },
+  {
+   "file": "ipv6",
+   "passed": 51,
+   "failed": 0,
+   "skipped": 0,
+   "opaque": 51
+  },
+  {
+   "file": "time",
+   "passed": 56,
+   "failed": 0,
+   "skipped": 0,
+   "opaque": 56
+  },
+  {
+   "file": "uuid",
+   "passed": 29,
+   "failed": 0,
+   "skipped": 0,
+   "opaque": 0
+  }
+ ]
+}

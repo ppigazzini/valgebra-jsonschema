@@ -27,6 +27,7 @@ uv run --no-sync python tools/suite.py --draft 2019-09 --check docs/studies/json
 uv run --no-sync python tools/suite.py --draft 7 --check docs/studies/json-schema-test-suite-draft7.json
 uv run --no-sync python tools/suite.py --draft 6 --check docs/studies/json-schema-test-suite-draft6.json
 uv run --no-sync python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
+uv run --no-sync python tools/suite.py --draft format --check docs/studies/json-schema-test-suite-format.json
 uv run --no-sync python tools/corpus.py --check docs/studies/jsonschemabench.json
 uv run --no-sync python tools/containment.py --check docs/studies/containment.json
 ```

@@ -83,6 +83,7 @@ draft-07 schema `upgrade` translates them.
 | a string holding a lone surrogate, which `json.loads` returns for `"\udc00"` | a pattern searches its code units | Python's `re` searches its code points | no pattern matches it, and a property name holding one is refused | valgebra's engine reads Unicode text, and such a string is none; RFC 8259 calls its behavior unpredictable |
 | `integer` in a draft-04 schema | a number written without a fraction or an exponent: `1.0` and `1e300` are none | the same | an integral number, as draft 2020-12 reads `integer`: `1.0` and `1e300` are integers | `upgrade` reads a draft-04 schema as the draft 2020-12 one, whose `integer` is a number's value; no 2020-12 keyword says "an int, not a float" |
 | integral constants above 2**53 | one number each | one number each | one number each, its float spelling only when the float is the same number | `9007199254740993` and `9007199254740992.0` are two numbers |
+| `format: hostname` under `assert_format`, on an `xn--` label | the label is an IDNA A-label, so its Punycode and what it decodes to are read | not read | the label as it is spelled: 23 of the suite's 66 cases, each of them invalid and admitted | reading a label takes IDNA2008's tables, a package of their own and no dependency here |
 | `additionalItems`, `dependencies` in a 2020-12 schema | not keywords: annotations | annotations | refused | see the inventory |
 
 ## The valgebra boundary

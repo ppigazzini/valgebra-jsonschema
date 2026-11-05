@@ -49,11 +49,12 @@ def _names_an_object(schema: object) -> bool:
     return isinstance(here, dict) and here.get("type") in ("object", ["object"])
 
 
-def read_tool(spec: Mapping[str, Any]) -> Tool:
+def read_tool(spec: Mapping[str, Any], *, assert_format: bool = False) -> Tool:
     """Read one entry of a server's tool list into its two contracts.
 
     Raises `Unsupported` for an ``inputSchema`` that is missing or names no object, and for
     anything `compile_schema` refuses, and `UnsupportedDialect` for a dialect it does not read.
+    ``assert_format`` reads as it does there.
     """
     name = spec.get("name")
     if not isinstance(name, str):
@@ -62,9 +63,10 @@ def read_tool(spec: Mapping[str, Any]) -> Tool:
     if "inputSchema" not in spec:
         msg = f"tool {name!r} has no inputSchema"
         raise Unsupported(msg)
-    arguments = compile_schema(spec["inputSchema"])
+    arguments = compile_schema(spec["inputSchema"], assert_format=assert_format)
     if not _names_an_object(spec["inputSchema"]):
         msg = f"tool {name!r} has an inputSchema that names no object"
         raise Unsupported(msg)
     output = spec.get("outputSchema")
-    return Tool(name, arguments, None if output is None else compile_schema(output))
+    result = None if output is None else compile_schema(output, assert_format=assert_format)
+    return Tool(name, arguments, result)

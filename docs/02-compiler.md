@@ -39,6 +39,20 @@ default), the `content*` keywords, `$comment`, `$defs`. A root `$id` is skipped,
 an embedded one whose resource holds no reference or anchor and declares no other `$schema`:
 the base URI it sets is one nothing inside resolves against.
 
+## `format`, on request
+
+`format` is an annotation, as draft 2020-12 makes it. `compile_schema(schema, assert_format=True)`
+reads it as an assertion over strings, and passes every other kind as any assertion does.
+
+| format | read as |
+|---|---|
+| `date`, `duration`, `ipv4`, `uuid` | a regular language, so a relation through it is decided |
+| `date-time`, `time`, `email`, `hostname`, `ipv6` | a predicate, exact on membership and opaque to a relation |
+
+Any other format is refused, since the assertion left out would admit what the schema refuses.
+[`04-results.md`](04-results.md#format-on-request) has the official suite's counts, and
+[`03-conformance.md`](03-conformance.md#differences-ledger) the one difference.
+
 ## Older drafts
 
 A schema whose `$schema` names draft 2019-09, draft-07, draft-06 or draft-04 is rewritten by

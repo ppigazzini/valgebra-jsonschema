@@ -21,6 +21,16 @@ skipped; draft-07, 870 of the 870 cases run pass, 59 skipped; draft-06, 790 of t
 pass, 51 skipped; draft-04, 587 of the 587 cases run pass, 31 skipped. See
 [`02-compiler.md`](02-compiler.md#measured).
 
+## `format`, on request
+
+```bash
+uv run python tools/suite.py --draft format --check docs/studies/json-schema-test-suite-format.json
+```
+
+The nine formats `assert_format` reads, on the suite's `optional/format` files: 471 of the 494
+cases pass. Each of the 23 that do not is a hostname, an `xn--` label the suite refuses for what it
+decodes to, which the ledger records.
+
 ## Real-world schemas
 
 ```bash

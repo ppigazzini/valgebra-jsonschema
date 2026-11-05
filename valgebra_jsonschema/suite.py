@@ -28,7 +28,7 @@ class Outcome:
     reasons: Counter[str] = field(default_factory=Counter)
 
 
-def run_file(path: Path, *, draft: int | None = None) -> Outcome:
+def run_file(path: Path, *, draft: int | None = None, assert_format: bool = False) -> Outcome:
     """Run every case of one suite file; an older draft's schemas are upgraded first."""
     out = Outcome()
     for group in json.loads(path.read_text(encoding="utf-8")):
@@ -37,7 +37,7 @@ def run_file(path: Path, *, draft: int | None = None) -> Outcome:
         declared = schema.get("$schema") if isinstance(schema, dict) else None
         if draft is not None and (declared is None or older(schema) == draft):
             schema = upgrade(schema, draft)
-        compiler = Compiler(schema)
+        compiler = Compiler(schema, assert_format=assert_format)
         try:
             compiled = compiler.compile(schema)
         except Unsupported as exc:
@@ -53,6 +53,11 @@ def run_file(path: Path, *, draft: int | None = None) -> Outcome:
                 out.failed += 1
                 out.failures.append(f"{path.stem}: {group['description']} / {test['description']}")
     return out
+
+
+def run_formats(directory: Path) -> dict[str, Outcome]:
+    """Run the vendored ``optional/format`` files, with ``format`` read as an assertion."""
+    return {p.stem: run_file(p, assert_format=True) for p in sorted(directory.glob("*.json"))}
 
 
 def run_older(directory: Path, draft: int) -> dict[str, Outcome]:

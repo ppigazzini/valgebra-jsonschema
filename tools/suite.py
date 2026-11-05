@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Literal, cast
 
 from valgebra_jsonschema.study import SUITE, SuiteFile, SuiteStudy, dumps, load_suite
-from valgebra_jsonschema.suite import run, run_older
+from valgebra_jsonschema.suite import run, run_formats, run_older
 
 ROOT = Path(__file__).parent.parent
 SUITE_DIR = ROOT / "tests" / "data" / "json-schema-test-suite"
@@ -25,17 +25,22 @@ OLDER_DIRS = {
 }
 #: The number `upgrade` reads each older draft by.
 OLDER_DRAFTS = {"2019-09": 2019, "7": 7, "6": 6, "4": 4}
+#: The vendored ``optional/format`` files of the formats `assert_format` reads.
+FORMAT_DIR = ROOT / "tests" / "data" / "json-schema-test-suite-format"
 COMMIT = (SUITE_DIR / "COMMIT").read_text(encoding="utf-8").strip()
 
 
-Draft = Literal["2020-12", "2019-09", "7", "6", "4"]
+Draft = Literal["2020-12", "2019-09", "7", "6", "4", "format"]
 
 
 def measure(draft: Draft) -> SuiteStudy:
     """Run every vendored suite file of one draft."""
-    outcomes = (
-        run(SUITE_DIR) if draft == "2020-12" else run_older(OLDER_DIRS[draft], OLDER_DRAFTS[draft])
-    )
+    if draft == "2020-12":
+        outcomes = run(SUITE_DIR)
+    elif draft == "format":
+        outcomes = run_formats(FORMAT_DIR)
+    else:
+        outcomes = run_older(OLDER_DIRS[draft], OLDER_DRAFTS[draft])
     files = [
         SuiteFile(file=stem, passed=o.passed, failed=o.failed, skipped=o.skipped, opaque=o.opaque)
         for stem, o in outcomes.items()
@@ -108,7 +113,9 @@ def main(argv: list[str]) -> int:
     out.add_argument("--json", type=Path)
     out.add_argument("--check", type=Path)
     out.add_argument("--reference", action="store_true", help="the jsonschema package instead")
-    parser.add_argument("--draft", choices=["2020-12", "2019-09", "7", "6", "4"], default="2020-12")
+    parser.add_argument(
+        "--draft", choices=["2020-12", "2019-09", "7", "6", "4", "format"], default="2020-12"
+    )
     args = parser.parse_args(argv)
     if args.reference:
         print(reference())

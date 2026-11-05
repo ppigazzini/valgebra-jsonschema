@@ -58,6 +58,8 @@ dialect with no `$schema` is read as 2020-12: name its dialect with `{"$schema":
 - **Any 2020-12 keyword.** [`03-conformance.md`](03-conformance.md#the-inventory) lists what each
   does here. A keyword that is refused raises `Unsupported` naming it, and is never skipped.
 - **`format` is an annotation**, as 2020-12 makes it, so it admits every value.
+  `read_tool(spec, assert_format=True)` reads nine formats as assertions, and refuses any other
+  ([`02-compiler.md`](02-compiler.md#format-on-request)).
 - **No reference is fetched.** A `$ref` outside the document is refused, which is how the protocol's
   rule against dereferencing a network reference reads here.
 - **Bounds hold what a document may cost.** A document past `MAX_NESTING` is refused before it is

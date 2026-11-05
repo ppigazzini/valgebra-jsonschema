@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+build/
+dist/
+*.egg-info
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.vscode/
+*.swp
+
+# Fetched by the tools at pinned commits. A published number lives in docs/studies/*.json
+# and is rechecked by the tool that wrote it; anything else is not a result.
+results/
+__DEV/

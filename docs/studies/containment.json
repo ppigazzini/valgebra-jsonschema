@@ -10,8 +10,8 @@
    "refused": 92,
    "timed_out": 0,
    "proven": 0,
-   "refuted": 476,
-   "undecided": 75,
+   "refuted": 486,
+   "undecided": 65,
    "proven_against": 0,
    "refuted_against": 0
   },
@@ -33,9 +33,9 @@
    "questions": 144,
    "refused": 20,
    "timed_out": 0,
-   "proven": 102,
+   "proven": 113,
    "refuted": 0,
-   "undecided": 22,
+   "undecided": 11,
    "proven_against": 0,
    "refuted_against": 0
   },
@@ -69,9 +69,9 @@
    "questions": 1066,
    "refused": 178,
    "timed_out": 0,
-   "proven": 483,
-   "refuted": 263,
-   "undecided": 142,
+   "proven": 507,
+   "refuted": 294,
+   "undecided": 87,
    "proven_against": 0,
    "refuted_against": 0
   },
@@ -82,8 +82,8 @@
    "refused": 11,
    "timed_out": 0,
    "proven": 0,
-   "refuted": 430,
-   "undecided": 62,
+   "refuted": 439,
+   "undecided": 53,
    "proven_against": 0,
    "refuted_against": 0
   },
@@ -105,9 +105,9 @@
    "questions": 115,
    "refused": 1,
    "timed_out": 0,
-   "proven": 96,
+   "proven": 108,
    "refuted": 0,
-   "undecided": 18,
+   "undecided": 6,
    "proven_against": 0,
    "refuted_against": 0
   },
@@ -141,9 +141,9 @@
    "questions": 836,
    "refused": 24,
    "timed_out": 0,
-   "proven": 438,
-   "refuted": 262,
-   "undecided": 112,
+   "proven": 462,
+   "refuted": 295,
+   "undecided": 55,
    "proven_against": 0,
    "refuted_against": 0
   },
@@ -154,8 +154,8 @@
    "refused": 11,
    "timed_out": 0,
    "proven": 0,
-   "refuted": 364,
-   "undecided": 62,
+   "refuted": 373,
+   "undecided": 53,
    "proven_against": 0,
    "refuted_against": 0
   },
@@ -177,9 +177,9 @@
    "questions": 99,
    "refused": 1,
    "timed_out": 0,
-   "proven": 80,
+   "proven": 92,
    "refuted": 0,
-   "undecided": 18,
+   "undecided": 6,
    "proven_against": 0,
    "refuted_against": 0
   },
@@ -213,9 +213,9 @@
    "questions": 762,
    "refused": 24,
    "timed_out": 0,
-   "proven": 372,
-   "refuted": 254,
-   "undecided": 112,
+   "proven": 396,
+   "refuted": 287,
+   "undecided": 55,
    "proven_against": 0,
    "refuted_against": 0
   },
@@ -226,8 +226,8 @@
    "refused": 8,
    "timed_out": 0,
    "proven": 0,
-   "refuted": 332,
-   "undecided": 9,
+   "refuted": 333,
+   "undecided": 8,
    "proven_against": 0,
    "refuted_against": 0
   },
@@ -250,10 +250,10 @@
    "refused": 1,
    "timed_out": 0,
    "proven": 9,
-   "refuted": 49,
-   "undecided": 19,
+   "refuted": 51,
+   "undecided": 17,
    "proven_against": 0,
-   "refuted_against": 49
+   "refuted_against": 51
   },
   {
    "draft": "4",
@@ -286,10 +286,10 @@
    "refused": 15,
    "timed_out": 0,
    "proven": 60,
-   "refuted": 382,
-   "undecided": 141,
+   "refuted": 399,
+   "undecided": 124,
    "proven_against": 0,
-   "refuted_against": 190
+   "refuted_against": 199
   }
  ]
 }

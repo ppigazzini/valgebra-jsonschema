@@ -81,6 +81,8 @@ relation reads them: `{"patternProperties": {"^x-": {"type": "string"}}, "additi
 is `subset` of an object of strings and the converse is `not_subset`. A key takes the schema of every
 pattern it matches, a conjunction, and valgebra reads two clauses over one key as a disjunction, so the
 keys are split where the patterns part, into up to sixteen cells, and no two clauses share a key.
+`propertyNames: true` names every key, as `{}` does, and `propertyNames: false` names none, so the one
+object it admits is the empty one.
 
 ## Opaque keywords
 
@@ -91,7 +93,7 @@ predicates: membership is exact, and a relation that has to look inside one answ
 | keyword | why |
 |---|---|
 | `patternProperties`, past four patterns or in a schema past valgebra's limit | a clause per cell of keys, and the cells number two to the patterns |
-| `propertyNames`, reading more than `pattern`, `minLength`, `maxLength`, `type` | a key is narrowed by words, and no other schema names them |
+| `propertyNames`, but `true`, `false` and one reading only `pattern`, `minLength`, `maxLength`, `type` | a key is narrowed by words, and no other schema names them |
 | `uniqueItems` | needs equality across elements |
 | `minContains`, `maxContains` | need counting |
 | `multipleOf` with a fractional step | `0.0075 % 0.0001` is not zero in binary floating point |
@@ -113,7 +115,7 @@ uv run python tools/suite.py --check docs/studies/json-schema-test-suite.json
 
 The official JSON-Schema-Test-Suite at commit `89e83a740146`, vendored with its MIT
 license. Draft 2020-12, with the four optional files on regular expressions and large
-numbers: 1071 cases run, 1071 passed, 0 failed; 327 skipped by the refusals above; 99 of
+numbers: 1071 cases run, 1071 passed, 0 failed; 327 skipped by the refusals above; 95 of
 the run cases go through an opaque predicate. Draft-07, through `upgrade`:
 
 ```bash

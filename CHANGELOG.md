@@ -12,6 +12,10 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   holds none of its values: each branch is spelled once per branch it may meet rather than once
   per branch, which keeps 14 JSONSchemaBench schemas under valgebra's node bound, and 9448 of
   the 9558 compile.
+- `propertyNames: true` names every key, and `propertyNames: false` none, so it admits the
+  empty object alone: both are sets a relation reads rather than predicates. The containment
+  study proves 6047 of its 10890 questions, and 95 of the 1071 draft 2020-12 suite cases run
+  go through an opaque predicate.
 
 ## [0.0.1] - 2026-11-12
 

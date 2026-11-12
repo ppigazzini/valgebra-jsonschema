@@ -83,12 +83,12 @@ the four the suite study runs.
 
 | draft | questions | refused | proven | refuted | undecided | proven against the label | refuted against the label |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 2020-12 | 3645 | 738 | 1835 | 782 | 290 | 0 | 2 |
-| 7 | 2788 | 96 | 1747 | 736 | 209 | 0 | 2 |
-| 6 | 2524 | 96 | 1563 | 662 | 203 | 0 | 2 |
+| 2020-12 | 3645 | 738 | 1847 | 786 | 274 | 0 | 2 |
+| 7 | 2788 | 96 | 1759 | 740 | 193 | 0 | 2 |
+| 6 | 2524 | 96 | 1575 | 666 | 187 | 0 | 2 |
 | 4 | 1933 | 66 | 866 | 785 | 216 | 0 | 252 |
 
-- No proof contradicts a label: 6011 proofs of the 10890 questions, 0 against one.
+- No proof contradicts a label: 6047 proofs of the 10890 questions, 0 against one.
 - Each of the 258 refutations against a label is a wrong label. In every draft
   two: in `universal/items.json` the generator leaves `type` and `items: false` outside the
   `not` it writes, so the schema it labels universal leaves out the value `1`; in

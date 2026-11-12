@@ -328,6 +328,13 @@ def test_two_hundred_definitions_compile_in_place():
     assert not s.is_valid({"p7": "d8_"})
 
 
+def test_property_names_true_names_every_key_and_false_none():
+    assert compile_schema({"propertyNames": True}) == compile_schema({})
+    keyless = compile_schema({"propertyNames": False})
+    assert [keyless.is_valid(v) for v in ({}, {"a": 1}, 1)] == [True, False, True]
+    assert keyless.is_equivalent(compile_schema({"maxProperties": 0}))
+
+
 def test_a_one_of_whose_branches_are_disjoint_is_their_union():
     branches = [{"type": "string"}, {"type": "null"}]
     assert compile_schema({"oneOf": branches}) == compile_schema({"anyOf": branches})

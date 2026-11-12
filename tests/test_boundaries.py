@@ -161,6 +161,8 @@ def test_what_the_page_calls_opaque_is_opaque(schema):
         {"multipleOf": 2},
         {"patternProperties": {letter: {"type": "integer"} for letter in "abcd"}},
         {"propertyNames": {"maxLength": 1}},
+        {"propertyNames": True},
+        {"propertyNames": False},
         {"type": "integer", "minimum": 1},
         {"pattern": "a"},
         {"properties": {"a": {"type": "string"}}, "required": ["a"]},

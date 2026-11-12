@@ -1151,6 +1151,11 @@ _NAMES = frozenset({"pattern", "minLength", "maxLength", "type", "title", "descr
 
 def _property_names(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     schema = s["propertyNames"]
+    if schema is False:
+        # No string is a name, so the one object every name passes is the empty one.
+        return c.guard("object", Validator({}))
+    if schema is True:
+        schema = {}
     words = isinstance(schema, dict) and set(schema) <= _NAMES
     if c.by_clauses and words and schema.get("type") in (None, "string"):
         parts: list[object] = [str]

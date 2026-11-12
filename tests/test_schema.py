@@ -62,6 +62,10 @@ class TestSemantics:
         assert not s.is_valid({"kids": [1]})
 
 
+_INT = {"type": "integer"}
+_STR = {"type": "string"}
+
+
 class TestEmbeddedResources:
     def test_an_embedded_id_with_nothing_resolving_inside_is_an_annotation(self):
         # A base URI matters to the references inside its resource; with none, the resource
@@ -71,32 +75,90 @@ class TestEmbeddedResources:
         assert compiled.is_valid({"a": "ab"})
         assert not compiled.is_valid({"a": "a"})
 
-    @pytest.mark.parametrize(
-        "resource",
-        [
-            {"$id": "http://example.com/a", "$ref": "#/$defs/b", "$defs": {"b": {}}},
-            {"$id": "http://example.com/a", "items": {"$anchor": "x"}},
-            {"$id": "http://example.com/a", "$schema": "http://json-schema.org/draft-07/schema#"},
-        ],
-    )
-    def test_an_embedded_id_over_a_reference_or_another_dialect_is_refused(self, resource):
-        with pytest.raises(Unsupported, match="'\\$id' changes the base URI"):
+    def test_an_embedded_id_declaring_another_dialect_is_refused(self):
+        draft7 = "http://json-schema.org/draft-07/schema#"
+        resource = {"$id": "http://example.com/a", "$schema": draft7}
+        with pytest.raises(Unsupported, match="declares another dialect"):
             compile_schema({"properties": {"a": resource}})
 
-    def test_a_pointer_through_an_embedded_id_is_refused(self):
+    def test_a_reference_resolves_against_the_resource_it_sits_in(self):
+        resource = {"$id": "http://example.com/a", "$ref": "#/$defs/b", "$defs": {"b": _INT}}
+        s = compile_schema({"$defs": {"b": _STR}, "properties": {"a": resource}})
+        assert s.is_valid({"a": 1})
+        assert not s.is_valid({"a": "1"})
+
+    def test_an_anchor_names_its_schema_within_its_resource(self):
         schema = {
             "$defs": {
-                "s": {"$id": "http://example.com/s", "properties": {"n": {"type": "integer"}}}
+                "a": {"$id": "http://example.com/a", "$defs": {"n": {"$anchor": "n", **_INT}}}
             },
+            "$ref": "http://example.com/a#n",
+        }
+        assert compile_schema(schema).is_valid(1)
+        assert not compile_schema(schema).is_valid("1")
+        with pytest.raises(Unsupported, match="no anchor"):
+            compile_schema({**schema, "$ref": "http://example.com/a#m"})
+        with pytest.raises(Unsupported, match="no anchor"):
+            compile_schema({**schema, "$ref": "#n"})
+
+    def test_an_anchored_schema_reads_its_references_in_its_resource(self):
+        anchored = {"$anchor": "n", "$ref": "#/$defs/z"}
+        resource = {"$id": "http://example.com/e", "$defs": {"z": _INT, "n": anchored}}
+        schema = {"$defs": {"z": _STR, "e": resource}, "$ref": "http://example.com/e#n"}
+        assert compile_schema(schema).is_valid(1)
+        assert not compile_schema(schema).is_valid("1")
+
+    def test_a_predicate_inside_a_resource_reads_its_references_there(self):
+        # Five patterns are a predicate, whose subschemas compile again at membership time
+        # when they hold the placeholder of the fixpoint `t`: in `e`, `#/$defs/t` is `e`'s.
+        patterns = {f"^{c}": {"$ref": "#/$defs/t"} for c in "abcde"}
+        t = {"type": "object", "patternProperties": patterns}
+        resource = {"$id": "http://example.com/e", "$defs": {"t": t}, "$ref": "#/$defs/t"}
+        schema = {"$defs": {"t": _STR, "e": resource}, "$ref": "#/$defs/e"}
+        compiled = compile_schema(schema)
+        assert compiled.is_valid({"a": {"b": {}}})
+        assert not compiled.is_valid({"a": "x"})
+
+    def test_a_fragment_alone_keeps_a_base_urljoin_does_not_join(self):
+        schema = {"$id": "urn:example:root", "$defs": {"n": {"$anchor": "n", **_INT}}, "$ref": "#n"}
+        assert compile_schema(schema).is_valid(1)
+        assert not compile_schema(schema).is_valid("1")
+
+    def test_a_pointer_through_an_embedded_id_reaches_its_schema(self):
+        schema = {
+            "$defs": {"s": {"$id": "http://example.com/s", "properties": {"n": _INT}}},
             "$ref": "#/$defs/s/properties/n",
         }
-        with pytest.raises(Unsupported, match="passes through an embedded"):
+        assert compile_schema(schema).is_valid(1)
+        assert not compile_schema(schema).is_valid("1")
+
+    def test_a_reference_to_another_document_is_refused(self):
+        with pytest.raises(Unsupported, match="does not hold"):
+            compile_schema({"$ref": "http://example.com/other.json"})
+
+    def test_an_older_drafts_id_fragment_is_an_anchor(self):
+        schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "definitions": {"n": {"$id": "#n", **_INT}},
+            "$ref": "#n",
+        }
+        assert compile_schema(schema).is_valid(1)
+        assert not compile_schema(schema).is_valid("1")
+
+    def test_a_recursive_ref_where_two_resources_set_the_anchor_is_refused(self):
+        inner = {"$id": "http://example.com/i", "$recursiveAnchor": True, "$recursiveRef": "#"}
+        schema = {
+            "$schema": "https://json-schema.org/draft/2019-09/schema",
+            "$recursiveAnchor": True,
+            "properties": {"a": inner},
+        }
+        with pytest.raises(Unsupported, match="two resources set"):
             compile_schema(schema)
 
 
 class TestContainmentLabels:
-    # Two pairs of the containment test suite carry a label the specification refutes; the
-    # results page names them, and each value here is the witness.
+    # Pairs of the containment test suite carry a label the specification refutes, in the
+    # kinds the results page names; each value here is the witness of one kind.
     def test_the_schema_labeled_universal_leaves_out_a_number(self):
         def tree(n):
             sub = f"#/anyOf/{n}/$defs/sub-item"
@@ -121,6 +183,49 @@ class TestContainmentLabels:
 
         compiled = compile_schema({"allOf": [branch(0, "enum"), branch(1, "not")]})
         assert compiled.is_valid({"$ref": "#/allOf/0/$defs/a_string"})
+        assert compiled.relation_to(nothing) == "not_subset"
+
+    def test_the_schema_labeled_universal_over_resources_leaves_out_an_empty_object(self):
+        # `subtree` names `tree{n}` relative to the node's own `$id`, in its own resource.
+        def tree(n):
+            subtree = {"$ref": f"tree{n}"}
+            node = {
+                "$id": f"http://localhost:1234/node{n}",
+                "type": "object",
+                "properties": {"value": {"type": "number"}, "subtree": subtree},
+                "required": ["value"],
+            }
+            return {
+                "$id": f"http://localhost:1234/tree{n}",
+                "type": "object",
+                "required": ["meta", "nodes"],
+                "$defs": {"node": node},
+            }
+
+        def fields(n):
+            nodes = {"type": "array", "items": {"$ref": f"node{n}"}}
+            return {"properties": {"meta": {"type": "string"}, "nodes": nodes}}
+
+        schema = {"anyOf": [{**tree(0), **fields(0)}, {**tree(1), "not": fields(1)}]}
+        compiled = compile_schema(schema)
+        assert compiled.is_valid({"meta": "m", "nodes": [{"value": 1, "subtree": 2}]})
+        assert not compiled.is_valid({})
+        assert JSON.relation_to(compiled) == "not_subset"
+
+    def test_the_schema_labeled_empty_holds_an_object_named_like_an_identifier(self):
+        # An `$id` inside an `enum` value names nothing, so `real{n}` is the one `$id` names.
+        def branch(n, key):
+            uri = f"https://localhost:1234/id/my_identifier{n}.json"
+            listed = {"enum": [{"$id": uri, "type": "null"}]}
+            body = {"anyOf": [listed, {"$ref": uri}]}
+            defs = {f"real{n}": {"$id": uri, "type": "string"}}
+            return {"$defs": defs, **({"not": body} if key == "not" else body)}
+
+        compiled = compile_schema({"allOf": [branch(0, "enum"), branch(1, "not")]})
+        assert compiled.is_valid(
+            {"$id": "https://localhost:1234/id/my_identifier0.json", "type": "null"}
+        )
+        assert not compiled.is_valid("a")
         assert compiled.relation_to(nothing) == "not_subset"
 
 
@@ -417,7 +522,8 @@ def test_a_keyword_holding_what_the_meta_schema_refuses_is_refused(schema):
         compile_schema(schema)
 
 
-def test_a_pointer_through_an_embedded_resource_is_refused():
+def test_a_reference_reached_through_a_pointer_resolves_in_its_own_resource():
+    # `y` sits in `x`'s resource, so its `#/$defs/z` is `x`'s `z`, however `y` is reached.
     schema = {
         "$defs": {
             "z": {"type": "string"},
@@ -428,8 +534,8 @@ def test_a_pointer_through_an_embedded_resource_is_refused():
         },
         "$ref": "#/$defs/x/$defs/y",
     }
-    with pytest.raises(Unsupported, match="embedded"):
-        compile_schema(schema)
+    assert compile_schema(schema).is_valid(1)
+    assert not compile_schema(schema).is_valid("1")
 
 
 class TestEcmaDialect:

@@ -35,10 +35,10 @@ def run_file(path: Path, *, draft: int | None = None, assert_format: bool = Fals
         schema = group["schema"]
         # A group naming a dialect of its own is that dialect's, so it reaches the refusal.
         declared = schema.get("$schema") if isinstance(schema, dict) else None
-        if draft is not None and (declared is None or older(schema) == draft):
-            schema = upgrade(schema, draft)
-        compiler = Compiler(schema, assert_format=assert_format)
         try:
+            if draft is not None and (declared is None or older(schema) == draft):
+                schema = upgrade(schema, draft)
+            compiler = Compiler(schema, assert_format=assert_format)
             compiled = compiler.compile(schema)
         except Unsupported as exc:
             out.skipped += len(group["tests"])

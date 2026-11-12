@@ -26,9 +26,9 @@
   },
   {
    "file": "anchor",
-   "passed": 0,
+   "passed": 8,
    "failed": 0,
-   "skipped": 8,
+   "skipped": 0,
    "opaque": 0
   },
   {
@@ -264,16 +264,16 @@
   },
   {
    "file": "recursiveRef",
-   "passed": 4,
+   "passed": 25,
    "failed": 0,
-   "skipped": 30,
+   "skipped": 9,
    "opaque": 0
   },
   {
    "file": "ref",
-   "passed": 44,
+   "passed": 76,
    "failed": 0,
-   "skipped": 37,
+   "skipped": 5,
    "opaque": 0
   },
   {

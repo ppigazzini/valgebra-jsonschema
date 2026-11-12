@@ -6,31 +6,31 @@
   {
    "subset": "Github_easy",
    "schemas": 1943,
-   "compiled": 1932,
-   "refused": 11,
+   "compiled": 1934,
+   "refused": 9,
    "crashed": 0,
    "timed_out": 0,
-   "values": 84129,
+   "values": 84201,
    "disagreed": 2
   },
   {
    "subset": "Github_hard",
    "schemas": 1240,
-   "compiled": 1218,
-   "refused": 22,
+   "compiled": 1221,
+   "refused": 19,
    "crashed": 0,
    "timed_out": 0,
-   "values": 47920,
+   "values": 48020,
    "disagreed": 0
   },
   {
    "subset": "Github_medium",
    "schemas": 1976,
-   "compiled": 1964,
-   "refused": 12,
+   "compiled": 1965,
+   "refused": 11,
    "crashed": 0,
    "timed_out": 0,
-   "values": 83585,
+   "values": 83613,
    "disagreed": 0
   },
   {
@@ -66,11 +66,11 @@
   {
    "subset": "JsonSchemaStore",
    "schemas": 492,
-   "compiled": 457,
-   "refused": 35,
+   "compiled": 459,
+   "refused": 33,
    "crashed": 0,
    "timed_out": 0,
-   "values": 17946,
+   "values": 18042,
    "disagreed": 0
   },
   {
@@ -106,8 +106,8 @@
  ],
  "refusals": [
   {
-   "reason": "a $ref outside the document, to an anchor, or through an embedded $id",
-   "schemas": 5
+   "reason": "a $ref to another document, or to nothing in this one",
+   "schemas": 8
   },
   {
    "reason": "a keyword holding what the meta-schema refuses",
@@ -124,10 +124,6 @@
   {
    "reason": "a set valgebra refuses to build",
    "schemas": 13
-  },
-  {
-   "reason": "an embedded $id",
-   "schemas": 11
   },
   {
    "reason": "the keyword additionalItems",

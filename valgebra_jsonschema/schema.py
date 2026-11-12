@@ -41,11 +41,11 @@ from __future__ import annotations
 import itertools
 import math
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Annotated, Any, TypeAlias
-from urllib.parse import unquote
+from urllib.parse import unquote, urljoin
 
 from annotated_types import Ge, Gt, Le, Lt, MaxLen, MinLen, MultipleOf
 
@@ -147,6 +147,7 @@ def older(schema: object) -> int | None:
 SUPPORTED = frozenset(
     {
         "$id",
+        "$anchor",
         "$ref",
         "prefixItems",
         "items",
@@ -194,7 +195,6 @@ REFUSED = frozenset(
         "unevaluatedItems",
         "$dynamicRef",
         "$dynamicAnchor",
-        "$anchor",
         "$recursiveRef",
         "$recursiveAnchor",
         "additionalItems",
@@ -312,15 +312,25 @@ class Compiler:
         #: Keywords outside draft 2020-12's vocabularies, which it says to treat as
         #: annotations: they assert nothing, and each one met is recorded here.
         self.ignored: set[str] = set()
-        self._done: dict[str, Validator[Any]] = {}
-        self._open: dict[str, Validator[Any]] = {}
+        #: Each target by its node and the base URI around it, which every reference
+        #: inside it resolves against.
+        self._done: dict[_Target, Validator[Any]] = {}
+        self._open: dict[_Target, Validator[Any]] = {}
         #: The open fixpoints whose placeholder each reference returned, in order.
-        self._used: list[str] = []
+        self._used: list[_Target] = []
         #: Sets built around open placeholders, with the fixpoints they need open: each is
         #: reused while those are, and dropped when one closes.
-        self._scoped: dict[str, tuple[Validator[Any], frozenset[str]]] = {}
-        #: Whether each target, by node, reaches itself through references.
-        self._recursive: dict[int, bool] = {}
+        self._scoped: dict[_Target, tuple[Validator[Any], frozenset[_Target]]] = {}
+        #: Whether each target reaches itself through references.
+        self._recursive: dict[_Target, bool] = {}
+        #: Each resource by its URI and each anchor by its resource's URI and its name, with
+        #: the base URI around the schema object it names: `_index` fills both at the first
+        #: reference past the root's own resource, which most documents never make.
+        self._root_base = _within("", root)
+        self._resources: dict[str, tuple[object, str]] = {}
+        self._anchors: dict[tuple[str, str], tuple[object, str]] = {}
+        #: The base URI inside each schema object being compiled.
+        self._bases: list[str] = [""]
         self._typed: list[frozenset[str] | None] = []
         #: Whether a keyword of each schema being compiled has guarded itself past the
         #: universe (`guard`): only then does the schema need its meet with ``JSON``.
@@ -387,10 +397,12 @@ class Compiler:
         parts: list[object] = []
         self._typed.append(typed)
         self._escaped.append(False)
+        self._bases.append(_within(self._bases[-1], schema))
         try:
             self._keywords(schema, parts)
         finally:
             self._typed.pop()
+            self._bases.pop()
             escaped = self._escaped.pop()
         # Every compiled subschema lies inside the universe, and so do the meets, unions and
         # differences of them that `allOf`, `anyOf`, `oneOf`, `not`, `if` and `$ref` build;
@@ -407,7 +419,11 @@ class Compiler:
         if self.assert_format and "format" in schema:
             parts.append(self._format(schema["format"]))
         for keyword in schema:
-            if keyword in ANNOTATIONS or (keyword == "$id" and self._inert(schema)):
+            if (
+                keyword in ANNOTATIONS
+                or keyword == "$anchor"
+                or (keyword == "$id" and self._inert(schema))
+            ):
                 continue
             group = _GROUPS.get(keyword, keyword)
             if group in seen:
@@ -436,8 +452,8 @@ class Compiler:
         msg = f"keyword 'format' holds {name!r:.60}, which is not asserted here"
         raise Unsupported(msg)
 
-    def ref(self, pointer: str) -> Validator[Any]:
-        """Return the set a local JSON pointer names.
+    def ref(self, reference: str) -> Validator[Any]:
+        """Return the set a reference names, resolved against the base URI it sits under.
 
         A target that reaches itself through references is a `valgebra.recursive` fixpoint;
         any other is compiled in place. Each fixpoint is a definition, and valgebra admits
@@ -448,48 +464,57 @@ class Compiler:
         built: the placeholder stands for its fixpoint inside that fixpoint's builder alone,
         and a set built around one means something else, or nothing, anywhere else.
         """
-        if pointer in self._done:
-            return self._done[pointer]
-        if pointer in self._open:
-            self._used.append(pointer)
-            return self._open[pointer]
-        if pointer in self._scoped:
-            built, needs = self._scoped[pointer]
+        node, around = self._locate(reference, self._bases[-1])
+        target = (id(node), around)
+        if target in self._done:
+            return self._done[target]
+        if target in self._open:
+            self._used.append(target)
+            return self._open[target]
+        if target in self._scoped:
+            built, needs = self._scoped[target]
             self._used.extend(needs)
             return built
-        target = self.resolve(pointer)
         mark = len(self._used)
-        if not self._reaches_itself(target):
-            built = self.compile(target)
+        if not self._reaches_itself(node, around):
+            built = self._compile_at(node, around)
         else:
 
             def body(this: Validator[Any]) -> Validator[Any]:
-                self._open[pointer] = this
+                self._open[target] = this
                 try:
-                    return self.compile(target)
+                    return self._compile_at(node, around)
                 finally:
-                    del self._open[pointer]
+                    del self._open[target]
 
             try:
                 built = recursive(body)
             except Unsupported:
                 raise
             except ValueError as exc:
-                msg = f"{_PAST_VALGEBRAS_LIMIT}: $ref {pointer!r}: {exc}"
+                msg = f"{_PAST_VALGEBRAS_LIMIT}: $ref {reference!r}: {exc}"
                 raise Unsupported(msg) from exc
             finally:
                 # Sets built around this fixpoint's placeholder mean nothing once it closes.
                 self._scoped = {
-                    p: (v, needs) for p, (v, needs) in self._scoped.items() if pointer not in needs
+                    t: (v, needs) for t, (v, needs) in self._scoped.items() if target not in needs
                 }
             # The fixpoint closes over its own placeholder; what it leaves open is the rest.
-            self._used[mark:] = [p for p in self._used[mark:] if p != pointer]
+            self._used[mark:] = [t for t in self._used[mark:] if t != target]
         needs = frozenset(self._used[mark:])
         if needs:
-            self._scoped[pointer] = (built, needs)
+            self._scoped[target] = (built, needs)
         else:
-            self._done[pointer] = built
+            self._done[target] = built
         return built
+
+    def _compile_at(self, schema: object, base: str) -> Validator[Any]:
+        """Return the set ``schema`` compiles to where ``base`` is the base URI around it."""
+        self._bases.append(base)
+        try:
+            return self.compile(schema)
+        finally:
+            self._bases.pop()
 
     def closed(self, schema: object) -> Callable[[], Validator[Any]]:
         """Return a getter of the set ``schema`` compiles to, for a callback to check against.
@@ -503,23 +528,23 @@ class Compiler:
         built = self.compile(schema)
         if len(self._used) == mark:
             return lambda: built
-        root = self.root
+        root, base = self.root, self._bases[-1]
         cache: list[Validator[Any]] = []
 
         def get() -> Validator[Any]:
             if not cache:
-                cache.append(Compiler(root).compile(schema))
+                cache.append(Compiler(root)._compile_at(schema, base))  # noqa: SLF001
             return cache[0]
 
         return get
 
     def _inert(self, resource: dict[str, Any]) -> bool:
-        """Return whether a schema's ``$id`` changes nothing its set depends on.
+        """Return whether a schema's ``$id`` starts a resource in the document's dialect.
 
         A root's ``$id`` names the document. An embedded one starts a resource whose base
-        URI the references inside it resolve against, and which may declare a dialect of its
-        own (draft 2020-12, section 8.1.1); with no reference or anchor inside and no other
-        ``$schema``, the resource means what its keywords mean wherever it sits.
+        URI the references and anchors inside it resolve against (`_within`), and which may
+        declare a dialect of its own (draft 2020-12, section 8.1.1); with no other
+        ``$schema`` inside, the resource means what its keywords mean.
         """
         if resource is self.root:
             return True
@@ -528,61 +553,95 @@ class Compiler:
         while stack:
             here = stack.pop()
             if isinstance(here, dict):
-                if _RESOLVING & here.keys() or here.get("$schema", dialect) != dialect:
+                if here.get("$schema", dialect) != dialect:
                     return False
                 stack.extend(here.values())
             elif isinstance(here, list):
                 stack.extend(here)
         return True
 
-    def _reaches_itself(self, target: object) -> bool:
-        """Return whether a reference inside ``target`` leads back to it, through any others.
+    def _index(self, root: object) -> None:
+        """Record every resource and anchor of the document by the URI a reference names it.
+
+        A schema object's ``$id`` resolves against the base URI around it and starts a
+        resource with the result as its base, and an ``$anchor`` names a schema object
+        inside its resource (draft 2020-12, section 8.2). Only the keywords that hold
+        subschemas are descended into, so an ``$id`` inside an ``enum`` names nothing. The
+        first of two schema objects one URI names is the one it names.
+        """
+        stack: list[tuple[object, str]] = [(root, "")]
+        while stack:
+            node, around = stack.pop()
+            if not isinstance(node, dict):
+                continue
+            base = _within(around, node)
+            if node is root or isinstance(node.get("$id"), str):
+                self._resources.setdefault(base, (node, around))
+            if isinstance(node.get("$anchor"), str):
+                self._anchors.setdefault((base, node["$anchor"]), (node, around))
+            stack.extend((sub, base) for sub in _subschemas(node))
+
+    def _reaches_itself(self, node: object, around: str) -> bool:
+        """Return whether a reference inside ``node`` leads back to it, through any others.
 
         Every ``$ref`` string in a subtree counts, at any depth, so a target inside a
         subtree a reference names is reached too. A string that only looks like a
         reference, inside an `enum`, makes a target recursive that is not: the fixpoint
         it then gets denotes the same set.
         """
-        key = id(target)
-        if key in self._recursive:
-            return self._recursive[key]
-        self._recursive[key] = self._walks_back(target)
+        key = (id(node), around)
+        if key not in self._recursive:
+            self._recursive[key] = self._walks_back(node, around)
         return self._recursive[key]
 
-    def _walks_back(self, target: object) -> bool:
+    def _walks_back(self, target: object, around: str) -> bool:
         seen: set[int] = set()
-        stack = list(_references(target))
+        stack = _references(target, around)
         while stack:
             try:
-                node = self.resolve(stack.pop())
+                node, base = self._locate(stack.pop(), "")
             except Unsupported:
                 continue
             if node is target:
                 return True
             if id(node) not in seen:
                 seen.add(id(node))
-                stack.extend(_references(node))
+                stack.extend(_references(node, base))
         return False
 
-    def resolve(self, pointer: str) -> object:
-        """Return the node a local JSON pointer names, or raise `Unsupported`."""
-        if not isinstance(pointer, str):
-            msg = f"keyword '$ref' holds {pointer!r:.60}, as no schema may"
+    def resolve(self, reference: str) -> object:
+        """Return the schema a reference names from the document's root, or raise `Unsupported`."""
+        return self._locate(reference, self._root_base)[0]
+
+    def _locate(self, reference: object, base: str) -> tuple[object, str]:
+        """Return the schema a reference names from ``base``, and the base URI around it.
+
+        The reference resolves against ``base`` to a resource's URI and a fragment: none
+        names the resource, a JSON pointer a schema inside it, and any other an anchor.
+        """
+        if not isinstance(reference, str):
+            msg = f"keyword '$ref' holds {reference!r:.60}, as no schema may"
             raise Unsupported(msg)
-        if not pointer.startswith("#"):
-            msg = f"$ref {pointer!r} is not local to the document"
+        uri, _, fragment = _join(base, reference).partition("#")
+        fragment = unquote(fragment)
+        anchor = fragment and not fragment.startswith("/")
+        if not self._resources and (anchor or uri != self._root_base):
+            self._index(self.root)
+        if uri == self._root_base and not self._resources:
+            node, around = self.root, ""
+        elif uri in self._resources:
+            node, around = self._resources[uri]
+        else:
+            msg = f"$ref {reference!r} names a document this one does not hold"
             raise Unsupported(msg)
-        if pointer not in {"#", "#/"} and not pointer.startswith("#/"):
-            msg = f"$ref {pointer!r} names an anchor; only JSON pointers are supported"
-            raise Unsupported(msg)
-        node = self.root
-        for raw in unquote(pointer[1:]).split("/")[1:]:
-            part = raw.replace("~1", "/").replace("~0", "~")
-            if node is not self.root and isinstance(node, dict) and "$id" in node:
-                # The pointer enters an embedded resource, whose `$ref`s resolve against
-                # its own base URI; reading them against the root would misread them.
-                msg = f"$ref {pointer!r} passes through an embedded $id resource"
+        if anchor:
+            if (uri, fragment) not in self._anchors:
+                msg = f"$ref {reference!r} names no anchor of its resource"
                 raise Unsupported(msg)
+            return self._anchors[uri, fragment]
+        for raw in fragment.split("/")[1:]:
+            part = raw.replace("~1", "/").replace("~0", "~")
+            inside = _within(around, node) if isinstance(node, dict) and "$id" in node else around
             if isinstance(node, dict) and part in node:
                 node = node[part]
             elif isinstance(node, dict) and part == "items" and "prefixItems" in node:
@@ -591,29 +650,63 @@ class Compiler:
             elif isinstance(node, list) and _INDEX.fullmatch(part) and int(part) < len(node):
                 node = node[int(part)]
             else:
-                msg = f"$ref {pointer!r} names nothing in the document"
+                msg = f"$ref {reference!r} names nothing in the document"
                 raise Unsupported(msg)
-        return node
+            around = inside
+        return node, around
 
 
-#: The keywords a base URI bears on: references and the anchors they may name.
-_RESOLVING = frozenset(
-    {"$ref", "$dynamicRef", "$anchor", "$dynamicAnchor", "$recursiveRef", "$recursiveAnchor"}
-)
+#: A schema to compile, by its node and the base URI around it.
+_Target: TypeAlias = tuple[int, str]
 
 
-def _references(node: object) -> list[str]:
-    """Return every ``$ref`` string in ``node``'s subtree."""
+def _join(base: str, reference: str) -> str:
+    """Return ``reference`` resolved against ``base``, as RFC 3986 section 5 resolves it.
+
+    `urljoin` returns a fragment alone where the base's scheme is not one it knows to be
+    hierarchical, as ``urn:`` is not; a fragment changes no other part of the base.
+    """
+    return base + reference if reference.startswith("#") else urljoin(base, reference)
+
+
+def _within(base: str, schema: object) -> str:
+    """Return the base URI inside ``schema``: its ``$id`` resolved against ``base``.
+
+    A fragment is no part of a base URI: draft 2020-12 has ``$anchor`` name one, and an
+    older draft's ``$id`` fragment is one `upgrade` rewrites to it.
+    """
+    identifier = schema.get("$id") if isinstance(schema, dict) else None
+    return _join(base, identifier).partition("#")[0] if isinstance(identifier, str) else base
+
+
+def _subschemas(schema: dict[str, Any]) -> Iterator[object]:
+    """Yield the subschemas a schema object's keywords hold."""
+    for key, value in schema.items():
+        if key in _ONE or key == "items":
+            yield value
+        elif (key in _MANY or key == "prefixItems") and isinstance(value, list):
+            yield from value
+        elif key in _MAP and isinstance(value, dict):
+            yield from value.values()
+
+
+def _references(node: object, base: str) -> list[str]:
+    """Return every ``$ref`` string in ``node``'s subtree, resolved against its base URI."""
     found: list[str] = []
-    stack = [node]
+    stack: list[tuple[object, str]] = [(node, base)]
     while stack:
-        here = stack.pop()
+        here, around = stack.pop()
         if isinstance(here, dict):
-            if isinstance(here.get("$ref"), str):
-                found.append(here["$ref"])
-            stack.extend(here.values())
+            if "$id" in here:
+                around = _within(around, here)
+            if isinstance(reference := here.get("$ref"), str):
+                found.append(_join(around, reference))
+            values: Iterable[object] = here.values()
         elif isinstance(here, list):
-            stack.extend(here)
+            values = here
+        else:
+            continue
+        stack.extend([(value, around) for value in values if isinstance(value, (dict, list))])
     return found
 
 
@@ -1261,10 +1354,7 @@ def _ref(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
 
 def _schema_id(_c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     del s
-    msg = (
-        "keyword '$id' changes the base URI of a resource holding a reference or another "
-        "dialect; only local references are supported"
-    )
+    msg = "keyword '$id' starts a resource that declares another dialect"
     raise Unsupported(msg)
 
 
@@ -1308,6 +1398,7 @@ _SHAPES: Mapping[str, Callable[[object], bool]] = {
     "exclusiveMaximum": _is_number,
     "pattern": lambda v: isinstance(v, str),
     "$ref": lambda v: isinstance(v, str),
+    "$anchor": lambda v: isinstance(v, str) and _ANCHOR.fullmatch(v) is not None,
     "uniqueItems": lambda v: isinstance(v, bool),
     "items": _is_schema,
     "contains": _is_schema,
@@ -1329,6 +1420,8 @@ _SHAPES: Mapping[str, Callable[[object], bool]] = {
 
 #: An array index in a JSON pointer, as RFC 6901 writes one: no sign, no leading zero.
 _INDEX = re.compile(r"0|[1-9][0-9]*", re.ASCII)
+#: A plain-name fragment, as draft 2020-12's meta-schema writes ``$anchor``.
+_ANCHOR = re.compile(r"[A-Za-z_][-A-Za-z0-9._]*", re.ASCII)
 
 
 def _check_shapes(schema: dict[str, Any]) -> None:
@@ -1590,17 +1683,41 @@ def upgrade(schema: object, draft: int = 7) -> object:
     its name, so every JSON pointer into the document still resolves. A keyword the draft
     does not know is an annotation there and is dropped (`_UNKNOWN`). Draft-04 also writes
     ``exclusiveMinimum`` and ``exclusiveMaximum`` as flags on ``minimum`` and ``maximum``,
-    and ``$id`` as ``id``. Only the keywords that hold subschemas are descended into: a
-    property named ``items`` is a name, not a keyword. A keyword holding a value of the
-    wrong shape is copied as it is, for the compiler's shape check to name.
+    and ``$id`` as ``id``. An ``$id`` fragment that is a plain name names its schema object
+    as draft 2020-12's ``$anchor`` does, and is written as one; any other fragment names
+    nothing a reference resolves to. Only the keywords that hold subschemas are descended
+    into: a property named ``items`` is a name, not a keyword. A keyword holding a value of
+    the wrong shape is copied as it is, for the compiler's shape check to name.
 
     Draft 2019-09 differs less: a ``$ref`` keeps its siblings, ``dependencies`` is no keyword,
     and the array ``items`` is the one change of meaning, beside ``$recursiveRef``. That is
-    ``$ref: "#"`` where one resource holds it, which is every document the compiler reads,
-    since it refuses a reference inside an embedded ``$id``.
+    ``$ref: "#"``, the root of the resource holding it, wherever at most one resource sets
+    ``$recursiveAnchor``: the reference then reaches the outermost resource of the dynamic
+    scope that sets it only where that resource is its own. A document where two set it is
+    refused.
     """
     _check_nesting(schema)
+    if draft == DRAFT2019:
+        _check_recursive_anchors(schema)
     return _upgrade(schema, draft)
+
+
+def _check_recursive_anchors(schema: object) -> None:
+    """Refuse a ``$recursiveRef`` in a document where two resources set ``$recursiveAnchor``."""
+    anchored, referring = 0, False
+    stack = [schema]
+    while stack:
+        here = stack.pop()
+        if isinstance(here, dict):
+            resource = here is schema or "$id" in here
+            anchored += resource and here.get("$recursiveAnchor") is True
+            referring |= "$recursiveRef" in here
+            stack.extend(here.values())
+        elif isinstance(here, list):
+            stack.extend(here)
+    if referring and anchored > 1:
+        msg = "keyword '$recursiveRef' in a document where two resources set $recursiveAnchor"
+        raise Unsupported(msg)
 
 
 def _upgrade(schema: object, draft: int) -> object:
@@ -1613,6 +1730,8 @@ def _upgrade(schema: object, draft: int) -> object:
     for key, value in ((k, v) for k, v in schema.items() if k not in _UNKNOWN[draft]):
         if key == "$schema":
             out[key] = DRAFT
+        elif key == "$id" and draft != DRAFT2019 and isinstance(value, str):
+            out |= _upgrade_id(value)
         elif key in {"items", "additionalItems"}:
             out |= _upgrade_items(schema, draft) if key == "items" or "items" not in schema else {}
         elif key == "dependencies" and draft != DRAFT2019:
@@ -1666,6 +1785,15 @@ def _upgrade_draft4(schema: dict[str, Any]) -> dict[str, Any]:
             out[exclusive] = out.pop(bound)
     if isinstance(out.get("id"), str):
         out["$id"] = out.pop("id")
+    return out
+
+
+def _upgrade_id(value: str) -> dict[str, Any]:
+    """Return an older ``$id`` as a base URI and the ``$anchor`` its fragment names."""
+    base, _, fragment = value.partition("#")
+    out: dict[str, Any] = {"$id": base} if base else {}
+    if _ANCHOR.fullmatch(fragment):
+        out["$anchor"] = fragment
     return out
 
 

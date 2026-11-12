@@ -6,6 +6,15 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A `$ref` resolves against the base URI it sits under: an embedded `$id` starts a resource,
+  and a reference names a resource of the document by its URI, then a schema in it by a JSON
+  pointer or an `$anchor`. An older draft's `$id` fragment that is a plain name reads as the
+  `$anchor` it names. 8 more JSONSchemaBench schemas compile, 9456 of 9558, and the suite
+  studies run 1111 cases of draft 2020-12, 1022 of 2019-09, 902 of draft-07, 814 of draft-06 and
+  597 of draft-04, each passing.
+
 ### Changed
 
 - `oneOf` leaves out the complement of a branch valgebra proves disjoint from another, which

@@ -31,13 +31,14 @@ keyword's kind, the guard's other half is empty after the meet and is left out.
 | `allOf`, `anyOf`, `not` | meet, union, complement within the JSON values |
 | `oneOf` | each branch minus every other branch valgebra does not prove disjoint from it |
 | `if`, `then`, `else` | `(if & then) | (~if & else)` |
-| `$ref` | a local JSON pointer, compiled as a `recursive` fixpoint over its target |
+| `$ref` | resolved against the base URI it sits under, to a resource of the document and a JSON pointer or `$anchor` in it; compiled as a `recursive` fixpoint over its target |
 
 Annotations assert nothing and are skipped: `title`, `description`, `default`, `examples`,
 `deprecated`, `readOnly`, `writeOnly`, `format` (the format-annotation vocabulary is the
-default), the `content*` keywords, `$comment`, `$defs`. A root `$id` is skipped, and so is
-an embedded one whose resource holds no reference or anchor and declares no other `$schema`:
-the base URI it sets is one nothing inside resolves against.
+default), the `content*` keywords, `$comment`, `$defs`. `$id` and `$anchor` assert nothing
+either: `$id` sets the base URI of its resource, which the references inside resolve against
+(draft 2020-12, section 8.2), and `$anchor` names its schema object within that resource. An
+embedded resource declaring another `$schema` is refused.
 
 ## `format`, on request
 
@@ -65,14 +66,16 @@ dropped, since it reads it as an annotation: `prefixItems`, `minContains` or
 `dependentRequired` written into any of them, `if`, `then` and `else` in draft-06, and
 `const`, `contains` and `propertyNames` in draft-04 too. Draft-04 also writes
 `exclusiveMinimum` and `exclusiveMaximum` as flags on `minimum` and `maximum`, and `$id`
-as `id`; both are rewritten. Only keywords that hold subschemas are descended into, so a
-property named `items` stays a name.
+as `id`; both are rewritten. An older `$id` whose fragment is a plain name, `#foo`, names its
+schema object as `$anchor` does, and is rewritten to one. Only keywords that hold subschemas
+are descended into, so a property named `items` stays a name.
 
 Draft 2019-09 differs less. A `$ref` keeps its siblings, `dependencies` is no keyword, so it is
 refused as in 2020-12, and two keywords read apart from 2020-12: an array `items`, and
-`$recursiveRef`. `$recursiveRef: "#"` is `$ref: "#"` wherever one resource holds it, which is
-every document compiled here, since a reference inside an embedded `$id` is refused. Any other
-value is refused.
+`$recursiveRef`. `$recursiveRef: "#"` is `$ref: "#"`, the root of the resource holding it,
+wherever at most one resource sets `$recursiveAnchor`: it reaches the outermost resource of the
+dynamic scope that sets it only where that resource is its own. A document where two set it is
+refused, and so is any other value.
 
 ## Keys
 
@@ -101,9 +104,8 @@ predicates: membership is exact, and a relation that has to look inside one answ
 ## Refused, and ignored
 
 `Unsupported` names the keyword: `unevaluatedProperties`, `unevaluatedItems`,
-`$dynamicRef`, `$dynamicAnchor`, `$anchor` references, references outside the document, an
-embedded `$id` whose resource holds a reference or an anchor or declares another `$schema`,
-a pointer through any embedded `$id`, a draft other than 2020-12, 2019-09, 07, 06 and 04, and a
+`$dynamicRef`, `$dynamicAnchor`, references to another document, an embedded `$id` whose
+resource declares another `$schema`, a draft other than 2020-12, 2019-09, 07, 06 and 04, and a
 property name ending in `?` (valgebra reads that suffix as "optional"). A keyword outside the
 vocabularies is an annotation, as draft 2020-12 says, and `Compiler.ignored` records it.
 
@@ -115,21 +117,22 @@ uv run python tools/suite.py --check docs/studies/json-schema-test-suite.json
 
 The official JSON-Schema-Test-Suite at commit `89e83a740146`, vendored with its MIT
 license. Draft 2020-12, with the four optional files on regular expressions and large
-numbers: 1071 cases run, 1071 passed, 0 failed; 327 skipped by the refusals above; 95 of
+numbers: 1111 cases run, 1111 passed, 0 failed; 287 skipped by the refusals above; 95 of
 the run cases go through an opaque predicate. Draft-07, through `upgrade`:
 
 ```bash
 uv run python tools/suite.py --draft 7 --check docs/studies/json-schema-test-suite-draft7.json
 ```
 
-870 cases run, 870 passed, 0 failed; 59 skipped (remote references and `$id` scopes). Draft
+902 cases run, 902 passed, 0 failed; 27 skipped (remote references). Draft
 2019-09, through `upgrade`:
 
 ```bash
 uv run python tools/suite.py --draft 2019-09 --check docs/studies/json-schema-test-suite-draft2019-09.json
 ```
 
-961 cases run, 961 passed, 0 failed; 300 skipped, by the same refusals. Draft-06 and draft-04,
+1022 cases run, 1022 passed, 0 failed; 239 skipped, by the same refusals and a
+`$recursiveRef` where two resources set `$recursiveAnchor`. Draft-06 and draft-04,
 through `upgrade`:
 
 ```bash
@@ -137,8 +140,8 @@ uv run python tools/suite.py --draft 6 --check docs/studies/json-schema-test-sui
 uv run python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
 ```
 
-Draft-06, 790 cases run, 790 passed, 0 failed; 51 skipped. Draft-04, 587 cases run, 587
-passed, 0 failed; 31 skipped. Both skip remote references, `$id` scopes and anchors.
+Draft-06, 814 cases run, 814 passed, 0 failed; 27 skipped. Draft-04, 597 cases run, 597
+passed, 0 failed; 21 skipped. Both skip remote references.
 
 ```bash
 uv run python tools/suite.py --reference

@@ -54,15 +54,18 @@ Every keyword of the draft 2020-12 vocabularies is in exactly one class, and
 
 | class | keywords |
 |---|---|
-| translated exactly | `type`, `enum`, `const`, `maximum`, `exclusiveMaximum`, `minimum`, `exclusiveMinimum`, an integral `multipleOf`, `minLength`, `maxLength`, `pattern`, `prefixItems`, `items`, `contains`, `minItems`, `maxItems`, `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`, `patternProperties`, `propertyNames`, `dependentRequired`, `dependentSchemas`, `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`, `else`, `$ref`, `$id` |
+| translated exactly | `type`, `enum`, `const`, `maximum`, `exclusiveMaximum`, `minimum`, `exclusiveMinimum`, an integral `multipleOf`, `minLength`, `maxLength`, `pattern`, `prefixItems`, `items`, `contains`, `minItems`, `maxItems`, `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`, `patternProperties`, `propertyNames`, `dependentRequired`, `dependentSchemas`, `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`, `else`, `$ref`, `$id`, `$anchor` |
 | translated as an opaque predicate | `uniqueItems`, `minContains`, `maxContains`, a fractional `multipleOf`, `patternProperties` past four patterns or in a schema past valgebra's limit, a `propertyNames` reading more than words and no boolean schema |
 | annotations | `title`, `description`, `default`, `examples`, `deprecated`, `readOnly`, `writeOnly`, `format`, `contentEncoding`, `contentMediaType`, `contentSchema`, `$schema`, `$vocabulary`, `$comment`, `$defs`, `definitions` |
-| refused | `unevaluatedProperties`, `unevaluatedItems`, `$anchor`, `$dynamicRef`, `$dynamicAnchor`, `$recursiveRef`, `$recursiveAnchor`, `additionalItems`, `dependencies` |
+| refused | `unevaluatedProperties`, `unevaluatedItems`, `$dynamicRef`, `$dynamicAnchor`, `$recursiveRef`, `$recursiveAnchor`, `additionalItems`, `dependencies` |
 
-`$ref` is read for a local pointer, and a reference outside the document is refused and never
-fetched. `$id` is read at the root and on an embedded resource that holds no reference or
-anchor and declares no other `$schema`; any other embedded `$id`, and a pointer through one, is
-refused.
+`$ref` resolves against the base URI it sits under, as draft 2020-12's section 8.2 states: `$id`
+sets the base of its resource, and the reference names a resource of the document by its URI,
+then a schema in it by a JSON pointer or by an `$anchor`. A reference to any other document is
+refused and never fetched, and so is an embedded resource declaring another `$schema`. An older
+draft's `$id` fragment that is a plain name is the `$anchor` it names. A draft 2019-09
+`$recursiveRef` is read as `$ref: "#"`, which it is wherever at most one resource sets
+`$recursiveAnchor`, and refused in a document where two do.
 
 A keyword outside the vocabularies is an annotation, as draft 2020-12 says to treat it,
 and `Compiler.ignored` records it: `x-label` or OpenAPI's `nullable` assert nothing. Two

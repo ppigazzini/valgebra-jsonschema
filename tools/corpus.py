@@ -109,10 +109,10 @@ def _alarm(*_: object) -> None:
 #: What the compiler does not read, by the start of the refusal it gives.
 REASONS = (
     ("$schema", "a $schema it does not read"),
-    ("keyword '$id'", "an embedded $id"),
+    ("keyword '$id'", "an embedded $id declaring another dialect"),
     ("pattern ", "a pattern outside valgebra's regex dialect"),
     ("negated class", "a pattern outside valgebra's regex dialect"),
-    ("$ref", "a $ref outside the document, to an anchor, or through an embedded $id"),
+    ("$ref", "a $ref to another document, or to nothing in this one"),
     ("valgebra refuses", "a set valgebra refuses to build"),
     ("property name", "a property name valgebra cannot hold"),
     ("a schema is an object or a boolean", "a value where a schema belongs"),

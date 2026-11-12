@@ -73,14 +73,14 @@ uv run python tools/containment.py --check docs/studies/containment.json
 ```
 
 - **Against the official JSON-Schema-Test-Suite**: draft 2020-12 with the four optional files on
-  regular expressions and large numbers, 1071 of the 1071 cases it runs; draft 2019-09, 961 of
-  961; draft-07, 870 of 870; draft-06, 790 of 790; draft-04, 587 of 587. Skipped: `unevaluated*`,
-  dynamic, anchor and remote references.
+  regular expressions and large numbers, 1111 of the 1111 cases it runs; draft 2019-09, 1022 of
+  1022; draft-07, 902 of 902; draft-06, 814 of 814; draft-04, 597 of 597. Skipped: `unevaluated*`,
+  dynamic and remote references.
 - **Real-world schemas** (JSONSchemaBench, 9558 schemas from GitHub, the JSON Schema Store,
-  Kubernetes and function-calling data): 9448 compile, none crashes; membership differs from the
-  `jsonschema` package's on 12 of 403424 values, each a reading the ledger records.
-- **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 6047 proven,
-  none against a label; each of the 258 refutations against a label is a wrong label, which
+  Kubernetes and function-calling data): 9456 compile, none crashes; membership differs from the
+  `jsonschema` package's on 12 of 403720 values, each a reading the ledger records.
+- **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 6197 proven,
+  none against a label; each of the 274 refutations against a label is a wrong label, which
   [`docs/04-results.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/04-results.md)
   names.
 

@@ -38,6 +38,8 @@ the study with `--json` in the same commit and says why the count moved.
 ## Conventions
 
 - `docs/10-writing.md` is the standard for pages, comments and commit messages.
+- `docs/06-releasing.md` is the order a version reaches PyPI in, and only a dispatch of
+  `.github/workflows/release.yml` uploads one.
 - A proof is valgebra's or a concrete value's; nothing here turns "not proven" into "false" or
   "true". A relation valgebra cannot decide is `undecided`.
 - A keyword the compiler does not translate raises `Unsupported`. `docs/03-conformance.md` holds

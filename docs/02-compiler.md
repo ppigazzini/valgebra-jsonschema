@@ -104,9 +104,10 @@ predicates: membership is exact, and a relation that has to look inside one answ
 ## Refused, and ignored
 
 `Unsupported` names the keyword: `unevaluatedProperties`, `unevaluatedItems`,
-`$dynamicRef`, `$dynamicAnchor`, references to another document, an embedded `$id` whose
-resource declares another `$schema`, a draft other than 2020-12, 2019-09, 07, 06 and 04, and a
-property name ending in `?` (valgebra reads that suffix as "optional"). A keyword outside the
+`$dynamicRef`, `$dynamicAnchor`, references to a document neither the one compiled nor
+`documents` holds, a supplied document in a dialect not read where a reference names it, an
+embedded `$id` whose resource declares another `$schema`, a draft other than 2020-12, 2019-09,
+07, 06 and 04, and a property name ending in `?` (valgebra reads that suffix as "optional"). A keyword outside the
 vocabularies is an annotation, as draft 2020-12 says, and `Compiler.ignored` records it.
 
 ## Measured

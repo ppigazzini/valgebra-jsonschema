@@ -300,9 +300,17 @@ class Compiler:
     """
 
     def __init__(
-        self, root: object, *, assert_format: bool = False, by_clauses: bool = True
+        self,
+        root: object,
+        *,
+        assert_format: bool = False,
+        by_clauses: bool = True,
+        documents: Mapping[str, object] | None = None,
     ) -> None:
         self.root = root
+        #: The documents a reference may name beside this one, by the URI each is retrieved
+        #: by; a reference to any other is refused, and none is fetched.
+        self.documents: Mapping[str, object] = documents or {}
         #: Read a key narrowed by a pattern as a clause, which a relation can read, rather than
         #: as a predicate. `compile_schema` turns it off for a schema past valgebra's limit.
         self.by_clauses = by_clauses
@@ -329,6 +337,8 @@ class Compiler:
         self._root_base = _within("", root)
         self._resources: dict[str, tuple[object, str]] = {}
         self._anchors: dict[tuple[str, str], tuple[object, str]] = {}
+        #: Why each supplied document a reference may not read is refused, by its URI.
+        self._refused: dict[str, str] = {}
         #: The base URI inside each schema object being compiled.
         self._bases: list[str] = [""]
         self._typed: list[frozenset[str] | None] = []
@@ -533,7 +543,8 @@ class Compiler:
 
         def get() -> Validator[Any]:
             if not cache:
-                cache.append(Compiler(root)._compile_at(schema, base))  # noqa: SLF001
+                again = Compiler(root, documents=self.documents)
+                cache.append(again._compile_at(schema, base))
             return cache[0]
 
         return get
@@ -568,8 +579,21 @@ class Compiler:
         inside its resource (draft 2020-12, section 8.2). Only the keywords that hold
         subschemas are descended into, so an ``$id`` inside an ``enum`` names nothing. The
         first of two schema objects one URI names is the one it names.
+
+        A supplied document is a resource at the URI it is supplied by, read in its own
+        dialect through `upgrade`; one this compiler does not read is refused only where a
+        reference names it.
         """
         stack: list[tuple[object, str]] = [(root, "")]
+        for uri, document in self.documents.items():
+            key = uri.partition("#")[0]
+            try:
+                document = _in_this_dialect(document)  # noqa: PLW2901
+            except Unsupported as exc:
+                self._refused.setdefault(key, str(exc))
+                continue
+            self._resources.setdefault(key, (document, key))
+            stack.append((document, key))
         while stack:
             node, around = stack.pop()
             if not isinstance(node, dict):
@@ -613,6 +637,18 @@ class Compiler:
         """Return the schema a reference names from the document's root, or raise `Unsupported`."""
         return self._locate(reference, self._root_base)[0]
 
+    def _resource(self, uri: str, reference: str) -> tuple[object, str]:
+        """Return the resource ``uri`` names, and the base URI around it."""
+        if uri == self._root_base and not self._resources:
+            return self.root, ""
+        if uri in self._resources:
+            return self._resources[uri]
+        if uri in self._refused:
+            msg = f"$ref {reference!r} names a document refused: {self._refused[uri]}"
+            raise Unsupported(msg)
+        msg = f"$ref {reference!r} names a document this one does not hold"
+        raise Unsupported(msg)
+
     def _locate(self, reference: object, base: str) -> tuple[object, str]:
         """Return the schema a reference names from ``base``, and the base URI around it.
 
@@ -627,13 +663,7 @@ class Compiler:
         anchor = fragment and not fragment.startswith("/")
         if not self._resources and (anchor or uri != self._root_base):
             self._index(self.root)
-        if uri == self._root_base and not self._resources:
-            node, around = self.root, ""
-        elif uri in self._resources:
-            node, around = self._resources[uri]
-        else:
-            msg = f"$ref {reference!r} names a document this one does not hold"
-            raise Unsupported(msg)
+        node, around = self._resource(uri, reference)
         if anchor:
             if (uri, fragment) not in self._anchors:
                 msg = f"$ref {reference!r} names no anchor of its resource"
@@ -1842,21 +1872,41 @@ def _check_nesting(document: object) -> None:
             stack.extend((child, depth + 1) for child in children)
 
 
-def compile_schema(schema: object, *, assert_format: bool = False) -> Validator[Any]:
+def compile_schema(
+    schema: object, *, assert_format: bool = False, documents: Mapping[str, object] | None = None
+) -> Validator[Any]:
     """Compile a root schema document, upgrading a 2019-09, -07, -06 or -04 one first.
 
     A document with no ``$schema`` is draft 2020-12, as the Model Context Protocol states,
     and one naming any other dialect raises `UnsupportedDialect`. With ``assert_format``, a
     ``format`` this package reads asserts rather than annotates, and any other raises
-    `Unsupported`.
+    `Unsupported`. ``documents`` maps a URI to the document a reference to it names; one
+    declaring no ``$schema`` is read in the dialect of the document compiled.
     """
+    if documents and isinstance(schema, dict) and isinstance(schema.get("$schema"), str):
+        dialect = schema["$schema"]
+        documents = {
+            uri: {"$schema": dialect, **d} if isinstance(d, dict) and "$schema" not in d else d
+            for uri, d in documents.items()
+        }
     if (draft := older(schema)) is not None:
         schema = upgrade(schema, draft)
     try:
-        return Compiler(schema, assert_format=assert_format).compile(schema)
+        return Compiler(schema, assert_format=assert_format, documents=documents).compile(schema)
     except Unsupported as exc:
         if not str(exc).startswith(_PAST_VALGEBRAS_LIMIT):
             raise
     # A clause per cell of keys is more nodes than the predicate it reads, so a schema past
     # valgebra's limit keeps its membership that way, and its relations go undecided.
-    return Compiler(schema, assert_format=assert_format, by_clauses=False).compile(schema)
+    compiler = Compiler(schema, assert_format=assert_format, by_clauses=False, documents=documents)
+    return compiler.compile(schema)
+
+
+def _in_this_dialect(document: object) -> object:
+    """Return a supplied document in draft 2020-12, or raise `Unsupported` for its dialect."""
+    if (draft := older(document)) is not None:
+        return upgrade(document, draft)
+    if isinstance(document, dict) and document.get("$schema", DRAFT) != DRAFT:
+        msg = f"$schema {document['$schema']!r}: this dialect is not supported"
+        raise UnsupportedDialect(msg)
+    return document

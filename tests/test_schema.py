@@ -156,6 +156,73 @@ class TestEmbeddedResources:
             compile_schema(schema)
 
 
+class TestDocuments:
+    def test_a_reference_reaches_a_supplied_document(self):
+        documents = {"http://example.com/s.json": {"$defs": {"n": _INT}}}
+        s = compile_schema({"$ref": "http://example.com/s.json#/$defs/n"}, documents=documents)
+        assert s.is_valid(1)
+        assert not s.is_valid("1")
+
+    def test_an_anchor_in_a_supplied_document_names_its_schema(self):
+        documents = {"http://example.com/s.json": {"$defs": {"n": {"$anchor": "n", **_INT}}}}
+        s = compile_schema({"$ref": "http://example.com/s.json#n"}, documents=documents)
+        assert s.is_valid(1)
+        assert not s.is_valid("1")
+
+    def test_a_predicate_compiled_again_reaches_the_supplied_documents(self):
+        # Five patterns are a predicate, compiled again at membership time around `t`.
+        value = {"anyOf": [{"$ref": "#/$defs/t"}, {"$ref": "http://example.com/n.json"}]}
+        t = {"type": "object", "patternProperties": {f"^{c}": value for c in "abcde"}}
+        documents = {"http://example.com/n.json": _INT}
+        s = compile_schema({"$defs": {"t": t}, "$ref": "#/$defs/t"}, documents=documents)
+        assert s.is_valid({"a": {"b": 1}})
+        assert not s.is_valid({"a": "x"})
+
+    def test_a_supplied_documents_references_resolve_against_its_uri(self):
+        documents = {
+            "http://example.com/a/s.json": {"$ref": "t.json"},
+            "http://example.com/a/t.json": _INT,
+            "http://example.com/t.json": _STR,
+        }
+        s = compile_schema({"$ref": "http://example.com/a/s.json"}, documents=documents)
+        assert s.is_valid(1)
+        assert not s.is_valid("1")
+
+    def test_two_documents_naming_each_other_are_a_fixpoint(self):
+        documents = {
+            "http://example.com/a.json": {
+                "type": "object",
+                "properties": {"b": {"$ref": "b.json"}},
+            },
+            "http://example.com/b.json": {
+                "type": "object",
+                "properties": {"a": {"$ref": "a.json"}},
+            },
+        }
+        s = compile_schema({"$ref": "http://example.com/a.json"}, documents=documents)
+        assert s.is_valid({"b": {"a": {"b": {}}}})
+        assert not s.is_valid({"b": {"a": 1}})
+
+    def test_a_document_declaring_no_dialect_is_read_in_the_compiled_ones(self):
+        draft4 = "http://json-schema.org/draft-04/schema#"
+        documents = {"http://example.com/m.json": {"maximum": 3, "exclusiveMaximum": True}}
+        schema = {"$schema": draft4, "$ref": "http://example.com/m.json"}
+        s = compile_schema(schema, documents=documents)
+        assert s.is_valid(2)
+        assert not s.is_valid(3)
+
+    def test_a_document_in_a_dialect_not_read_is_refused_only_where_named(self):
+        documents = {
+            "http://example.com/old.json": {"$schema": "http://json-schema.org/draft-03/schema#"},
+            "http://example.com/n.json": _INT,
+        }
+        assert compile_schema({"$ref": "http://example.com/n.json"}, documents=documents).is_valid(
+            1
+        )
+        with pytest.raises(Unsupported, match="refused"):
+            compile_schema({"$ref": "http://example.com/old.json"}, documents=documents)
+
+
 class TestContainmentLabels:
     # Pairs of the containment test suite carry a label the specification refutes, in the
     # kinds the results page names; each value here is the witness of one kind.

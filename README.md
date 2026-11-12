@@ -58,7 +58,9 @@ naming any other dialect fails saying so, as the Model Context Protocol asks
 ([`docs/05-mcp.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/05-mcp.md)).
 Patterns follow ECMA-262, as the specification requires, and numbers compare by value: `1` and
 `1.0` are one number, and `true` is none. `format` is an annotation, as 2020-12 makes it, and
-`assert_format=True` reads nine of them as assertions.
+`assert_format=True` reads nine of them as assertions. A `$ref` resolves against the base URI it
+sits under, within the document or to one passed in `documents={uri: document}`; nothing is
+fetched.
 [`docs/02-compiler.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/02-compiler.md)
 says how each keyword becomes a set, and
 [`docs/03-conformance.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/03-conformance.md)

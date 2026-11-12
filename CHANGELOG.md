@@ -14,6 +14,10 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   `$anchor` it names. 8 more JSONSchemaBench schemas compile, 9456 of 9558, and the suite
   studies run 1111 cases of draft 2020-12, 1022 of 2019-09, 902 of draft-07, 814 of draft-06 and
   597 of draft-04, each passing.
+- `compile_schema(schema, documents={uri: document})` takes the documents a reference may name
+  beside the one compiled. Each is a resource at its URI, read in its own dialect or, declaring
+  none, in the compiled document's; one in a dialect not read is refused only where a reference
+  names it, and no document is fetched.
 
 ### Changed
 

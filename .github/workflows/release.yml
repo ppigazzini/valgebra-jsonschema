@@ -1,0 +1,206 @@
+name: release
+
+# Build the wheel and the sdist, run the suite on each as installed, and publish both to a
+# package index. Publishing happens only on a manual dispatch from `main` that selects an
+# index and confirms the version, on a commit `test.yml` passed; no tag push publishes. Uploads use trusted publishing, an
+# OIDC token and no stored secret, and carry PEP 740 attestations. A dispatch with the target
+# left at `none` builds and tests without publishing, as a dry run.
+on:
+  workflow_dispatch:
+    inputs:
+      publish_target:
+        description: "Index to publish to; none builds and tests only"
+        type: choice
+        options: [none, testpypi, pypi]
+        default: none
+      confirm_version:
+        description: "Exact version to publish (must match the built artifacts)"
+        type: string
+        default: ""
+
+# One release at a time, and never canceled mid-publish: a half-finished upload is worse than
+# a wait.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: wheel and sdist
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    # The files this job makes are the ones the publish job uploads, so every Python package
+    # it runs comes from the lock, each hash required. hatchling fixes every timestamp, so two
+    # builds of one commit give the same bytes.
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.3.3
+        with: { version: "0.13.7", python-version: "3.15", enable-cache: false }
+      # Without `[tool.uv.sources]`, as every other build frontend reads the project, and with
+      # the backend of the group `build`.
+      - run: |
+          uv export --locked --only-group build --no-emit-project -o "$RUNNER_TEMP/build.txt"
+          uv build --no-sources --build-constraints "$RUNNER_TEMP/build.txt" --require-hashes
+      # What the suite imports beside the package, at the lock's versions, for the smoke. It
+      # travels apart from `dist`, every file of which the publish job uploads.
+      - run: uv export --locked --only-group test --no-emit-project -o suite.txt
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: dist
+          path: dist
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: suite
+          path: suite.txt
+          if-no-files-found: error
+
+  metadata:
+    name: the metadata, as the index reads it
+    needs: [build]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    # twine and what it imports resolve fresh, so they run here and not in the build job: they
+    # read copies of the artifacts, and nothing this job writes reaches the upload.
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: dist
+          path: dist
+      - uses: astral-sh/setup-uv@v10.3.3
+        with: { version: "0.13.7", python-version: "3.15", enable-cache: false }
+      # The metadata, and the README as the index renders it.
+      - run: uvx twine==7.0.0 check --strict dist/*
+
+  smoke:
+    name: smoke ${{ matrix.artifact }} on ${{ matrix.python }}
+    needs: [build]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    # Each artifact is installed as a user installs it, its dependencies resolved from PyPI,
+    # on the floor and on the newest release, and the suite the sdist carries runs on it. A
+    # version cannot be replaced on an index once uploaded, only yanked, so a broken artifact
+    # fails here.
+    strategy:
+      fail-fast: false
+      matrix:
+        artifact: [wheel, sdist]
+        python: ["3.11", "3.15"]
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: dist
+          path: dist
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: suite
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.7"
+          python-version: ${{ matrix.python }}
+          # Nothing is checked out yet for the cache to key on.
+          enable-cache: false
+      - name: Install the artifact and import it
+        env:
+          ARTIFACT: ${{ matrix.artifact }}
+        run: |
+          set -euo pipefail
+          uv venv
+          case "$ARTIFACT" in
+            wheel) uv pip install dist/*.whl ;;
+            sdist) uv pip install dist/*.tar.gz ;;
+          esac
+          uv pip check
+          .venv/bin/python -W error -c 'import importlib.metadata as md, valgebra_jsonschema as m; assert "site-packages" in m.__file__, m.__file__; s = m.compile_schema({"type": "integer"}); assert s.is_valid(1) and s.is_valid(1.0) and not s.is_valid(True); print("smoke ok", md.version("valgebra-jsonschema"))'
+      - name: Run the suite the sdist carries on the installed artifact
+        # The sdist's own suite, so a file the suite reads and the sdist leaves out fails here.
+        # It runs through the environment's `pytest` script, which puts no directory of the
+        # unpacked tree on the path, from a working directory that holds no package: the suite
+        # imports the installed artifact.
+        run: |
+          set -euo pipefail
+          mkdir suite
+          tar -xzf dist/*.tar.gz -C suite --strip-components 1
+          uv pip install -r suite.txt
+          .venv/bin/pytest -p no:cacheprovider suite/tests
+
+  publish:
+    name: publish to ${{ inputs.publish_target }}
+    needs: [build, metadata, smoke]
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    # A dry run uploads nothing, and a dispatch from another branch cannot publish a commit the
+    # push lanes never read on `main`. A dispatch from a branch runs that branch's copy of this
+    # file, which can drop the condition, so each environment admits `main` alone as well: a
+    # rule of the repository's settings, which no branch edits.
+    if: ${{ inputs.publish_target != 'none' && github.ref == 'refs/heads/main' }}
+    # The environment named after the index is the one its trusted publisher names: PyPI and
+    # TestPyPI each trust this workflow file in it.
+    environment:
+      name: ${{ inputs.publish_target }}
+      url: ${{ inputs.publish_target == 'pypi' && 'https://pypi.org/p/valgebra-jsonschema' || 'https://test.pypi.org/p/valgebra-jsonschema' }}
+    permissions:
+      id-token: write # the OIDC token trusted publishing exchanges; it signs the attestations
+      actions: read # the runs of `test.yml` on the commit
+      contents: read
+    steps:
+      - name: Refuse a commit the push lanes have not passed
+        # The commit is one `test.yml` passed on `main`: a push run of it on this very commit
+        # concluded in success. A failed, canceled or unfinished run, none at all, or an API
+        # that does not answer refuses.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          passed="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/test.yml/runs?head_sha=$GITHUB_SHA&branch=main&event=push&status=success&per_page=1" --jq .total_count)"
+          if [ "$passed" -lt 1 ]; then
+            echo "::error::test.yml has no successful push run on $GITHUB_SHA"; exit 1
+          fi
+          echo "test.yml passed on $GITHUB_SHA"
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: dist
+          path: dist
+      - name: Refuse a version other than the confirmed one, or one the index serves
+        # Fail closed. Only a definitive 404 for the version proceeds: a 200 is a re-publish,
+        # and any other answer, a 5xx, a 429 or no connection, leaves the question open. A
+        # version the index names as its latest is refused too, against a per-version answer
+        # that has not caught up with an upload.
+        env:
+          CONFIRM_VERSION: ${{ inputs.confirm_version }}
+          INDEX: ${{ inputs.publish_target == 'testpypi' && 'https://test.pypi.org' || 'https://pypi.org' }}
+        run: |
+          set -euo pipefail
+          wheel="$(basename dist/*.whl)"
+          built="${wheel#valgebra_jsonschema-}"; built="${built%%-*}"
+          echo "built artifacts are version $built"
+          if [ -z "$CONFIRM_VERSION" ]; then
+            echo "::error::confirm_version is required to publish"; exit 1
+          fi
+          if [ "$built" != "$CONFIRM_VERSION" ]; then
+            echo "::error::confirm_version '$CONFIRM_VERSION' is not the built version '$built'"; exit 1
+          fi
+          code="$(curl -sS --retry 5 --retry-all-errors --retry-delay 2 \
+            -o /dev/null -w '%{http_code}' "$INDEX/pypi/valgebra-jsonschema/$built/json" || echo 000)"
+          case "$code" in
+            404) echo "version $built is absent from $INDEX" ;;
+            200) echo "::error::version $built is already on $INDEX; bump the version"; exit 1 ;;
+            *) echo "::error::could not confirm version $built against $INDEX (HTTP $code)"; exit 1 ;;
+          esac
+          latest="$(curl -sS --retry 5 --retry-all-errors --retry-delay 2 "$INDEX/pypi/valgebra-jsonschema/json" \
+            | python3 -c 'import json, sys; print(json.load(sys.stdin).get("info", {}).get("version", ""))' 2>/dev/null || true)"
+          if [ -n "$latest" ] && [ "$built" = "$latest" ]; then
+            echo "::error::version $built is already the latest on $INDEX; bump the version"; exit 1
+          fi
+          echo "version $built differs from the latest on $INDEX (${latest:-none})"
+      - uses: pypa/gh-action-pypi-publish@v1.14.3
+        with:
+          repository-url: ${{ inputs.publish_target == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
+          # The step above refuses a version the index serves, so a duplicate upload is an
+          # error here rather than a green run.
+          skip-existing: false

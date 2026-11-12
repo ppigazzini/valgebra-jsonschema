@@ -50,6 +50,10 @@ dev = [
     "ruff>=0.17.4",
     "ty>=0.0.99",
 ]
+# The backend `[build-system]` names, at the lock's version and hashes: the release workflow
+# builds the published artifacts with it alone, so a backend release reaches them only through
+# a lock update.
+build = ["hatchling>=1.33.0"]
 
 [build-system]
 requires = ["hatchling>=1.33.0"]

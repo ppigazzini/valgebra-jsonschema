@@ -16,8 +16,10 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   597 of draft-04, each passing.
 - `compile_schema(schema, documents={uri: document})` takes the documents a reference may name
   beside the one compiled. Each is a resource at its URI, read in its own dialect or, declaring
-  none, in the compiled document's; one in a dialect not read is refused only where a reference
-  names it, and no document is fetched.
+  none, in the compiled document's; one in a dialect not read, or a draft 2019-09 one setting
+  `$recursiveAnchor`, is refused only where a reference names it, and no document is fetched.
+  `Sampler` takes them too. The suite studies read the suite's vendored `remotes/` and the
+  drafts' meta-schemas, and run every case of drafts 07, 06 and 04: 929, 841 and 618.
 
 ### Changed
 

@@ -40,10 +40,10 @@
   },
   {
    "file": "definitions",
-   "passed": 0,
+   "passed": 2,
    "failed": 0,
-   "skipped": 2,
-   "opaque": 0
+   "skipped": 0,
+   "opaque": 2
   },
   {
    "file": "dependencies",
@@ -180,16 +180,16 @@
   },
   {
    "file": "ref",
-   "passed": 43,
+   "passed": 45,
    "failed": 0,
-   "skipped": 2,
-   "opaque": 0
+   "skipped": 0,
+   "opaque": 2
   },
   {
    "file": "refRemote",
-   "passed": 0,
+   "passed": 17,
    "failed": 0,
-   "skipped": 17,
+   "skipped": 0,
    "opaque": 0
   },
   {

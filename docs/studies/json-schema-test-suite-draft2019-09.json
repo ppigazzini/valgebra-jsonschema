@@ -278,9 +278,9 @@
   },
   {
    "file": "refRemote",
-   "passed": 0,
+   "passed": 31,
    "failed": 0,
-   "skipped": 31,
+   "skipped": 0,
    "opaque": 0
   },
   {

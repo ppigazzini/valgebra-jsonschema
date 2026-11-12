@@ -32,6 +32,8 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path, PurePosixPath
 from typing import Any
 
+from jsonschema_specifications import REGISTRY
+
 from valgebra_jsonschema._valgebra import Validator
 from valgebra_jsonschema.schema import Compiler, Unsupported, upgrade
 from valgebra_jsonschema.study import (
@@ -82,9 +84,14 @@ def files(cache: Path, directory: str) -> list[Path]:
     )
 
 
+#: The meta-schemas of the drafts, which a pair may name by URI, as every implementation of
+#: a draft holds its own.
+METASCHEMAS = {uri: resource.contents for uri, resource in REGISTRY.items()}
+
+
 def _compile(schema: object, older: int | None) -> Validator[Any]:
     document = upgrade(schema, older) if older is not None else schema
-    return Compiler(document).compile(document)
+    return Compiler(document, documents=METASCHEMAS).compile(document)
 
 
 class _OutOfTimeError(Exception):

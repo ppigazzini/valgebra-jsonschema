@@ -13,8 +13,10 @@ import sys
 from pathlib import Path
 from typing import Literal, cast
 
+from jsonschema_specifications import REGISTRY
+
 from valgebra_jsonschema.study import SUITE, SuiteFile, SuiteStudy, dumps, load_suite
-from valgebra_jsonschema.suite import run, run_formats, run_older
+from valgebra_jsonschema.suite import remotes, run, run_formats, run_older
 
 ROOT = Path(__file__).parent.parent
 SUITE_DIR = ROOT / "tests" / "data" / "json-schema-test-suite"
@@ -27,6 +29,14 @@ OLDER_DIRS = {
 OLDER_DRAFTS = {"2019-09": 2019, "7": 7, "6": 6, "4": 4}
 #: The vendored ``optional/format`` files of the formats `assert_format` reads.
 FORMAT_DIR = ROOT / "tests" / "data" / "json-schema-test-suite-format"
+#: The vendored ``remotes/`` the cases name by URI, but for draft-03's, which nothing reads.
+REMOTES_DIR = ROOT / "tests" / "data" / "json-schema-test-suite-remotes"
+#: The documents a case may name by URI: the remotes, and the meta-schemas of the drafts,
+#: which the suite leaves every implementation to hold.
+DOCUMENTS = {
+    **{uri: resource.contents for uri, resource in REGISTRY.items()},
+    **remotes(REMOTES_DIR),
+}
 COMMIT = (SUITE_DIR / "COMMIT").read_text(encoding="utf-8").strip()
 
 
@@ -36,11 +46,11 @@ Draft = Literal["2020-12", "2019-09", "7", "6", "4", "format"]
 def measure(draft: Draft) -> SuiteStudy:
     """Run every vendored suite file of one draft."""
     if draft == "2020-12":
-        outcomes = run(SUITE_DIR)
+        outcomes = run(SUITE_DIR, DOCUMENTS)
     elif draft == "format":
         outcomes = run_formats(FORMAT_DIR)
     else:
-        outcomes = run_older(OLDER_DIRS[draft], OLDER_DRAFTS[draft])
+        outcomes = run_older(OLDER_DIRS[draft], OLDER_DRAFTS[draft], DOCUMENTS)
     files = [
         SuiteFile(file=stem, passed=o.passed, failed=o.failed, skipped=o.skipped, opaque=o.opaque)
         for stem, o in outcomes.items()

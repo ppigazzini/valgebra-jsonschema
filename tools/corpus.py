@@ -33,6 +33,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 import jsonschema
+from jsonschema_specifications import REGISTRY
 
 from valgebra_jsonschema.sample import Sampler
 from valgebra_jsonschema.schema import Unsupported, compile_schema, older, upgrade
@@ -76,6 +77,10 @@ COMMIT = "9a94995b9279ae3af3aed4b2629172790b968d14"
 CACHE = ROOT / "results" / f"jsonschemabench-{COMMIT[:12]}"
 #: Seconds one schema may take; none of the corpus needs more than one.
 TIMEOUT = 60
+#: The meta-schemas of the drafts, which the `jsonschema` package resolves a reference to
+#: by default: supplied to the compiler too, so the two read one set of documents.
+METASCHEMAS = {uri: resource.contents for uri, resource in REGISTRY.items()}
+
 VALIDATORS = {
     2019: jsonschema.Draft201909Validator,
     7: jsonschema.Draft7Validator,
@@ -143,12 +148,13 @@ def one(path: Path) -> tuple[str, str, str, int, int]:
     try:
         schema = json.loads(path.read_text(encoding="utf-8"))
         try:
-            compiled = compile_schema(schema)
+            compiled = compile_schema(schema, documents=METASCHEMAS)
         except Unsupported as exc:
             return subset, "refused", reason(str(exc)), 0, 0
         draft = older(schema)
         root = upgrade(schema, draft) if draft is not None else schema
-        drawn = Sampler(root, random.Random(path.name)).draw(root, 20)
+        sampler = Sampler(root, random.Random(path.name), documents=METASCHEMAS)
+        drawn = sampler.draw(root, 20)
         reference = VALIDATORS.get(draft or 0, jsonschema.Draft202012Validator)(schema)
         values = [*drawn, *GENERIC]
         disagreed = sum(compiled.is_valid(v) != reference.is_valid(v) for v in values)

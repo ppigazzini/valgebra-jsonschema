@@ -211,6 +211,25 @@ class TestDocuments:
         assert s.is_valid(2)
         assert not s.is_valid(3)
 
+    def test_a_property_named_schema_in_a_resource_is_a_name(self):
+        # A meta-schema declares the property `$schema`, which declares no dialect.
+        resource = {"$id": "http://example.com/m", "properties": {"$schema": _STR}}
+        s = compile_schema(
+            {"$ref": "http://example.com/m"}, documents={"http://example.com/m": resource}
+        )
+        assert s.is_valid({"$schema": "x"})
+        assert not s.is_valid({"$schema": 1})
+
+    def test_a_supplied_document_setting_a_recursive_anchor_is_refused_where_named(self):
+        draft2019 = "https://json-schema.org/draft/2019-09/schema"
+        anchored = {"$schema": draft2019, "$recursiveAnchor": True, "type": "object"}
+        documents = {"http://example.com/a.json": anchored, "http://example.com/n.json": _INT}
+        assert compile_schema({"$ref": "http://example.com/n.json"}, documents=documents).is_valid(
+            1
+        )
+        with pytest.raises(Unsupported, match="recursiveAnchor"):
+            compile_schema({"$ref": "http://example.com/a.json"}, documents=documents)
+
     def test_a_document_in_a_dialect_not_read_is_refused_only_where_named(self):
         documents = {
             "http://example.com/old.json": {"$schema": "http://json-schema.org/draft-03/schema#"},

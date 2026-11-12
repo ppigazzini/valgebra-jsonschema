@@ -555,7 +555,9 @@ class Compiler:
         A root's ``$id`` names the document. An embedded one starts a resource whose base
         URI the references and anchors inside it resolve against (`_within`), and which may
         declare a dialect of its own (draft 2020-12, section 8.1.1); with no other
-        ``$schema`` inside, the resource means what its keywords mean.
+        ``$schema`` on a schema object inside, the resource means what its keywords mean. Only
+        the keywords that hold subschemas are descended into, so a property named
+        ``$schema``, as a meta-schema declares one, is a name.
         """
         if resource is self.root:
             return True
@@ -566,9 +568,7 @@ class Compiler:
             if isinstance(here, dict):
                 if here.get("$schema", dialect) != dialect:
                     return False
-                stack.extend(here.values())
-            elif isinstance(here, list):
-                stack.extend(here)
+                stack.extend(_subschemas(here))
         return True
 
     def _index(self, root: object) -> None:
@@ -1732,6 +1732,20 @@ def upgrade(schema: object, draft: int = 7) -> object:
     return _upgrade(schema, draft)
 
 
+def _sets_recursive_anchor(schema: object) -> bool:
+    """Return whether a schema object in ``schema`` sets ``$recursiveAnchor``."""
+    stack = [schema]
+    while stack:
+        here = stack.pop()
+        if isinstance(here, dict):
+            if here.get("$recursiveAnchor") is True:
+                return True
+            stack.extend(here.values())
+        elif isinstance(here, list):
+            stack.extend(here)
+    return False
+
+
 def _check_recursive_anchors(schema: object) -> None:
     """Refuse a ``$recursiveRef`` in a document where two resources set ``$recursiveAnchor``."""
     anchored, referring = 0, False
@@ -1884,11 +1898,7 @@ def compile_schema(
     declaring no ``$schema`` is read in the dialect of the document compiled.
     """
     if documents and isinstance(schema, dict) and isinstance(schema.get("$schema"), str):
-        dialect = schema["$schema"]
-        documents = {
-            uri: {"$schema": dialect, **d} if isinstance(d, dict) and "$schema" not in d else d
-            for uri, d in documents.items()
-        }
+        documents = in_dialect(documents, schema["$schema"])
     if (draft := older(schema)) is not None:
         schema = upgrade(schema, draft)
     try:
@@ -1902,9 +1912,30 @@ def compile_schema(
     return compiler.compile(schema)
 
 
+def in_dialect(documents: Mapping[str, object], dialect: str) -> dict[str, object]:
+    """Return ``documents`` with each declaring no ``$schema`` declaring ``dialect``.
+
+    A supplied document is read in its own dialect, and one declaring none in the dialect of
+    the document a reference to it sits in, as `compile_schema` reads it.
+    """
+    return {
+        uri: {"$schema": dialect, **d} if isinstance(d, dict) and "$schema" not in d else d
+        for uri, d in documents.items()
+    }
+
+
 def _in_this_dialect(document: object) -> object:
-    """Return a supplied document in draft 2020-12, or raise `Unsupported` for its dialect."""
-    if (draft := older(document)) is not None:
+    """Return a supplied document in draft 2020-12, or raise `Unsupported` for its dialect.
+
+    A draft 2019-09 document setting ``$recursiveAnchor`` is refused: a ``$recursiveRef``
+    reaching it reads the dynamic scope, which may start in another document, while
+    `upgrade` reads it within one document. With every anchor in the compiled document,
+    each scope's outermost anchored resource is one `upgrade` sees.
+    """
+    if (draft := older(document)) == DRAFT2019 and _sets_recursive_anchor(document):
+        msg = "keyword '$recursiveAnchor' in a supplied document, which another one's scope reads"
+        raise Unsupported(msg)
+    if draft is not None:
         return upgrade(document, draft)
     if isinstance(document, dict) and document.get("$schema", DRAFT) != DRAFT:
         msg = f"$schema {document['$schema']!r}: this dialect is not supported"

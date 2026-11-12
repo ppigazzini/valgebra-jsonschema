@@ -13,12 +13,14 @@ uv run python tools/suite.py --draft 6 --check docs/studies/json-schema-test-sui
 uv run python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
 ```
 
-Draft 2020-12, with the four optional files on regular expressions and large numbers: 1111
-of the 1111 cases run pass; 287 are skipped: the `unevaluatedItems` and
-`unevaluatedProperties` files (200 cases), dynamic and remote references, and a custom
-metaschema. Through `upgrade`: draft 2019-09, 1022 of the 1022 cases run pass, 239 skipped;
-draft-07, 902 of the 902 cases run pass, 27 skipped; draft-06, 814 of the 814 cases run pass, 27
-skipped; draft-04, 597 of the 597 cases run pass, 21 skipped. See
+Draft 2020-12, with the four optional files on regular expressions and large numbers: 1142
+of the 1142 cases run pass; 256 are skipped: the `unevaluatedItems` and
+`unevaluatedProperties` files (200 cases), dynamic references, and a custom metaschema.
+Through `upgrade`: draft 2019-09, 1053 of the 1053 cases run pass, 208 skipped; draft-07, 929
+of the 929 cases run pass, 0 skipped; draft-06, 841 of the 841 cases run pass, 0 skipped;
+draft-04, 618 of the 618 cases run pass, 0 skipped. A case's remote documents
+are the suite's `remotes/`, vendored, and the drafts' meta-schemas from the
+`jsonschema-specifications` package, passed as `documents`. See
 [`02-compiler.md`](02-compiler.md#measured).
 
 ## `format`, on request
@@ -52,18 +54,19 @@ draft.
 | Github_trivial | 444 | 444 | 0 | 0 | 0 | 17098 | 10 |
 | Github_ultra | 164 | 156 | 8 | 0 | 0 | 5470 | 0 |
 | Glaiveai2K | 1707 | 1689 | 18 | 0 | 0 | 79793 | 0 |
-| JsonSchemaStore | 492 | 459 | 33 | 0 | 0 | 18042 | 0 |
+| JsonSchemaStore | 492 | 460 | 32 | 0 | 0 | 18082 | 0 |
 | Kubernetes | 1064 | 1063 | 1 | 0 | 0 | 44463 | 0 |
 | Snowplow | 403 | 400 | 3 | 0 | 0 | 17745 | 0 |
 | WashingtonPost | 125 | 125 | 0 | 0 | 0 | 5275 | 0 |
-| all | 9558 | 9456 | 102 | 0 | 0 | 403720 | 12 |
+| all | 9558 | 9457 | 101 | 0 | 0 | 403760 | 12 |
 
-- 9456 of the 9558 schemas compile, none crashes, none times out. Of the 102 refused, 58
+- 9457 of the 9558 schemas compile, none crashes, none times out. Of the 101 refused, 58
   use `dependencies` or `additionalItems` in a schema declaring no older draft, 13 build
   sets valgebra refuses, 19 hold a pattern outside valgebra's regex dialect, 18 of them a
-  lookaround and 1 a backreference, and 8 a `$ref` to another document or to nothing in
-  this one; the rest are listed by `tools/corpus.py`.
-- Membership differs from the package's on 12 of the 403720 values, each a reading the
+  lookaround and 1 a backreference, and 7 a `$ref` to nothing in the document; the rest
+  are listed by `tools/corpus.py`. A schema may name a draft's meta-schema, which both the
+  compiler and the `jsonschema` package read from the `jsonschema-specifications` package.
+- Membership differs from the package's on 12 of the 403760 values, each a reading the
   ledger records: 11 are an integral float, `1e300` or `-0.0`, under a draft-04
   `integer`, and 1 is `"\n"` under a pattern ending in `$`, which Python's `re` matches
   before a final newline.
@@ -84,12 +87,12 @@ the four the suite study runs.
 | draft | questions | refused | proven | refuted | undecided | proven against the label | refuted against the label |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | 2020-12 | 3645 | 655 | 1897 | 811 | 282 | 0 | 5 |
-| 7 | 2788 | 30 | 1799 | 760 | 199 | 0 | 4 |
-| 6 | 2524 | 30 | 1615 | 686 | 193 | 0 | 4 |
-| 4 | 1933 | 22 | 886 | 805 | 220 | 0 | 261 |
+| 7 | 2788 | 12 | 1805 | 764 | 207 | 0 | 4 |
+| 6 | 2524 | 12 | 1621 | 690 | 201 | 0 | 4 |
+| 4 | 1933 | 4 | 890 | 811 | 228 | 0 | 263 |
 
-- No proof contradicts a label: 6197 proofs of the 10890 questions, 0 against one.
-- Each of the 274 refutations against a label is a wrong label, and the `jsonschema`
+- No proof contradicts a label: 6213 proofs of the 10890 questions, 0 against one.
+- Each of the 276 refutations against a label is a wrong label, and the `jsonschema`
   package's validator for the draft admits the witness to one side and refuses it from the
   other. In every draft the generator writes two kinds. In `universal/items.json` and
   `universal/ref.json` it leaves keywords outside the `not` it writes, `type` and
@@ -98,7 +101,7 @@ the four the suite study runs.
   `unsatisfiable/id.json`, and in draft 2020-12's `unsatisfiable/anchor.json`, it renames a
   `$ref`, an `$id` or an `$anchor` inside an `enum` or `const` value as well as in the
   schema, so the two copies differ and the schema it labels empty holds the value it
-  lists, such as `{"$ref": "#/allOf/0/$defs/a_string"}`. In draft-04, 257 more pairs put `const`, which draft-06 added, in a draft-04
+  lists, such as `{"$ref": "#/allOf/0/$defs/a_string"}`. In draft-04, 259 more pairs put `const`, which draft-06 added, in a draft-04
   schema: the draft reads it as an annotation, so the first schema admits every value.
 - A question is refused where the compiler refuses a schema of its pair, as the inventory
   of [`03-conformance.md`](03-conformance.md) lists; an undecided one is kept and counted.

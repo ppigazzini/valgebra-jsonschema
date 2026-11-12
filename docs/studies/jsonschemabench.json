@@ -66,11 +66,11 @@
   {
    "subset": "JsonSchemaStore",
    "schemas": 492,
-   "compiled": 459,
-   "refused": 33,
+   "compiled": 460,
+   "refused": 32,
    "crashed": 0,
    "timed_out": 0,
-   "values": 18042,
+   "values": 18082,
    "disagreed": 0
   },
   {
@@ -107,7 +107,7 @@
  "refusals": [
   {
    "reason": "a $ref to another document, or to nothing in this one",
-   "schemas": 8
+   "schemas": 7
   },
   {
    "reason": "a keyword holding what the meta-schema refuses",

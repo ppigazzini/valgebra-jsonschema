@@ -63,8 +63,9 @@ Every keyword of the draft 2020-12 vocabularies is in exactly one class, and
 sets the base of its resource, and the reference names a resource of the document by its URI,
 then a schema in it by a JSON pointer or by an `$anchor`. A document the caller supplies in
 `compile_schema(schema, documents={uri: document})` is a resource at its URI, read in its own
-dialect, or in the compiled document's where it declares none. A reference to any other document
-is refused and never fetched, and so is an embedded resource declaring another `$schema`. An older
+dialect, or in the compiled document's where it declares none; a draft 2019-09 document setting
+`$recursiveAnchor` is refused where named, since the dynamic scope a `$recursiveRef` reads may
+start outside it. A reference to any other document is refused and never fetched, and so is an embedded resource declaring another `$schema`. An older
 draft's `$id` fragment that is a plain name is the `$anchor` it names. A draft 2019-09
 `$recursiveRef` is read as `$ref: "#"`, which it is wherever at most one resource sets
 `$recursiveAnchor`, and refused in a document where two do.

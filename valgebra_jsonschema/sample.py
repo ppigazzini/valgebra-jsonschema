@@ -15,6 +15,7 @@ import math
 import random
 import re
 import string
+from collections.abc import Mapping
 from typing import Any
 
 from valgebra_jsonschema.schema import Compiler, Unsupported
@@ -29,11 +30,20 @@ _LONGEST_LIST = 16
 class Sampler:
     """Draw candidate values for the schemas of one document, from one seeded stream."""
 
-    def __init__(self, root: object, rng: random.Random, *, depth: int = 4) -> None:
+    def __init__(
+        self,
+        root: object,
+        rng: random.Random,
+        *,
+        depth: int = 4,
+        documents: Mapping[str, object] | None = None,
+    ) -> None:
         self.root = root
         self.rng = rng
         self.depth = depth
-        self.compiler = Compiler(root)
+        #: The documents a reference may name beside the root, as `compile_schema` takes them.
+        self.documents = documents
+        self.compiler = Compiler(root, documents=documents)
 
     def draw(self, schema: object, tries: int = 40) -> list[Any]:
         """Return up to ``tries`` distinct candidates that the compiled schema admits."""
@@ -41,7 +51,7 @@ class Sampler:
             target = self.compiler.compile(schema)
         except Unsupported:
             # A schema past valgebra's limit reads by predicate, as `compile_schema` has it.
-            self.compiler = Compiler(self.root, by_clauses=False)
+            self.compiler = Compiler(self.root, by_clauses=False, documents=self.documents)
             target = self.compiler.compile(schema)
         found: list[Any] = []
         seen: set[str] = set()

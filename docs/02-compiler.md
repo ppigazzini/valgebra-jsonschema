@@ -118,21 +118,23 @@ uv run python tools/suite.py --check docs/studies/json-schema-test-suite.json
 
 The official JSON-Schema-Test-Suite at commit `89e83a740146`, vendored with its MIT
 license. Draft 2020-12, with the four optional files on regular expressions and large
-numbers: 1111 cases run, 1111 passed, 0 failed; 287 skipped by the refusals above; 95 of
-the run cases go through an opaque predicate. Draft-07, through `upgrade`:
+numbers: 1142 cases run, 1142 passed, 0 failed; 256 skipped by the refusals above; 95 of
+the run cases go through an opaque predicate. A case's remote documents are the suite's
+`remotes/`, vendored with it, and the drafts' meta-schemas from the `jsonschema-specifications`
+package, passed as `documents`. Draft-07, through `upgrade`:
 
 ```bash
 uv run python tools/suite.py --draft 7 --check docs/studies/json-schema-test-suite-draft7.json
 ```
 
-902 cases run, 902 passed, 0 failed; 27 skipped (remote references). Draft
+929 cases run, 929 passed, 0 failed; 0 skipped. Draft
 2019-09, through `upgrade`:
 
 ```bash
 uv run python tools/suite.py --draft 2019-09 --check docs/studies/json-schema-test-suite-draft2019-09.json
 ```
 
-1022 cases run, 1022 passed, 0 failed; 239 skipped, by the same refusals and a
+1053 cases run, 1053 passed, 0 failed; 208 skipped, by the same refusals and a
 `$recursiveRef` where two resources set `$recursiveAnchor`. Draft-06 and draft-04,
 through `upgrade`:
 
@@ -141,8 +143,8 @@ uv run python tools/suite.py --draft 6 --check docs/studies/json-schema-test-sui
 uv run python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
 ```
 
-Draft-06, 814 cases run, 814 passed, 0 failed; 27 skipped. Draft-04, 597 cases run, 597
-passed, 0 failed; 21 skipped. Both skip remote references.
+Draft-06, 841 cases run, 841 passed, 0 failed; 0 skipped. Draft-04, 618 cases run, 618 passed,
+0 failed; 0 skipped.
 
 ```bash
 uv run python tools/suite.py --reference

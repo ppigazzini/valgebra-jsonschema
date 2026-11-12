@@ -86,11 +86,10 @@ uv run python tools/containment.py --check docs/studies/containment.json
 
 ## Install
 
-The package is not on PyPI. It installs from this repository, on Python 3.11 or later, and takes
-valgebra from PyPI, a Rust extension published as wheels:
+On Python 3.11 or later, from PyPI, with valgebra, a Rust extension published as wheels:
 
 ```bash
-pip install git+https://github.com/ppigazzini/valgebra-jsonschema
+pip install valgebra-jsonschema
 ```
 
 ## License

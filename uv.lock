@@ -700,6 +700,11 @@ dev = [
     { name = "ruff" },
     { name = "ty" },
 ]
+test = [
+    { name = "jsonschema" },
+    { name = "pydantic" },
+    { name = "pytest" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -716,6 +721,11 @@ dev = [
     { name = "pytest", specifier = ">=9.2.0" },
     { name = "ruff", specifier = ">=0.17.4" },
     { name = "ty", specifier = ">=0.0.99" },
+]
+test = [
+    { name = "jsonschema", specifier = ">=4.26.0" },
+    { name = "pydantic", specifier = ">=2.14.3" },
+    { name = "pytest", specifier = ">=9.2.0" },
 ]
 
 [[package]]

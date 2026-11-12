@@ -34,14 +34,19 @@ dependencies = [
 Repository = "https://github.com/ppigazzini/valgebra-jsonschema"
 
 [dependency-groups]
-dev = [
+# What the suite imports beside the package. The release smoke installs this group alone
+# beside the built artifact, so a module the suite needs and no group names fails there.
+test = [
     # The second implementation: `tests/test_properties.py` compares membership on random
     # schemas, and `tools/suite.py --reference` runs it on the optional suite files.
     "jsonschema>=4.26.0",
-    "pre-commit>=4.7.0",
     # What the Python SDK and FastMCP emit: `tests/test_mcp.py` reads its schemas as written.
     "pydantic>=2.14.3",
     "pytest>=9.2.0",
+]
+dev = [
+    { include-group = "test" },
+    "pre-commit>=4.7.0",
     "ruff>=0.17.4",
     "ty>=0.0.99",
 ]

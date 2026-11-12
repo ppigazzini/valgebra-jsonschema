@@ -29,7 +29,7 @@ keyword's kind, the guard's other half is empty after the meet and is left out.
 | `properties`, `required`, `additionalProperties` | one record: optional and required fields, and a catch-all clause for every other key; a required key outside `properties` takes the additional schema |
 | `dependentRequired`, `dependentSchemas` | "key absent, or the dependency holds" |
 | `allOf`, `anyOf`, `not` | meet, union, complement within the JSON values |
-| `oneOf` | each branch minus all the others |
+| `oneOf` | each branch minus every other branch valgebra does not prove disjoint from it |
 | `if`, `then`, `else` | `(if & then) | (~if & else)` |
 | `$ref` | a local JSON pointer, compiled as a `recursive` fixpoint over its target |
 

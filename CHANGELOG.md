@@ -6,6 +6,13 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `oneOf` leaves out the complement of a branch valgebra proves disjoint from another, which
+  holds none of its values: each branch is spelled once per branch it may meet rather than once
+  per branch, which keeps 14 JSONSchemaBench schemas under valgebra's node bound, and 9448 of
+  the 9558 compile.
+
 ## [0.0.1] - 2026-11-12
 
 ### Added

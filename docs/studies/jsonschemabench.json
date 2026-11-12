@@ -16,41 +16,41 @@
   {
    "subset": "Github_hard",
    "schemas": 1240,
-   "compiled": 1214,
-   "refused": 26,
+   "compiled": 1218,
+   "refused": 22,
    "crashed": 0,
    "timed_out": 0,
-   "values": 47759,
+   "values": 47920,
    "disagreed": 0
   },
   {
    "subset": "Github_medium",
    "schemas": 1976,
-   "compiled": 1960,
-   "refused": 16,
+   "compiled": 1964,
+   "refused": 12,
    "crashed": 0,
    "timed_out": 0,
-   "values": 83396,
+   "values": 83585,
    "disagreed": 0
   },
   {
    "subset": "Github_trivial",
    "schemas": 444,
-   "compiled": 442,
-   "refused": 2,
+   "compiled": 444,
+   "refused": 0,
    "crashed": 0,
    "timed_out": 0,
-   "values": 17002,
+   "values": 17098,
    "disagreed": 10
   },
   {
    "subset": "Github_ultra",
    "schemas": 164,
-   "compiled": 154,
-   "refused": 10,
+   "compiled": 156,
+   "refused": 8,
    "crashed": 0,
    "timed_out": 0,
-   "values": 5392,
+   "values": 5470,
    "disagreed": 0
   },
   {
@@ -66,11 +66,11 @@
   {
    "subset": "JsonSchemaStore",
    "schemas": 492,
-   "compiled": 455,
-   "refused": 37,
+   "compiled": 457,
+   "refused": 35,
    "crashed": 0,
    "timed_out": 0,
-   "values": 17870,
+   "values": 17946,
    "disagreed": 0
   },
   {
@@ -115,7 +115,7 @@
   },
   {
    "reason": "a pattern outside valgebra's regex dialect",
-   "schemas": 18
+   "schemas": 19
   },
   {
    "reason": "a property name valgebra cannot hold",
@@ -123,7 +123,7 @@
   },
   {
    "reason": "a set valgebra refuses to build",
-   "schemas": 28
+   "schemas": 13
   },
   {
    "reason": "an embedded $id",

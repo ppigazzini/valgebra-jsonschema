@@ -328,6 +328,36 @@ def test_two_hundred_definitions_compile_in_place():
     assert not s.is_valid({"p7": "d8_"})
 
 
+def test_a_one_of_whose_branches_are_disjoint_is_their_union():
+    branches = [{"type": "string"}, {"type": "null"}]
+    assert compile_schema({"oneOf": branches}) == compile_schema({"anyOf": branches})
+
+
+def test_a_one_of_whose_branches_meet_holds_a_value_in_exactly_one():
+    s = compile_schema({"oneOf": [{"type": "integer"}, {"minimum": 0}]})
+    assert [s.is_valid(v) for v in (5, -1, 0.5, "x", -1.5)] == [False, True, True, True, False]
+
+
+def test_a_one_of_nested_in_its_disjoint_branches_stays_under_the_node_bound():
+    # Each level's second branch would be spelled twice, whole and complemented: 2**20
+    # copies at the root, where twelve levels already pass valgebra's node bound.
+    schema: dict = {"type": "null"}
+    for _ in range(20):
+        leaf = {"type": "object", "required": ["t"], "properties": {"t": {"const": "leaf"}}}
+        node = {
+            "type": "object",
+            "required": ["t", "next"],
+            "properties": {"t": {"const": "node"}, "next": schema},
+        }
+        schema = {"oneOf": [leaf, node]}
+    s = compile_schema(schema)
+    value: object = {"t": "leaf"}
+    for _ in range(19):
+        value = {"t": "node", "next": value}
+    assert s.is_valid(value)
+    assert not s.is_valid({"t": "node", "next": {"t": "other"}})
+
+
 def test_a_reference_that_reaches_itself_is_a_fixpoint():
     item = {"$ref": "#/$defs/tree"}
     tree = {"type": "object", "properties": {"kids": {"type": "array", "items": item}}}

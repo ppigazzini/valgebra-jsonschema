@@ -31,6 +31,16 @@ messages, names and commit messages. `-ize` and `-yze` (`serialize`, `analyze`),
 (`2026-10-29`). A quotation, a published title and a third party's name keep the
 spelling they were published with.
 
+## The untracked surface
+
+Maintainer notes — reports, analyses, plans — live in a working area `.gitignore` names, and
+this standard does not govern them. **A tracked file never names that area, or a note in it**:
+the area is not in the tree, so the reference dangles for every reader but its author. A page,
+a comment and a commit message state the fact a note holds, with its evidence, where the fact
+is needed, and a note is never the only place a fact of the tree lives.
+`tools/check_markdown.py` sweeps every tracked file, prose and source alike, for the area's
+name and for a report's.
+
 ## Claims
 
 A claim needs evidence in the same sentence or the next one.

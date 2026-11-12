@@ -1,3 +1,6 @@
+# Maintainer notes — not part of the tracked project
+__DEV/
+
 .venv/
 __pycache__/
 *.py[cod]
@@ -13,4 +16,3 @@ dist/
 # Fetched by the tools at pinned commits. A published number lives in docs/studies/*.json
 # and is rechecked by the tool that wrote it; anything else is not a result.
 results/
-__DEV/

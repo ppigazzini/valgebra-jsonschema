@@ -5,13 +5,18 @@ renders, wrongly. `$^{238}$U` becomes a dangling superscript, `\\!`
 inside inline `$...$` prints as a literal `!`, and a range split across two spans
 (`$10^4$`-`$10^5$`) renders the second span as source text.
 
-    uv run python tools/check_markdown.py            # every tracked .md
+Every tracked file, prose and source alike, is swept for a name of the untracked
+working area or of a report in it: `.gitignore` names the area, so such a name
+points every reader but its author at nothing. `.gitignore`, which declares the
+area, and this file, which names it to refuse it, are exempt.
+
+    uv run python tools/check_markdown.py            # every tracked file
     uv run python tools/check_markdown.py README.md  # specific files
 
 Exit status is 1 if anything is found, so it works as a pre-commit hook.
 
-Inline code spans are stripped before matching: a page that documents these
-rules quotes the broken forms deliberately.
+Inline code spans are stripped before the rendering rules match: a page that
+documents these rules quotes the broken forms deliberately.
 """
 
 from __future__ import annotations
@@ -40,6 +45,11 @@ ROOT = Path(__file__).resolve().parent.parent
 # into this tree by the address of `main`, and that address names a path the tree must hold.
 README = ROOT / "README.md"
 TREE = re.compile(r"https://github\.com/ppigazzini/valgebra-jsonschema/(?:blob|tree)/main/(.+)")
+# The untracked working area, and a report in it. A report is named in prose, with no path to
+# match, so its name is held directly.
+INTERNAL = re.compile(r"__DEV|REPORT-[0-9]+")
+# The files that name the area to declare it or to refuse it.
+DECLARES_INTERNAL = frozenset({ROOT / ".gitignore", ROOT / "tools" / "check_markdown.py"})
 
 
 def strip_code_spans(line: str) -> str:
@@ -79,15 +89,28 @@ def strip_code_spans(line: str) -> str:
     return "".join(out)
 
 
-def tracked_markdown() -> list[Path]:
-    """Return every Markdown file git knows about."""
+def tracked() -> list[Path]:
+    """Return every file git knows about."""
     out = subprocess.run(
-        ["git", "ls-files", "*.md"],  # noqa: S607
+        ["git", "ls-files"],  # noqa: S607
         capture_output=True,
         text=True,
         check=True,
     )
-    return [Path(line) for line in out.stdout.split() if line]
+    return [Path(line) for line in out.stdout.splitlines() if line]
+
+
+def internal_references(path: Path) -> list[str]:
+    """Return one message per name of the untracked working area, or of a report in it."""
+    if path.resolve() in DECLARES_INTERNAL:
+        return []
+    text = path.read_bytes().decode("utf-8", errors="replace")
+    return [
+        f"{path}:{n}: names {match[0]}, which is untracked: the reference dangles for every "
+        "reader but its author, so the sentence states the fact itself"
+        for n, line in enumerate(text.splitlines(), 1)
+        for match in INTERNAL.finditer(line)
+    ]
 
 
 def link_problems(path: Path, line: str) -> list[str]:
@@ -128,12 +151,15 @@ def check(path: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    """Scan the named files, or every tracked .md."""
-    paths = [Path(a) for a in argv] or tracked_markdown()
-    problems = [msg for p in paths if p.exists() for msg in check(p)]
+    """Scan the named files, or every tracked file: the rendering rules read its pages."""
+    files = [Path(a) for a in argv] if argv else tracked()
+    files = [p for p in files if p.exists()]
+    pages = [p for p in files if p.suffix == ".md"]
+    problems = [msg for p in pages for msg in check(p)]
+    problems += [msg for p in files for msg in internal_references(p)]
     for msg in problems:
         print(msg)
-    print(f"\n{len(problems)} problem(s) in {len(paths)} file(s)")
+    print(f"\n{len(problems)} problem(s) in {len(files)} file(s), {len(pages)} of them pages")
     return 1 if problems else 0
 
 

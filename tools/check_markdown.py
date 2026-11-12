@@ -35,6 +35,11 @@ RULES: tuple[tuple[str, str], ...] = (
 
 FENCE = re.compile(r"^\s*(```|~~~)")
 LINK = re.compile(r"\[[^\]]*\]\(([^)#\s]+)(?:#[^)\s]*)?\)")
+ROOT = Path(__file__).resolve().parent.parent
+# The README is also the package's page on PyPI, which resolves no relative link: it links
+# into this tree by the address of `main`, and that address names a path the tree must hold.
+README = ROOT / "README.md"
+TREE = re.compile(r"https://github\.com/ppigazzini/valgebra-jsonschema/(?:blob|tree)/main/(.+)")
 
 
 def strip_code_spans(line: str) -> str:
@@ -85,6 +90,21 @@ def tracked_markdown() -> list[Path]:
     return [Path(line) for line in out.stdout.split() if line]
 
 
+def link_problems(path: Path, line: str) -> list[str]:
+    """Return one message per dead link on ``line``, and per relative one in the README."""
+    problems: list[str] = []
+    for target in LINK.findall(line):
+        if target.startswith(("http://", "https://", "mailto:")):
+            own = TREE.match(target)
+            if own and not (ROOT / own[1]).exists():
+                problems.append(f"dead link -> {target}")
+        elif path.resolve() == README:
+            problems.append(f"relative link in the README, which PyPI cannot follow -> {target}")
+        elif not (path.parent / target).exists():
+            problems.append(f"dead link -> {target}")
+    return problems
+
+
 def check(path: Path) -> list[str]:
     """Return one message per problem found in ``path``."""
     problems: list[str] = []
@@ -94,12 +114,7 @@ def check(path: Path) -> list[str]:
             in_fence = not in_fence
             continue
 
-        problems.extend(
-            f"{path}:{n}: dead link -> {target}"
-            for target in LINK.findall(raw)
-            if not target.startswith(("http://", "https://", "mailto:"))
-            and not (path.parent / target).exists()
-        )
+        problems.extend(f"{path}:{n}: {why}" for why in link_problems(path, raw))
 
         if in_fence:
             continue

@@ -62,7 +62,11 @@ Structure by what the reader is doing, not by how the code is organized.
 State the limit of what a page covers. A page that silently omits a case reads as though
 the case does not exist.
 
-Link with relative paths; `tools/check_markdown.py` fails the build on a dead one.
+Link with relative paths, except in `README.md`. The README is also the package's page on
+PyPI, which resolves no relative link, so it links into this tree by the absolute address of
+`main`, `https://github.com/ppigazzini/valgebra-jsonschema/blob/main/` and the path.
+`tools/check_markdown.py` fails the build on a dead link of either kind and on a relative link
+in the README.
 
 ### Markdown that GitHub renders
 

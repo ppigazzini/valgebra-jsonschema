@@ -55,11 +55,14 @@ can prove neither, which is never a wrong proof, and a keyword this package does
 
 Drafts 2020-12, 2019-09, 07, 06 and 04, all but the first through `upgrade`, and a document
 naming any other dialect fails saying so, as the Model Context Protocol asks
-([`docs/05-mcp.md`](docs/05-mcp.md)). Patterns follow ECMA-262, as the
-specification requires, and numbers compare by value: `1` and `1.0` are one number, and `true` is
-none. `format` is an annotation, as 2020-12 makes it, and `assert_format=True` reads nine of them as
-assertions. [`docs/02-compiler.md`](docs/02-compiler.md) says how each keyword becomes a set, and
-[`docs/03-conformance.md`](docs/03-conformance.md) holds the inventory and the ledger of differences.
+([`docs/05-mcp.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/05-mcp.md)).
+Patterns follow ECMA-262, as the specification requires, and numbers compare by value: `1` and
+`1.0` are one number, and `true` is none. `format` is an annotation, as 2020-12 makes it, and
+`assert_format=True` reads nine of them as assertions.
+[`docs/02-compiler.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/02-compiler.md)
+says how each keyword becomes a set, and
+[`docs/03-conformance.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/03-conformance.md)
+holds the inventory and the ledger of differences.
 
 ## Measured
 
@@ -78,7 +81,8 @@ uv run python tools/containment.py --check docs/studies/containment.json
   `jsonschema` package's on 12 of 402824 values, each a reading the ledger records.
 - **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 6011 proven,
   none against a label; each of the 258 refutations against a label is a wrong label, which
-  [`docs/04-results.md`](docs/04-results.md) names.
+  [`docs/04-results.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/04-results.md)
+  names.
 
 ## Install
 

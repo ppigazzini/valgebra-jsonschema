@@ -1,0 +1,31 @@
+version: 2
+# Every ecosystem waits seven days after a release before proposing it, so a version pulled or
+# compromised in its first week never reaches a pull request; zizmor's `dependabot-cooldown`
+# audit reads this.
+updates:
+  # A new tag on a `uses:` leaves `.github/workflows/actions.lock` behind, and the job
+  # `actions-lock` fails until `gh actions-lock` rewrites the file on the pull request's branch.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: uv
+    directory: "/"
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      python:
+        patterns: ["*"]
+    # A valgebra release moves the floor in `pyproject.toml`, the lock and the published
+    # studies in one commit, since a 0.0.x minor is a breaking release here; a lock-only bump
+    # would leave the floor behind.
+    ignore:
+      - dependency-name: "valgebra"

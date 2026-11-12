@@ -756,7 +756,7 @@ test = [
 requires-dist = [
     { name = "annotated-types", specifier = ">=0.8.0" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
-    { name = "valgebra", specifier = ">=0.0.25,<0.1" },
+    { name = "valgebra", specifier = ">=0.0.25,<0.0.26" },
 ]
 
 [package.metadata.requires-dev]

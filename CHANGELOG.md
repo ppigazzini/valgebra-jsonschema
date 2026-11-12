@@ -19,8 +19,9 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   narrowed by a pattern, so a relation reads them.
 - `assert_format=True` reads `date`, `duration`, `ipv4`, `uuid`, `date-time`, `time`, `email`,
   `hostname` and `ipv6` as assertions, and refuses any other `format`. It is off by default.
-- The package requires valgebra 0.0.25 or later and below 0.1, since a `0.0.x` minor of
-  valgebra is a breaking release here.
+- The package requires valgebra 0.0.25 and below 0.0.26, since a `0.0.x` minor of valgebra
+  is a breaking release here: each is taken by a release of this package, with its suite run on
+  it.
 
 [Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.1...HEAD
 [0.0.1]: https://github.com/ppigazzini/valgebra-jsonschema/releases/tag/v0.0.1

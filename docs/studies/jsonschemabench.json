@@ -16,11 +16,11 @@
   {
    "subset": "Github_hard",
    "schemas": 1240,
-   "compiled": 1221,
-   "refused": 19,
+   "compiled": 1222,
+   "refused": 18,
    "crashed": 0,
    "timed_out": 0,
-   "values": 48020,
+   "values": 48064,
    "disagreed": 0
   },
   {
@@ -66,11 +66,11 @@
   {
    "subset": "JsonSchemaStore",
    "schemas": 492,
-   "compiled": 460,
-   "refused": 32,
+   "compiled": 473,
+   "refused": 19,
    "crashed": 0,
    "timed_out": 0,
-   "values": 18082,
+   "values": 18517,
    "disagreed": 0
   },
   {
@@ -115,7 +115,7 @@
   },
   {
    "reason": "a pattern outside valgebra's regex dialect",
-   "schemas": 19
+   "schemas": 5
   },
   {
    "reason": "a property name valgebra cannot hold",

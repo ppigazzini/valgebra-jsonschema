@@ -624,6 +624,45 @@ def test_a_reference_reached_through_a_pointer_resolves_in_its_own_resource():
     assert not compile_schema(schema).is_valid("1")
 
 
+class TestLookaheads:
+    @pytest.mark.parametrize(
+        ("pattern", "admitted", "refused"),
+        [
+            ("^(?!@@)[@a-z]+$", ["@a", "a@@"], ["@@a", "a b"]),
+            ("^(?!interactive|name|style).+$", ["color", "xname"], ["names", ""]),
+            ("^(?!pattern$).*$", ["patterns", ""], ["pattern"]),
+            ("^(?=[^=]+$)(?!\\s+$)(.|\\n)+$", ["ab", " a "], ["a=b", "   "]),
+            ("^((?!mode)(?!Mode).)*$", ["abc", ""], ["a mode b", "Moder", "a\nb"]),
+        ],
+    )
+    def test_a_lookahead_opening_a_pattern_or_tempering_its_dot_is_a_set(
+        self, pattern, admitted, refused
+    ):
+        s = compile_schema({"type": "string", "pattern": pattern})
+        assert [s.is_valid(v) for v in admitted] == [True] * len(admitted)
+        assert [s.is_valid(v) for v in refused] == [False] * len(refused)
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            "^(?!a)b|c",  # the lookahead binds the first branch alone
+            "^((?!$).)*$",  # `$` matches the empty string at the end alone
+            "^((?!x?).)*$",  # `x?` matches the empty string
+            "^((?!\\b$).)*$",  # `\b$` matches at the end of "ab" alone, which the loop never tests
+            "a(?!b)",  # a lookahead past the start
+        ],
+    )
+    def test_any_other_lookahead_is_refused(self, pattern):
+        with pytest.raises(Unsupported, match="regex dialect"):
+            compile_schema({"pattern": pattern})
+
+    def test_a_relation_reads_the_lookahead(self):
+        words = compile_schema({"type": "string", "pattern": "^[a-z@]+$"})
+        unmarked = compile_schema({"type": "string", "pattern": "^(?!@@)[a-z@]+$"})
+        assert unmarked.relation_to(words) == "subset"
+        assert words.relation_to(unmarked) == "not_subset"
+
+
 class TestEcmaDialect:
     @pytest.mark.parametrize(
         ("pattern", "text", "admitted"),

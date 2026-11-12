@@ -21,6 +21,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   `Sampler` takes them too. The suite studies read the suite's vendored `remotes/` and the
   drafts' meta-schemas, and run every case of drafts 07, 06 and 04: 929, 841 and 618.
 
+- A `pattern` opening with lookaheads, `^(?!A)(?=C)B`, and one tempering its dot,
+  `^((?!A).)*$`, are the sets they denote, meets of patterns with complements, which a
+  relation reads: 14 more JSONSchemaBench schemas compile, 9471 of 9558. Any other lookaround
+  is outside valgebra's dialect.
+
 ### Changed
 
 - `oneOf` leaves out the complement of a branch valgebra proves disjoint from another, which

@@ -1187,12 +1187,121 @@ def _class_atom(pattern: str, i: int) -> tuple[_Atom, int]:
 
 
 def _search(pattern: str) -> Validator[Any]:
-    body = ecma(pattern)
+    """Return the strings ``pattern`` finds a match in, as ECMA-262's ``test`` does.
+
+    valgebra's engine holds no lookaround, and two shapes of one are read as the sets they
+    denote, of patterns it holds. Lookaheads ``^(?!A)(?=C)B`` opening a pattern hold where
+    ``^B`` finds a match, no match of ``A`` starts the string and one of ``C`` does, so long
+    as ``B`` alternates at no top level, where the lookaheads would bind its first branch
+    alone. ``^((?!A).)*$`` holds the strings with no line terminator in which ``A`` occurs
+    nowhere, so long as ``A`` matches no empty string and asserts no position, where it
+    could match at the end, which the loop never tests. Any other lookaround is refused.
+    """
+    if "(?=" not in pattern and "(?!" not in pattern:
+        return _regex(pattern, f"(?s:.*)(?:{ecma(pattern)})(?s:.*)")
+    if (bodies := _tempered(pattern)) is not None:
+        return intersection(
+            _regex(pattern, f"{_DOT}*"),
+            *(complement(_regex(pattern, f"(?s:.*)(?:{ecma(a)})(?s:.*)")) for a in bodies),
+        )
+    if (split := _lookaheads(pattern)) is not None:
+        looks, rest = split
+        return intersection(
+            _regex(pattern, f"(?s:.*)(?:{ecma(rest)})(?s:.*)"),
+            *(
+                _regex(pattern, f"(?:{ecma(a)})(?s:.*)")
+                if positive
+                else complement(_regex(pattern, f"(?:{ecma(a)})(?s:.*)"))
+                for positive, a in looks
+            ),
+        )
+    return _regex(pattern, f"(?s:.*)(?:{ecma(pattern)})(?s:.*)")
+
+
+def _regex(pattern: str, body: str) -> Validator[Any]:
+    """Return the strings ``body`` matches whole, read from ``pattern``."""
     try:
-        return Validator(Annotated[str, Regex(f"(?s:.*)(?:{body})(?s:.*)")])
+        return Validator(Annotated[str, Regex(body)])
     except Exception as exc:
         msg = f"pattern {pattern!r} is outside valgebra's regex dialect: {exc}"
         raise Unsupported(msg) from exc
+
+
+def _tokens(pattern: str) -> list[tuple[int, str]]:
+    """Return where each token of ``pattern`` starts, and its rewrite, with its end last."""
+    out: list[tuple[int, str]] = []
+    i, repeatable = 0, False
+    while i < len(pattern):
+        part, end, repeatable = _token(pattern, i, repeatable=repeatable)
+        out.append((i, part))
+        i = end
+    return [*out, (len(pattern), "")]
+
+
+def _opens(part: str) -> bool:
+    return part == "(" or _GROUP.fullmatch(part) is not None
+
+
+def _group(tokens: list[tuple[int, str]], k: int) -> int:
+    """Return the index of the token after the group token ``k`` opens, or 0 if none closes it."""
+    depth = 0
+    for j in range(k, len(tokens) - 1):
+        part = tokens[j][1]
+        depth += _opens(part) - (part == ")")
+        if depth == 0:
+            return j + 1
+    return 0
+
+
+def _lookaheads(pattern: str) -> tuple[list[tuple[bool, str]], str] | None:
+    """Return the lookaheads opening ``^(?!A)(?=C)B``, and ``^B``.
+
+    Each lookahead is whether it is positive and its body. None for any other pattern, or
+    where ``B`` alternates at its top level.
+    """
+    tokens = _tokens(pattern)
+    if tokens[0][1] != "^":
+        return None
+    looks: list[tuple[bool, str]] = []
+    k = 1
+    while tokens[k][1] in ("(?=", "(?!") and (end := _group(tokens, k)):
+        looks.append((tokens[k][1] == "(?=", pattern[tokens[k + 1][0] : tokens[end - 1][0]]))
+        k = end
+    depth = 0
+    for _, part in tokens[k:]:
+        if part == "|" and depth == 0:
+            return None
+        depth += _opens(part) - (part == ")")
+    return (looks, "^" + pattern[tokens[k][0] :]) if looks else None
+
+
+#: What a token asserting a position is rewritten to: a lookahead body holding one may match
+#: the empty string at one position and not at another.
+_POSITIONS = frozenset({"^", "$", "(?-u:\\b)", "(?-u:\\B)"})
+
+
+def _tempered(pattern: str) -> list[str] | None:
+    """Return the bodies ``A`` of ``^((?!A).)*$``.
+
+    None for any other pattern, or where an ``A`` matches the empty string or asserts a
+    position.
+    """
+    tokens = _tokens(pattern)
+    if [part for _, part in tokens[:2]] not in (["^", "("], ["^", "(?:"]):
+        return None
+    bodies: list[str] = []
+    k = 2
+    while tokens[k][1] == "(?!" and (end := _group(tokens, k)):
+        inner = tokens[k + 1 : end - 1]
+        if any(part in _POSITIONS for _, part in inner):
+            return None
+        bodies.append(pattern[tokens[k + 1][0] : tokens[end - 1][0]])
+        k = end
+    if not bodies or [part for _, part in tokens[k:]] != [_DOT, ")", "*", "$", ""]:
+        return None
+    if any(_regex(pattern, ecma(a)).is_valid("") for a in bodies):
+        return None
+    return bodies
 
 
 #: How many patterns one object group splits its keys by: the cells number two to this.

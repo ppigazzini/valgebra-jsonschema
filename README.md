@@ -79,8 +79,8 @@ uv run python tools/containment.py --check docs/studies/containment.json
   1053; draft-07, 929 of 929; draft-06, 841 of 841; draft-04, 618 of 618. Skipped: `unevaluated*`
   and dynamic references.
 - **Real-world schemas** (JSONSchemaBench, 9558 schemas from GitHub, the JSON Schema Store,
-  Kubernetes and function-calling data): 9457 compile, none crashes; membership differs from the
-  `jsonschema` package's on 12 of 403760 values, each a reading the ledger records.
+  Kubernetes and function-calling data): 9471 compile, none crashes; membership differs from the
+  `jsonschema` package's on 12 of 404239 values, each a reading the ledger records.
 - **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 6213 proven,
   none against a label; each of the 276 refutations against a label is a wrong label, which
   [`docs/04-results.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/04-results.md)

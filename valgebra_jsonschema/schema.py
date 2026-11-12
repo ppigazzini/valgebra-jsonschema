@@ -184,6 +184,8 @@ SUPPORTED = frozenset(
         "minProperties",
         "required",
         "dependentRequired",
+        "unevaluatedProperties",
+        "unevaluatedItems",
     }
 )
 
@@ -191,8 +193,6 @@ SUPPORTED = frozenset(
 #: other keyword it has no handler for is outside the vocabularies, so an annotation.
 REFUSED = frozenset(
     {
-        "unevaluatedProperties",
-        "unevaluatedItems",
         "$dynamicRef",
         "$dynamicAnchor",
         "$recursiveRef",
@@ -605,6 +605,122 @@ class Compiler:
                 self._anchors.setdefault((base, node["$anchor"]), (node, around))
             stack.extend((sub, base) for sub in _subschemas(node))
 
+    def evaluations(self, schema: dict[str, Any]) -> list[Case]:
+        """Return the cases a schema object being compiled evaluates on.
+
+        What ``unevaluated*`` reads is what the keywords beside it and the in-place
+        subschemas that succeed evaluate at the instance (draft 2020-12, section 11), and
+        which of those succeed depends on the instance. Each case is the sets an instance of
+        it is in, and what is evaluated there. ``allOf`` multiplies its subschemas' cases,
+        ``anyOf`` takes every nonempty set of branches, each holding, ``oneOf`` each branch
+        holding, ``if`` holding with ``then`` or failing with ``else``, a
+        ``dependentSchemas`` entry its key present, a ``$ref`` its target's cases; ``not``
+        evaluates nothing. An instance may be in several cases, but each holds of branches
+        that hold on it, so the case of every branch that holds evaluates the most, and an
+        ``unevaluated*`` holding on any case holds on that one: the union is exact. ``if``
+        is the exception, its two outcomes evaluating apart, so each states its own. A
+        ``$ref`` that reaches itself at one instance, an ``anyOf`` of more than `_BRANCHES`
+        branches and more than `_EVALUATION_CASES` cases are refused.
+        """
+        return self._evaluations(schema, self._bases[-1], frozenset(), own=False)
+
+    def _evaluations(
+        self, schema: object, here: str, seen: frozenset[_Target], *, own: bool = True
+    ) -> list[Case]:
+        if not isinstance(schema, dict):
+            return [_NOTHING]
+        cases: list[Case] = [([], self._evaluated_beside(schema, here, own=own))]
+        for node in schema.get("allOf", []):
+            cases = _product(cases, self._inside(node, here, seen))
+        for options in (
+            self._any_of_cases(schema.get("anyOf"), here, seen),
+            self._one_of_cases(schema.get("oneOf"), here, seen),
+            self._if_cases(schema, here, seen),
+            self._dependent_cases(schema.get("dependentSchemas", {}), here, seen),
+            self._ref_cases(schema.get("$ref"), here, seen),
+        ):
+            cases = _product(cases, options)
+        if len(cases) > _EVALUATION_CASES:
+            msg = f"unevaluated* reads {len(cases)} cases, past {_EVALUATION_CASES}"
+            raise Unsupported(msg)
+        return cases
+
+    def _inside(self, node: object, here: str, seen: frozenset[_Target]) -> list[Case]:
+        return self._evaluations(node, _within(here, node), seen)
+
+    def _holding(self, node: object, here: str, seen: frozenset[_Target]) -> list[Case]:
+        held = self._compile_at(node, here)
+        return [([held, *conds], done) for conds, done in self._inside(node, here, seen)]
+
+    def _failing(self, node: object, here: str) -> list[Case]:
+        return [([complement(self._compile_at(node, here))], Evaluated())]
+
+    def _any_of_cases(self, branches: object, here: str, seen: frozenset[_Target]) -> list[Case]:
+        if not isinstance(branches, list):
+            return [_NOTHING]
+        if len(branches) > _BRANCHES:
+            msg = f"keyword 'anyOf' holds {len(branches)} branches beside unevaluated*"
+            raise Unsupported(msg)
+        options: list[Case] = []
+        for chosen in itertools.product((True, False), repeat=len(branches)):
+            if any(chosen):
+                combo = [_NOTHING]
+                for node in itertools.compress(branches, chosen):
+                    combo = _product(combo, self._holding(node, here, seen))
+                options += combo
+        return options
+
+    def _one_of_cases(self, branches: object, here: str, seen: frozenset[_Target]) -> list[Case]:
+        if not isinstance(branches, list):
+            return [_NOTHING]
+        return [case for node in branches for case in self._holding(node, here, seen)]
+
+    def _if_cases(self, schema: dict[str, Any], here: str, seen: frozenset[_Target]) -> list[Case]:
+        if "if" not in schema:
+            return [_NOTHING]
+        then = self._inside(schema.get("then", True), here, seen)
+        otherwise = self._inside(schema.get("else", True), here, seen)
+        return [
+            *_product(self._holding(schema["if"], here, seen), then),
+            *_product(self._failing(schema["if"], here), otherwise),
+        ]
+
+    def _dependent_cases(
+        self, dependents: dict[str, Any], here: str, seen: frozenset[_Target]
+    ) -> list[Case]:
+        cases = [_NOTHING]
+        for key, node in dependents.items():
+            present = [([has(key), *conds], done) for conds, done in self._inside(node, here, seen)]
+            cases = _product(cases, [*present, _NOTHING])
+        return cases
+
+    def _ref_cases(self, reference: object, here: str, seen: frozenset[_Target]) -> list[Case]:
+        if not isinstance(reference, str):
+            return [_NOTHING]
+        node, around = self._locate(reference, here)
+        target = (id(node), around)
+        if target in seen:
+            msg = f"$ref {reference!r} reaches itself at one instance beside unevaluated*"
+            raise Unsupported(msg)
+        return self._evaluations(node, _within(around, node), seen | {target})
+
+    def _evaluated_beside(self, schema: dict[str, Any], here: str, *, own: bool) -> Evaluated:
+        """Return what a schema object's own keywords evaluate, beside its subschemas.
+
+        An ``unevaluated*`` evaluates what it reads only for a schema around this one, and
+        ``own`` says whether it counts: not for the schema being compiled.
+        """
+        contains = schema.get("contains")
+        return Evaluated(
+            names=frozenset(schema.get("properties", {})),
+            patterns=frozenset(schema.get("patternProperties", {})),
+            every_key="additionalProperties" in schema
+            or (own and "unevaluatedProperties" in schema),
+            prefix=len(schema.get("prefixItems", [])),
+            every_item="items" in schema or (own and "unevaluatedItems" in schema),
+            contained=() if contains is None else (self._compile_at(contains, here),),
+        )
+
     def _reaches_itself(self, node: object, around: str) -> bool:
         """Return whether a reference inside ``node`` leads back to it, through any others.
 
@@ -688,6 +804,51 @@ class Compiler:
 
 #: A schema to compile, by its node and the base URI around it.
 _Target: TypeAlias = tuple[int, str]
+
+
+@dataclass(frozen=True, slots=True)
+class Evaluated:
+    """What a schema evaluates at its instance.
+
+    Keys by name, by pattern or every one, and items in a prefix, every one, or those in a
+    ``contains`` set.
+    """
+
+    names: frozenset[str] = frozenset()
+    patterns: frozenset[str] = frozenset()
+    every_key: bool = False
+    prefix: int = 0
+    every_item: bool = False
+    contained: tuple[Validator[Any], ...] = ()
+
+    def __or__(self, other: Evaluated) -> Evaluated:
+        return Evaluated(
+            self.names | other.names,
+            self.patterns | other.patterns,
+            self.every_key or other.every_key,
+            max(self.prefix, other.prefix),
+            self.every_item or other.every_item,
+            self.contained + other.contained,
+        )
+
+
+#: One case of what a schema evaluates: the sets an instance of it is in, and what it
+#: evaluates there.
+Case: TypeAlias = tuple[list[Validator[Any]], Evaluated]
+#: The branches an ``anyOf`` beside ``unevaluated*`` may hold: every nonempty set of them
+#: that holds is a case, fifteen for four.
+_BRANCHES = 4
+#: The cases one ``unevaluated*`` reads before it is refused: each is a set built.
+_EVALUATION_CASES = 64
+
+
+#: The case of no condition, on which nothing is evaluated: what `_product` multiplies by.
+_NOTHING: Case = ([], Evaluated())
+
+
+def _product(cases: list[Case], others: list[Case]) -> list[Case]:
+    """Return every case of one list met with every case of the other."""
+    return [(a + b, x | y) for a, x in cases for b, y in others]
 
 
 def _join(base: str, reference: str) -> str:
@@ -1491,6 +1652,53 @@ def _ref(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     return c.ref(s["$ref"])
 
 
+def _unevaluated_properties(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
+    """Return the objects whose keys no keyword or holding subschema evaluates are in a set.
+
+    On each case of what the schema evaluates (`Compiler.evaluations`), those keys are the
+    ones ``properties`` and ``patternProperties`` would leave to ``additionalProperties``
+    if they named the keys evaluated there: so each case reads as that object group.
+    """
+    rest = s["unevaluatedProperties"]
+    shapes = [
+        intersection(*conds)
+        if done.every_key
+        else intersection(
+            *conds,
+            c.compile(
+                {
+                    "properties": dict.fromkeys(done.names, True),
+                    "patternProperties": dict.fromkeys(done.patterns, True),
+                    "additionalProperties": rest,
+                }
+            ),
+        )
+        for conds, done in c.evaluations(s)
+    ]
+    return c.guard("object", union(*shapes))
+
+
+def _unevaluated_items(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
+    """Return the arrays whose items no keyword or holding subschema evaluates are in a set.
+
+    On each case, those are the items past the evaluated prefix that are in no ``contains``
+    set evaluated there, so each item past it is in the set or in one of those.
+    """
+    rest = c.compile(s["unevaluatedItems"])
+    shapes: list[Validator[Any]] = []
+    for conds, done in c.evaluations(s):
+        if done.every_item:
+            shapes.append(intersection(*conds))
+            continue
+        prefix = [JSON] * done.prefix
+        tail = union(rest, *done.contained)
+        lists: list[object] = [Validator([])]
+        lists += [fixed(prefix[:n]) for n in range(1, len(prefix))]
+        lists.append(Validator([*prefix, tail, ...]))
+        shapes.append(intersection(*conds, union(*lists)))
+    return c.guard("array", union(*shapes))
+
+
 def _schema_id(_c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     del s
     msg = "keyword '$id' starts a resource that declares another dialect"
@@ -1619,6 +1827,8 @@ _HANDLERS: dict[str, Callable[[Compiler, dict[str, Any]], Validator[Any]]] = {
     "not": _not,
     "if": _if,
     "$ref": _ref,
+    "unevaluatedProperties": _unevaluated_properties,
+    "unevaluatedItems": _unevaluated_items,
     "$id": _schema_id,
 }
 

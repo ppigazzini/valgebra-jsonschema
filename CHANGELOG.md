@@ -26,6 +26,12 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   relation reads: 14 more JSONSchemaBench schemas compile, 9471 of 9558. Any other lookaround
   is outside valgebra's dialect.
 
+- `unevaluatedProperties` and `unevaluatedItems` are read on each case of which in-place
+  subschemas hold, as the object group or the array that leaves the keys or items nothing
+  evaluates there to the subschema. The suite studies run every case of their files that
+  reads no dynamic reference, 1341 of draft 2020-12 and 1239 of 2019-09, each passing, and
+  the containment study proves 6564 of its 10890 questions.
+
 ### Changed
 
 - `oneOf` leaves out the complement of a branch valgebra proves disjoint from another, which

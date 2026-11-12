@@ -156,6 +156,97 @@ class TestEmbeddedResources:
             compile_schema(schema)
 
 
+def _keyed(key, value):
+    return {"properties": {key: {"const": value}}, "required": [key]}
+
+
+class TestUnevaluated:
+    @pytest.mark.parametrize(
+        ("schema", "admitted", "refused"),
+        [
+            ({"properties": {"a": {}}}, [{"a": 1}, {}], [{"b": 1}]),
+            (
+                {
+                    "$defs": {"x": {"properties": {"b": {}}}},
+                    "allOf": [{"properties": {"a": {}}}],
+                    "$ref": "#/$defs/x",
+                },
+                [{"a": 1, "b": 1}],
+                [{"c": 1}],
+            ),
+            ({"anyOf": [_keyed("a", 1), _keyed("b", 1)]}, [{"a": 1, "b": 1}], [{"a": 1, "b": 2}]),
+            ({"oneOf": [_keyed("a", 1), _keyed("b", 1)]}, [{"a": 1}], [{"a": 1, "c": 1}]),
+            (
+                # The first branch names `b` and `c`, and evaluates them only where it holds.
+                {
+                    "oneOf": [
+                        {**_keyed("a", 1), "properties": {"a": {"const": 1}, "b": {}, "c": {}}},
+                        {"properties": {"c": {}}, "required": ["c"]},
+                    ]
+                },
+                [{"c": 1}, {"a": 1, "b": 1}],
+                [{"c": 1, "b": 1}],
+            ),
+            ({"patternProperties": {"^x": {}}}, [{"x1": 1}], [{"y": 1}]),
+            (
+                {
+                    "if": _keyed("k", "x"),
+                    "then": {"properties": {"t": {}}},
+                    "else": {"properties": {"e": {}}},
+                },
+                [{"k": "x", "t": 1}, {"e": 1}],
+                [{"k": "x", "e": 1}, {"k": "y", "e": 1}],
+            ),
+            (
+                # `else` names `k`, which it evaluates only where `if` fails.
+                {
+                    "if": _keyed("k", "x"),
+                    "then": {"properties": {"t": {}}},
+                    "else": {"properties": {"e": {}, "k": {}}},
+                },
+                [{"k": "y", "e": 1}],
+                [{"k": "x", "e": 1}, {"k": "y", "t": 1}],
+            ),
+            ({"not": _keyed("a", 2)}, [{}], [{"a": 1}]),
+            (
+                {"properties": {"a": {}}, "dependentSchemas": {"a": {"properties": {"b": {}}}}},
+                [{"a": 1, "b": 1}],
+                [{"b": 1}],
+            ),
+            ({"allOf": [{"unevaluatedProperties": True}]}, [{"x": 1}], []),
+        ],
+    )
+    def test_a_key_is_evaluated_where_a_holding_subschema_names_it(self, schema, admitted, refused):
+        s = compile_schema({**schema, "unevaluatedProperties": False})
+        assert [s.is_valid(v) for v in admitted] == [True] * len(admitted)
+        assert [s.is_valid(v) for v in refused] == [False] * len(refused)
+
+    def test_an_item_is_evaluated_by_a_prefix_or_a_contains(self):
+        s = compile_schema(
+            {"prefixItems": [_STR], "contains": {"const": 9}, "unevaluatedItems": False}
+        )
+        assert s.is_valid(["a", 9])
+        assert s.is_valid(["a", 9, 9])
+        assert not s.is_valid(["a", 9, 1])
+
+    @pytest.mark.parametrize(
+        "schema",
+        [
+            {"anyOf": [{}] * 5, "unevaluatedProperties": False},
+            # The keyword first, so its walk meets the cycle before valgebra's build does.
+            {"unevaluatedItems": False, "$defs": {"x": {"$ref": "#/$defs/x"}}, "$ref": "#/$defs/x"},
+        ],
+    )
+    def test_too_many_cases_or_a_reference_to_itself_is_refused(self, schema):
+        with pytest.raises(Unsupported, match="unevaluated"):
+            compile_schema(schema)
+
+    def test_a_relation_reads_the_unevaluated_keys(self):
+        named = {"properties": {"a": {}}}
+        s = compile_schema({**named, "unevaluatedProperties": False})
+        assert s.is_equivalent(compile_schema({**named, "additionalProperties": False}))
+
+
 class TestDocuments:
     def test_a_reference_reaches_a_supplied_document(self):
         documents = {"http://example.com/s.json": {"$defs": {"n": _INT}}}
@@ -355,7 +446,7 @@ class TestRefusals:
     @pytest.mark.parametrize(
         "schema",
         [
-            {"unevaluatedProperties": False},
+            {"$dynamicRef": "#meta"},
             {"$ref": "http://example.com/x.json"},
             {"$ref": "#anchor"},
             {"properties": {"a": {"$id": "x", "$ref": "#/$defs/b"}}, "$defs": {"b": {}}},

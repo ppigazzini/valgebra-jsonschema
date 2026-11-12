@@ -13,10 +13,11 @@ uv run python tools/suite.py --draft 6 --check docs/studies/json-schema-test-sui
 uv run python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
 ```
 
-Draft 2020-12, with the four optional files on regular expressions and large numbers: 1142
-of the 1142 cases run pass; 256 are skipped: the `unevaluatedItems` and
-`unevaluatedProperties` files (200 cases), dynamic references, and a custom metaschema.
-Through `upgrade`: draft 2019-09, 1053 of the 1053 cases run pass, 208 skipped; draft-07, 929
+Draft 2020-12, with the four optional files on regular expressions and large numbers: 1341
+of the 1341 cases run pass; 57 are skipped: 52 read a dynamic reference, the meta-schema's
+among them, and 5 a custom metaschema. Through `upgrade`: draft 2019-09, 1239 of the 1239
+cases run pass, 22 skipped, a `$recursiveRef` where two resources set `$recursiveAnchor`
+among them; draft-07, 929
 of the 929 cases run pass, 0 skipped; draft-06, 841 of the 841 cases run pass, 0 skipped;
 draft-04, 618 of the 618 cases run pass, 0 skipped. A case's remote documents
 are the suite's `remotes/`, vendored, and the drafts' meta-schemas from the
@@ -54,19 +55,19 @@ draft.
 | Github_trivial | 444 | 444 | 0 | 0 | 0 | 17098 | 10 |
 | Github_ultra | 164 | 156 | 8 | 0 | 0 | 5470 | 0 |
 | Glaiveai2K | 1707 | 1689 | 18 | 0 | 0 | 79793 | 0 |
-| JsonSchemaStore | 492 | 473 | 19 | 0 | 0 | 18517 | 0 |
+| JsonSchemaStore | 492 | 475 | 17 | 0 | 0 | 18576 | 0 |
 | Kubernetes | 1064 | 1063 | 1 | 0 | 0 | 44463 | 0 |
 | Snowplow | 403 | 400 | 3 | 0 | 0 | 17745 | 0 |
 | WashingtonPost | 125 | 125 | 0 | 0 | 0 | 5275 | 0 |
-| all | 9558 | 9471 | 87 | 0 | 0 | 404239 | 12 |
+| all | 9558 | 9473 | 85 | 0 | 0 | 404298 | 12 |
 
-- 9471 of the 9558 schemas compile, none crashes, none times out. Of the 87 refused, 58
+- 9473 of the 9558 schemas compile, none crashes, none times out. Of the 85 refused, 58
   use `dependencies` or `additionalItems` in a schema declaring no older draft, 13 build
   sets valgebra refuses, 5 hold a pattern outside valgebra's regex dialect, 4 of them a
   lookahead past the pattern's start and 1 a backreference, and 7 a `$ref` to nothing in the document; the rest
   are listed by `tools/corpus.py`. A schema may name a draft's meta-schema, which both the
   compiler and the `jsonschema` package read from the `jsonschema-specifications` package.
-- Membership differs from the package's on 12 of the 404239 values, each a reading the
+- Membership differs from the package's on 12 of the 404298 values, each a reading the
   ledger records: 11 are an integral float, `1e300` or `-0.0`, under a draft-04
   `integer`, and 1 is `"\n"` under a pattern ending in `$`, which Python's `re` matches
   before a final newline.
@@ -86,18 +87,19 @@ the four the suite study runs.
 
 | draft | questions | refused | proven | refuted | undecided | proven against the label | refuted against the label |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 2020-12 | 3645 | 655 | 1897 | 811 | 282 | 0 | 5 |
+| 2020-12 | 3645 | 162 | 2248 | 911 | 324 | 0 | 8 |
 | 7 | 2788 | 12 | 1805 | 764 | 207 | 0 | 4 |
 | 6 | 2524 | 12 | 1621 | 690 | 201 | 0 | 4 |
 | 4 | 1933 | 4 | 890 | 811 | 228 | 0 | 263 |
 
-- No proof contradicts a label: 6213 proofs of the 10890 questions, 0 against one.
-- Each of the 276 refutations against a label is a wrong label, and the `jsonschema`
+- No proof contradicts a label: 6564 proofs of the 10890 questions, 0 against one.
+- Each of the 279 refutations against a label is a wrong label, and the `jsonschema`
   package's validator for the draft admits the witness to one side and refuses it from the
-  other. In every draft the generator writes two kinds. In `universal/items.json` and
-  `universal/ref.json` it leaves keywords outside the `not` it writes, `type` and
-  `items: false` in one and `type` and `required` in the other, so the schema it labels
-  universal leaves out the value `1`, or `{}`. In `unsatisfiable/ref.json` and
+  other. In every draft the generator writes two kinds. In `universal/items.json`,
+  `universal/ref.json` and, in draft 2020-12, `universal/unevaluatedItems.json` and
+  `universal/unevaluatedProperties.json` it leaves keywords outside the `not` it writes,
+  such as `type` and `items: false`, or `type` and `required`, so the schema it labels
+  universal leaves out a value: `1`, `{}`, `1.5` or `{"prop1": 1}`. In `unsatisfiable/ref.json` and
   `unsatisfiable/id.json`, and in draft 2020-12's `unsatisfiable/anchor.json`, it renames a
   `$ref`, an `$id` or an `$anchor` inside an `enum` or `const` value as well as in the
   schema, so the two copies differ and the schema it labels empty holds the value it

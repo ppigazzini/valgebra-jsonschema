@@ -66,11 +66,11 @@
   {
    "subset": "JsonSchemaStore",
    "schemas": 492,
-   "compiled": 473,
-   "refused": 19,
+   "compiled": 475,
+   "refused": 17,
    "crashed": 0,
    "timed_out": 0,
-   "values": 18517,
+   "values": 18576,
    "disagreed": 0
   },
   {
@@ -132,10 +132,6 @@
   {
    "reason": "the keyword dependencies",
    "schemas": 43
-  },
-  {
-   "reason": "the keyword unevaluatedProperties",
-   "schemas": 2
   }
  ]
 }

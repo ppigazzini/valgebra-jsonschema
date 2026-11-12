@@ -222,9 +222,9 @@
   },
   {
    "file": "not",
-   "passed": 38,
+   "passed": 40,
    "failed": 0,
-   "skipped": 2,
+   "skipped": 0,
    "opaque": 0
   },
   {
@@ -271,9 +271,9 @@
   },
   {
    "file": "ref",
-   "passed": 76,
+   "passed": 77,
    "failed": 0,
-   "skipped": 3,
+   "skipped": 2,
    "opaque": 0
   },
   {
@@ -299,16 +299,16 @@
   },
   {
    "file": "unevaluatedItems",
-   "passed": 0,
+   "passed": 69,
    "failed": 0,
-   "skipped": 71,
-   "opaque": 0
+   "skipped": 2,
+   "opaque": 4
   },
   {
    "file": "unevaluatedProperties",
-   "passed": 0,
+   "passed": 127,
    "failed": 0,
-   "skipped": 129,
+   "skipped": 2,
    "opaque": 0
   },
   {

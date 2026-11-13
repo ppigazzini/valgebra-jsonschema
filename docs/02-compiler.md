@@ -41,7 +41,7 @@ bare meet where it declines that of a meet holding the recursive universe.
 | `if`, `then`, `else` | `(if & then) | (~if & else)` |
 | `unevaluatedProperties`, `unevaluatedItems` | on each case of which in-place subschemas hold, the keys or items no keyword beside it nor holding subschema evaluates (draft 2020-12, section 11), read as the object group or the array of a prefix that leaves them to the subschema: an `anyOf` of more than four branches beside one, more than 64 cases, or a `$ref` reaching itself at one instance is refused |
 | `$ref` | resolved against the base URI it sits under, to a resource of the document and a JSON pointer or `$anchor` in it; compiled as a `recursive` fixpoint over its target |
-| `$dynamicRef`, `$dynamicAnchor` | a `$dynamicAnchor` names its schema object as an `$anchor` does; a `$dynamicRef` reads the dynamic scope only where its target sets a dynamic anchor of the fragment's name, and names the outermost schema object of the scope that sets one (draft 2020-12, section 8.2.3.2), so where one schema object of every document sets that name it is the `$ref` it resolves as |
+| `$dynamicRef`, `$dynamicAnchor` | a `$dynamicAnchor` names its schema object as an `$anchor` does; a `$dynamicRef` reads the dynamic scope only where its target sets a dynamic anchor of the fragment's name, and names the outermost schema object of the scope that sets one (draft 2020-12, sections 7.1 and 8.2.3.2). Where one schema object of every document sets that name, it is the `$ref` it resolves as; anywhere else the document compiles again keeping the scope, each schema object once per binding of the names its scope holds, and a target the scope chooses is a `recursive` fixpoint, which a reference reaching it again closes |
 
 Annotations assert nothing and are skipped: `title`, `description`, `default`, `examples`,
 `deprecated`, `readOnly`, `writeOnly`, `format` (the format-annotation vocabulary is the
@@ -81,11 +81,15 @@ schema object as `$anchor` does, and is rewritten to one. Only keywords that hol
 are descended into, so a property named `items` stays a name.
 
 Draft 2019-09 differs less. A `$ref` keeps its siblings, `dependencies` is no keyword, so it is
-refused as in 2020-12, and two keywords read apart from 2020-12: an array `items`, and
-`$recursiveRef`. `$recursiveRef: "#"` is `$ref: "#"`, the root of the resource holding it,
-wherever at most one resource sets `$recursiveAnchor`: it reaches the outermost resource of the
-dynamic scope that sets it only where that resource is its own. A document where two set it is
-refused, and so is any other value.
+refused as in 2020-12, and an array `items` and its recursion read apart from 2020-12.
+`$recursiveAnchor: true` on the root of a resource is a `$dynamicAnchor` whose name is empty,
+and `$recursiveRef: "#"` the `$dynamicRef: "#"` that reads it, as the draft 2020-12 release
+notes say the two pairs agree: the reference names the root of the resource holding it, or,
+where that root sets the anchor, the outermost schema in the dynamic scope that sets it (draft
+2019-09, section 8.2.4.2.2). The empty name is one no draft 2020-12 anchor may spell, so it meets
+no anchor of a document. A `$recursiveAnchor: true` on a schema object starting no resource is
+refused, since 2019-09's text reads one anywhere in the scope by its resource's root and the
+release notes hold it to a root; so is a `$recursiveRef` of any other value.
 
 ## Keys
 
@@ -118,10 +122,11 @@ compiled from their subschema, and each compilation holds its own.
 
 ## Refused, and ignored
 
-`Unsupported` names the keyword: a `$dynamicRef` whose anchor two schema objects set, references to a document neither the one compiled nor
+`Unsupported` names the keyword: references to a document neither the one compiled nor
 `documents` holds, a supplied document in a dialect not read where a reference names it, an
 embedded `$id` whose resource declares another `$schema`, a draft other than 2020-12, 2019-09,
-07, 06 and 04, and a property name holding a lone surrogate. A keyword outside the
+07, 06 and 04, a draft 2019-09 `$recursiveAnchor: true` on a schema object starting no resource,
+and a property name holding a lone surrogate. A keyword outside the
 vocabularies is an annotation, as draft 2020-12 says, and `Compiler.ignored` records it.
 
 ## Measured
@@ -132,8 +137,8 @@ uv run python tools/suite.py --check docs/studies/json-schema-test-suite.json
 
 The official JSON-Schema-Test-Suite at commit `89e83a740146`, vendored with its MIT
 license. Draft 2020-12, with the four optional files on regular expressions and large
-numbers: 1356 cases run, 1356 passed, 0 failed; 42 skipped by the refusals above; 99 of
-the run cases go through an opaque predicate. A case's remote documents are the suite's
+numbers: 1393 cases run, 1393 passed, 0 failed; 5 skipped, each naming a custom meta-schema as
+its dialect; 103 of the run cases go through an opaque predicate. A case's remote documents are the suite's
 `remotes/`, vendored with it, and the drafts' meta-schemas from the `jsonschema-specifications`
 package, passed as `documents`. Draft-07, through `upgrade`:
 
@@ -148,8 +153,7 @@ uv run python tools/suite.py --draft 7 --check docs/studies/json-schema-test-sui
 uv run python tools/suite.py --draft 2019-09 --check docs/studies/json-schema-test-suite-draft2019-09.json
 ```
 
-1239 cases run, 1239 passed, 0 failed; 22 skipped, by the same refusals and a
-`$recursiveRef` where two resources set `$recursiveAnchor`. Draft-06 and draft-04,
+1256 cases run, 1256 passed, 0 failed; 5 skipped, the same five. Draft-06 and draft-04,
 through `upgrade`:
 
 ```bash

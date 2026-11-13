@@ -68,10 +68,10 @@
   },
   {
    "file": "defs",
-   "passed": 0,
+   "passed": 2,
    "failed": 0,
-   "skipped": 2,
-   "opaque": 0
+   "skipped": 0,
+   "opaque": 2
   },
   {
    "file": "dependentRequired",
@@ -89,9 +89,9 @@
   },
   {
    "file": "dynamicRef",
-   "passed": 15,
+   "passed": 44,
    "failed": 0,
-   "skipped": 29,
+   "skipped": 0,
    "opaque": 0
   },
   {
@@ -271,10 +271,10 @@
   },
   {
    "file": "ref",
-   "passed": 77,
+   "passed": 79,
    "failed": 0,
-   "skipped": 2,
-   "opaque": 0
+   "skipped": 0,
+   "opaque": 2
   },
   {
    "file": "refRemote",
@@ -299,16 +299,16 @@
   },
   {
    "file": "unevaluatedItems",
-   "passed": 69,
+   "passed": 71,
    "failed": 0,
-   "skipped": 2,
+   "skipped": 0,
    "opaque": 4
   },
   {
    "file": "unevaluatedProperties",
-   "passed": 127,
+   "passed": 129,
    "failed": 0,
-   "skipped": 2,
+   "skipped": 0,
    "opaque": 0
   },
   {

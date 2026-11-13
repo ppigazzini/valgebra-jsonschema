@@ -16,8 +16,8 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   597 of draft-04, each passing.
 - `compile_schema(schema, documents={uri: document})` takes the documents a reference may name
   beside the one compiled. Each is a resource at its URI, read in its own dialect or, declaring
-  none, in the compiled document's; one in a dialect not read, or a draft 2019-09 one setting
-  `$recursiveAnchor`, is refused only where a reference names it, and no document is fetched.
+  none, in the compiled document's; one in a dialect not read is refused only where a reference
+  names it, and no document is fetched.
   `Sampler` takes them too. The suite studies read the suite's vendored `remotes/` and the
   drafts' meta-schemas, and run every case of drafts 07, 06 and 04: 929, 841 and 618.
 
@@ -38,12 +38,17 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   that way: it proves 6756 of its 10890 questions and leaves 490 undecided, and its 3 proofs
   against a label are `nonvalid/ref.json`'s tree, which the `jsonschema` package admits.
 
-- `$dynamicAnchor` names its schema object as `$anchor` does, and a `$dynamicRef` whose
-  anchor one schema object of every document sets is the `$ref` it resolves as (draft 2020-12,
-  section 8.2.3.2); where two set it, the reference reads the dynamic scope and is refused.
-  The draft 2020-12 suite study runs 1356 cases, each passing, and the containment study
-  refuses 139 of its questions rather than 190, its 2 more proofs against a label being
-  `nonvalid/dynamicRef.json`'s, which the official suite labels the other way.
+- `$dynamicRef` reads the dynamic scope across every document: where its target sets a
+  `$dynamicAnchor` of its fragment's name, it names the outermost schema object of the scope
+  that sets one (draft 2020-12, sections 7.1 and 8.2.3.2), and `$dynamicAnchor` names its
+  schema object as `$anchor` does. Draft 2019-09's `$recursiveAnchor: true` on a resource's
+  root is a dynamic anchor with no name, and its `$recursiveRef: "#"` the `$dynamicRef: "#"`
+  that reads it, as the draft 2020-12 release notes say the two pairs agree, in a supplied
+  document too. The suite studies run 1393 cases of draft 2020-12 and 1256 of 2019-09, each
+  passing, and skip the five that name a custom meta-schema. The containment study refuses
+  36 of its questions, each a reference the generator broke, and its 5 more answers against a
+  label, 3 proofs in `nonvalid/dynamicRef.json` and 2 refutations in `universal/dynamicRef.json`,
+  are each a wrong label the `jsonschema` package witnesses.
 
 - A property name ending in `?` is that name. valgebra's record literal reads the suffix as
   "optional", so such a key is written with one more and, where it is required, met with its

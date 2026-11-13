@@ -221,6 +221,10 @@ class Unsupported(ValueError):  # noqa: N818 - the name is the sentence a caller
 _PAST_VALGEBRAS_LIMIT = "valgebra refuses the schema"
 
 
+class _DynamicScope(Exception):  # noqa: N818 - a signal inside the compiler, never raised past it
+    """A ``$dynamicRef`` reads the dynamic scope: the compilation starts again keeping one."""
+
+
 class UnsupportedDialect(Unsupported):
     """A document's ``$schema`` names a dialect this compiler does not read.
 
@@ -372,13 +376,22 @@ class Compiler:
         self.ignored: set[str] = set()
         #: Each target by its node and the base URI around it, which every reference
         #: inside it resolves against.
-        self._done: dict[_Target, Validator[Any]] = {}
-        self._open: dict[_Target, Validator[Any]] = {}
+        self._done: dict[_Key, Validator[Any]] = {}
+        self._open: dict[_Key, Validator[Any]] = {}
         #: The open fixpoints whose placeholder each reference returned, in order.
-        self._used: list[_Target] = []
+        self._used: list[_Key] = []
         #: Sets built around open placeholders, with the fixpoints they need open: each is
         #: reused while those are, and dropped when one closes.
-        self._scoped: dict[_Target, tuple[Validator[Any], frozenset[_Target]]] = {}
+        self._scoped: dict[_Key, tuple[Validator[Any], frozenset[_Key]]] = {}
+        #: Whether the dynamic scope is kept: set where a ``$dynamicRef`` reads it, and then
+        #: each schema object compiles under the binding of each dynamic anchor the
+        #: outermost resource entered sets (draft 2020-12, sections 7.1 and 8.2.3.2).
+        self._dynamic_scope = False
+        self._scope: list[_Scope] = [()]
+        #: Each schema object a dynamic scope binds a name to, by its target.
+        self._bound: dict[_Target, tuple[object, str]] = {}
+        #: Each resource's dynamic anchors by name, by the resource's URI: `_index` fills it.
+        self._dynamic_in: dict[str, dict[str, tuple[object, str]]] = {}
         #: Whether each target reaches itself through references.
         self._recursive: dict[_Target, bool] = {}
         #: Each resource by its URI and each anchor by its resource's URI and its name, with
@@ -474,10 +487,22 @@ class Compiler:
             raise UnsupportedDialect(msg)
         try:
             return self._compile_object(schema)
+        except _DynamicScope:
+            if self._typed:
+                raise
+            self._keep_the_dynamic_scope()
+            return self._parts(schema)
         except Unsupported:
             raise
         except ValueError as exc:
             raise _past_valgebras_limit(exc) from exc
+
+    def _keep_the_dynamic_scope(self) -> None:
+        """Forget every set compiled, for each to be compiled again under the dynamic scope."""
+        self._dynamic_scope = True
+        self._done, self._open, self._used, self._scoped = {}, {}, [], {}
+        if not self._indexed:
+            self._index(self.root)
 
     def _compile_object(self, schema: dict[str, Any]) -> tuple[list[object], bool]:
         _check_shapes(schema)
@@ -492,12 +517,19 @@ class Compiler:
         parts: list[object] = []
         self._typed.append(typed)
         self._escaped.append(False)
-        self._bases.append(_within(self._bases[-1], schema))
+        base = _within(self._bases[-1], schema)
+        self._bases.append(base)
+        # A resource setting a dynamic anchor enters the dynamic scope, where one is kept.
+        entered = self._dynamic_scope and base in self._dynamic_in
+        if entered:
+            self._scope.append(self._entering(base))
         try:
             self._keywords(schema, parts)
         finally:
             self._typed.pop()
             self._bases.pop()
+            if entered:
+                self._scope.pop()
             escaped = self._escaped.pop()
         # Every compiled subschema lies inside the universe, and so do the meets, unions and
         # differences of them that `allOf`, `anyOf`, `oneOf`, `not`, `if` and `$ref` build;
@@ -545,20 +577,29 @@ class Compiler:
         msg = f"keyword 'format' holds {name!r:.60}, which is not asserted here"
         raise Unsupported(msg)
 
-    def ref(self, reference: str) -> Validator[Any]:
+    def ref(self, reference: str, *, dynamic: bool = False) -> Validator[Any]:
         """Return the set a reference names, resolved against the base URI it sits under.
 
         A target that reaches itself through references is a `valgebra.recursive` fixpoint;
         any other is compiled in place. Each fixpoint is a definition, and valgebra admits
         128 in one set, so the 200 `$defs` a generated schema may carry are compiled
-        inline, not as 200 definitions.
+        inline, not as 200 definitions. A ``dynamic`` reference names what `dynamic_target`
+        returns, and a target the dynamic scope chose is a fixpoint whether or not its
+        references reach it statically: a ``$dynamicRef`` the scope redirects may reach it
+        again.
 
         A set is kept for reuse only when it holds no placeholder of a fixpoint still being
         built: the placeholder stands for its fixpoint inside that fixpoint's builder alone,
-        and a set built around one means something else, or nothing, anywhere else.
+        and a set built around one means something else, or nothing, anywhere else. Under the
+        dynamic scope it is kept for the scope it is compiled in, the one entering the
+        target's own resource, as `_compile_object` enters it.
         """
-        node, around = self._locate(reference, self._bases[-1])
-        target = (id(node), around)
+        if dynamic:
+            (node, around), fixpoint = self.dynamic_target(reference)
+        else:
+            (node, around), fixpoint = self._locate(reference, self._bases[-1]), False
+        scope = self._entering(_within(around, node)) if self._dynamic_scope else ()
+        target: _Key = ((id(node), around), scope)
         if target in self._done:
             return self._done[target]
         if target in self._open:
@@ -569,7 +610,7 @@ class Compiler:
             self._used.extend(needs)
             return built
         mark = len(self._used)
-        if not self._reaches_itself(node, around):
+        if not (fixpoint or self._reaches_itself(node, around)):
             built = (self._checked_at if self.by_predicate else self._compile_at)(node, around)
         else:
 
@@ -611,6 +652,50 @@ class Compiler:
         self.opaque.add("$ref")
         return intersection(JSON, opaque(object, lambda value: get().is_valid(value)))
 
+    def _entering(self, uri: str) -> _Scope:
+        """Return the dynamic scope with the resource at ``uri`` entered.
+
+        A name the scope binds stays bound: the outermost resource that sets a dynamic
+        anchor is the one a ``$dynamicRef`` reaches. Each schema object a name is bound to is
+        recorded by its target, for `dynamic_target` to return.
+        """
+        scope = self._scope[-1]
+        anchors = self._dynamic_in.get(uri)
+        if not anchors:
+            return scope
+        bound = {name for name, _ in scope}
+        added = []
+        for name, (node, around) in anchors.items():
+            if name not in bound:
+                self._bound[id(node), around] = (node, around)
+                added.append((name, (id(node), around)))
+        return tuple(sorted((*scope, *added))) if added else scope
+
+    def dynamic_target(
+        self, reference: str, base: str | None = None
+    ) -> tuple[tuple[object, str], bool]:
+        """Return the schema a ``$dynamicRef`` names, and whether the dynamic scope chose it.
+
+        It resolves as ``$ref`` does, and where that target sets a ``$dynamicAnchor`` of the
+        fragment's name, the scope's binding of the name replaces it (draft 2020-12, section
+        8.2.3.2). A name at most one schema object of every document sets needs no scope.
+
+        The empty name is the one `upgrade` writes for draft 2019-09's ``$recursiveAnchor``,
+        and its ``$recursiveRef``, ``"#"``, the one reference that reads it.
+        """
+        node, around = self._locate(reference, self._bases[-1] if base is None else base)
+        name = unquote(reference.partition("#")[2])
+        if not (isinstance(node, dict) and node.get("$dynamicAnchor") == name):
+            return (node, around), False
+        if self.dynamic_anchors(name) <= 1 or not (name or reference == "#"):
+            return (node, around), False
+        if not self._dynamic_scope:
+            raise _DynamicScope
+        binding = dict(self._scope[-1]).get(name)
+        if binding is None:
+            return (node, around), False
+        return self._bound[binding], True
+
     def _compile_at(self, schema: object, base: str) -> Validator[Any]:
         """Return the set ``schema`` compiles to where ``base`` is the base URI around it."""
         self._bases.append(base)
@@ -636,6 +721,7 @@ class Compiler:
         if len(self._used) == mark:
             return built, lambda: built
         root, base = self.root, self._bases[-1]
+        dynamic, scope = self._dynamic_scope, self._scope[-1]
         cache: list[Validator[Any]] = []
 
         def get() -> Validator[Any]:
@@ -647,6 +733,9 @@ class Compiler:
                     by_predicate=self.by_predicate,
                     documents=self.documents,
                 )
+                if dynamic:
+                    again._keep_the_dynamic_scope()
+                    again._scope, again._bound = [scope], dict(self._bound)
                 cache.append(again._compile_at(schema, base))
             return cache[0]
 
@@ -709,6 +798,7 @@ class Compiler:
                 # A dynamic anchor names its schema object as a plain one does too.
                 self._dynamic[dynamic] += 1
                 self._anchors.setdefault((base, dynamic), (node, around))
+                self._dynamic_in.setdefault(base, {}).setdefault(dynamic, (node, around))
             if isinstance(node.get("$anchor"), str):
                 self._anchors.setdefault((base, node["$anchor"]), (node, around))
             stack.extend((sub, base) for sub in _subschemas(node))
@@ -743,6 +833,19 @@ class Compiler:
     ) -> list[Case]:
         if not isinstance(schema, dict):
             return [_NOTHING]
+        # A resource entered on the way to a `$dynamicRef` is in its scope here too.
+        entered = self._dynamic_scope and here in self._dynamic_in
+        if entered:
+            self._scope.append(self._entering(here))
+        try:
+            return self._cases(schema, here, seen, own=own)
+        finally:
+            if entered:
+                self._scope.pop()
+
+    def _cases(
+        self, schema: dict[str, Any], here: str, seen: frozenset[_Target], *, own: bool
+    ) -> list[Case]:
         cases: list[Case] = [([], self._evaluated_beside(schema, here, own=own))]
         for node in schema.get("allOf", []):
             cases = _product(cases, self._inside(node, here, seen))
@@ -752,7 +855,7 @@ class Compiler:
             self._if_cases(schema, here, seen),
             self._dependent_cases(schema.get("dependentSchemas", {}), here, seen),
             self._ref_cases(schema.get("$ref"), here, seen),
-            self._ref_cases(schema.get("$dynamicRef"), here, seen),
+            self._ref_cases(schema.get("$dynamicRef"), here, seen, dynamic=True),
         ):
             cases = _product(cases, options)
         if len(cases) > _EVALUATION_CASES:
@@ -809,10 +912,15 @@ class Compiler:
             cases = _product(cases, [*present, _NOTHING])
         return cases
 
-    def _ref_cases(self, reference: object, here: str, seen: frozenset[_Target]) -> list[Case]:
+    def _ref_cases(
+        self, reference: object, here: str, seen: frozenset[_Target], *, dynamic: bool = False
+    ) -> list[Case]:
         if not isinstance(reference, str):
             return [_NOTHING]
-        node, around = self._locate(reference, here)
+        if dynamic:
+            (node, around), _ = self.dynamic_target(reference, here)
+        else:
+            node, around = self._locate(reference, here)
         target = (id(node), around)
         if target in seen:
             msg = f"$ref {reference!r} reaches itself at one instance beside unevaluated*"
@@ -919,6 +1027,13 @@ class Compiler:
 
 #: A schema to compile, by its node and the base URI around it.
 _Target: TypeAlias = tuple[int, str]
+
+#: The dynamic anchors in scope, each name with the target of the schema object the
+#: outermost resource entered binds it to, sorted by name (draft 2020-12, section 7.1).
+_Scope: TypeAlias = tuple[tuple[str, _Target], ...]
+
+#: A target, under the dynamic scope it is compiled in.
+_Key: TypeAlias = tuple[_Target, _Scope]
 
 
 @dataclass(frozen=True, slots=True)
@@ -1849,19 +1964,15 @@ def _ref(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
 
 
 def _dynamic_ref(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
-    """Return the set a ``$dynamicRef`` names, where it names one statically.
+    """Return the set a ``$dynamicRef`` names.
 
     It resolves as ``$ref`` does, and reads the dynamic scope only where that target sets a
     ``$dynamicAnchor`` of the fragment's name: then it names the outermost schema object of
     the scope that sets one (draft 2020-12, section 8.2.3.2). Where at most one schema
     object of every document sets that name, the two are one, and the reference is a
-    ``$ref``; anywhere else it is refused.
+    ``$ref``.
     """
-    reference = s["$dynamicRef"]
-    if c.dynamic_anchors(reference.partition("#")[2]) > 1:
-        msg = f"keyword '$dynamicRef' holds {reference!r:.60}, an anchor two schema objects set"
-        raise Unsupported(msg)
-    return c.ref(reference)
+    return c.ref(s["$dynamicRef"], dynamic=True)
 
 
 def _unevaluated_properties(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
@@ -1944,6 +2055,21 @@ def _is_type(value: object) -> bool:
     )
 
 
+class _RecursiveAnchor(str):
+    """The name `upgrade` gives draft 2019-09's ``$recursiveAnchor``: the empty one.
+
+    No draft 2020-12 anchor may spell it, and no JSON text parses to this type, so the shape
+    check admits it where `upgrade` wrote it alone, and it meets no anchor of a document.
+    """
+
+    __slots__ = ()
+
+
+def _is_anchor(value: object) -> bool:
+    """Return whether ``value`` is a name draft 2020-12's ``$anchor`` may spell."""
+    return isinstance(value, str) and _ANCHOR.fullmatch(value) is not None
+
+
 #: What each keyword's value must be for the draft 2020-12 meta-schema to admit it. A count
 #: is checked where it is read (`_count`), a subschema where it is compiled.
 _SHAPES: Mapping[str, Callable[[object], bool]] = {
@@ -1958,8 +2084,8 @@ _SHAPES: Mapping[str, Callable[[object], bool]] = {
     "pattern": lambda v: isinstance(v, str),
     "$ref": lambda v: isinstance(v, str),
     "$dynamicRef": lambda v: isinstance(v, str),
-    "$dynamicAnchor": lambda v: isinstance(v, str) and _ANCHOR.fullmatch(v) is not None,
-    "$anchor": lambda v: isinstance(v, str) and _ANCHOR.fullmatch(v) is not None,
+    "$dynamicAnchor": lambda v: isinstance(v, _RecursiveAnchor) or _is_anchor(v),
+    "$anchor": _is_anchor,
     "uniqueItems": lambda v: isinstance(v, bool),
     "items": _is_schema,
     "contains": _is_schema,
@@ -2229,8 +2355,8 @@ _LATER = frozenset(
 #: them rather than let draft 2020-12 assert them. Draft-06 added `const`, `contains` and
 #: `propertyNames`; draft-07 added `if`, `then` and `else`.
 _UNKNOWN = {
-    # Draft 2019-09 knows all but what 2020-12 added and the anchor it read recursion by.
-    DRAFT2019: frozenset({"prefixItems", "$dynamicRef", "$dynamicAnchor", "$recursiveAnchor"}),
+    # Draft 2019-09 knows all but what 2020-12 added.
+    DRAFT2019: frozenset({"prefixItems", "$dynamicRef", "$dynamicAnchor"}),
     7: _LATER,
     6: _LATER | {"if", "then", "else"},
     4: _LATER | {"if", "then", "else", "const", "contains", "propertyNames"},
@@ -2254,56 +2380,24 @@ def upgrade(schema: object, draft: int = 7) -> object:
     the wrong shape is copied as it is, for the compiler's shape check to name.
 
     Draft 2019-09 differs less: a ``$ref`` keeps its siblings, ``dependencies`` is no keyword,
-    and the array ``items`` is the one change of meaning, beside ``$recursiveRef``. That is
-    ``$ref: "#"``, the root of the resource holding it, wherever at most one resource sets
-    ``$recursiveAnchor``: the reference then reaches the outermost resource of the dynamic
-    scope that sets it only where that resource is its own. A document where two set it is
-    refused.
+    and the array ``items`` is the one change of meaning, beside its recursion. Its
+    ``$recursiveAnchor: true`` is a ``$dynamicAnchor`` whose name is empty, on the root of a
+    resource, and its ``$recursiveRef: "#"`` the ``$dynamicRef: "#"`` that reads it, as the
+    draft 2020-12 release notes say the two pairs agree. A ``$recursiveAnchor: true``
+    starting no resource, and a ``$recursiveRef`` of any other value, are refused. The empty
+    name is one no draft 2020-12 anchor may spell, so no anchor of a document meets it, and it
+    is written as a `str` no JSON text parses to, which the compiler admits there alone.
     """
     _check_nesting(schema)
-    if draft == DRAFT2019:
-        _check_recursive_anchors(schema)
-    return _upgrade(schema, draft)
+    return _upgrade(schema, draft, resource=True)
 
 
-def _sets_recursive_anchor(schema: object) -> bool:
-    """Return whether a schema object in ``schema`` sets ``$recursiveAnchor``."""
-    stack = [schema]
-    while stack:
-        here = stack.pop()
-        if isinstance(here, dict):
-            if here.get("$recursiveAnchor") is True:
-                return True
-            stack.extend(here.values())
-        elif isinstance(here, list):
-            stack.extend(here)
-    return False
-
-
-def _check_recursive_anchors(schema: object) -> None:
-    """Refuse a ``$recursiveRef`` in a document where two resources set ``$recursiveAnchor``."""
-    anchored, referring = 0, False
-    stack = [schema]
-    while stack:
-        here = stack.pop()
-        if isinstance(here, dict):
-            resource = here is schema or "$id" in here
-            anchored += resource and here.get("$recursiveAnchor") is True
-            referring |= "$recursiveRef" in here
-            stack.extend(here.values())
-        elif isinstance(here, list):
-            stack.extend(here)
-    if referring and anchored > 1:
-        msg = "keyword '$recursiveRef' in a document where two resources set $recursiveAnchor"
-        raise Unsupported(msg)
-
-
-def _upgrade(schema: object, draft: int) -> object:
+def _upgrade(schema: object, draft: int, *, resource: bool = False) -> object:
     if not isinstance(schema, dict):
         return schema
     if "$ref" in schema and draft != DRAFT2019:
         return _upgrade_ref(schema, draft)
-    schema = _in_later_words(schema, draft)
+    schema = _upgrade_draft4(schema) if draft == 4 else schema  # noqa: PLR2004
     out: dict[str, Any] = {}
     for key, value in ((k, v) for k, v in schema.items() if k not in _UNKNOWN[draft]):
         if key == "$schema":
@@ -2320,22 +2414,29 @@ def _upgrade(schema: object, draft: int) -> object:
             out[key] = [_upgrade(v, draft) for v in value]
         elif key in _MAP and isinstance(value, dict):
             out[key] = {k: _upgrade(v, draft) for k, v in value.items()}
+        elif key in {"$recursiveAnchor", "$recursiveRef"}:
+            out |= _recursion(key, value, resource=resource or isinstance(schema.get("$id"), str))
         else:
             out[key] = value
     return out
 
 
-def _in_later_words(schema: dict[str, Any], draft: int) -> dict[str, Any]:
-    """Return a schema object with what its draft spelled apart in the words 2020-12 reads."""
-    if draft == 4:  # noqa: PLR2004
-        return _upgrade_draft4(schema)
-    if draft == DRAFT2019 and "$recursiveRef" in schema:
-        target = schema["$recursiveRef"]
-        if target != "#" or "$ref" in schema:
-            msg = f"keyword '$recursiveRef' holds {target!r:.60} beside {sorted(schema)!r:.60}"
+def _recursion(key: str, value: object, *, resource: bool) -> dict[str, Any]:
+    """Return a draft 2019-09 recursion keyword as the dynamic one it is in 2020-12."""
+    if key == "$recursiveRef":
+        if value != "#":
+            # Draft 2019-09 defines the keyword for "#" alone (section 8.2.4.2.1).
+            msg = f"keyword '$recursiveRef' holds {value!r:.60}, not '#'"
             raise Unsupported(msg)
-        return {("$ref" if key == "$recursiveRef" else key): v for key, v in schema.items()}
-    return schema
+        return {"$dynamicRef": "#"}
+    if value is not True:
+        return {}
+    if not resource:
+        # Draft 2019-09's text reads one anywhere in the scope, by its resource's root,
+        # and the 2020-12 release notes hold it to a root: the two part off a root.
+        msg = "keyword '$recursiveAnchor' on a schema object that starts no resource"
+        raise Unsupported(msg)
+    return {"$dynamicAnchor": _RecursiveAnchor()}
 
 
 def _upgrade_ref(schema: dict[str, Any], draft: int) -> dict[str, Any]:
@@ -2487,17 +2588,8 @@ def in_dialect(documents: Mapping[str, object], dialect: str) -> dict[str, objec
 
 
 def _in_this_dialect(document: object) -> object:
-    """Return a supplied document in draft 2020-12, or raise `Unsupported` for its dialect.
-
-    A draft 2019-09 document setting ``$recursiveAnchor`` is refused: a ``$recursiveRef``
-    reaching it reads the dynamic scope, which may start in another document, while
-    `upgrade` reads it within one document. With every anchor in the compiled document,
-    each scope's outermost anchored resource is one `upgrade` sees.
-    """
-    if (draft := older(document)) == DRAFT2019 and _sets_recursive_anchor(document):
-        msg = "keyword '$recursiveAnchor' in a supplied document, which another one's scope reads"
-        raise Unsupported(msg)
-    if draft is not None:
+    """Return a supplied document in draft 2020-12, or raise `Unsupported` for its dialect."""
+    if (draft := older(document)) is not None:
         return upgrade(document, draft)
     if isinstance(document, dict) and document.get("$schema", DRAFT) != DRAFT:
         msg = f"$schema {document['$schema']!r}: this dialect is not supported"

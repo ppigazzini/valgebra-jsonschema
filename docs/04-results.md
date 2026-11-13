@@ -13,12 +13,10 @@ uv run python tools/suite.py --draft 6 --check docs/studies/json-schema-test-sui
 uv run python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
 ```
 
-Draft 2020-12, with the four optional files on regular expressions and large numbers: 1356
-of the 1356 cases run pass; 42 are skipped: 37 read a dynamic reference whose anchor two
-schema objects set, the meta-schema's among them, and 5 a custom metaschema. Through `upgrade`: draft 2019-09, 1239 of the 1239
-cases run pass, 22 skipped, a `$recursiveRef` where two resources set `$recursiveAnchor`
-among them; draft-07, 929
-of the 929 cases run pass, 0 skipped; draft-06, 841 of the 841 cases run pass, 0 skipped;
+Draft 2020-12, with the four optional files on regular expressions and large numbers: 1393
+of the 1393 cases run pass; 5 are skipped, each naming a custom meta-schema as its dialect.
+Through `upgrade`: draft 2019-09, 1256 of the 1256 cases run pass, 5 skipped, the same five;
+draft-07, 929 of the 929 cases run pass, 0 skipped; draft-06, 841 of the 841 cases run pass, 0 skipped;
 draft-04, 618 of the 618 cases run pass, 0 skipped. A case's remote documents
 are the suite's `remotes/`, vendored, and the drafts' meta-schemas from the
 `jsonschema-specifications` package, passed as `documents`. See
@@ -92,20 +90,23 @@ the four the suite study runs.
 
 | draft | questions | refused | proven | refuted | undecided | proven against the label | refuted against the label |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 2020-12 | 3645 | 111 | 2363 | 1047 | 124 | 3 | 13 |
+| 2020-12 | 3645 | 8 | 2416 | 1077 | 144 | 4 | 15 |
 | 7 | 2788 | 12 | 1854 | 839 | 83 | 1 | 4 |
 | 6 | 2524 | 12 | 1669 | 765 | 78 | 1 | 4 |
 | 4 | 1933 | 4 | 909 | 815 | 205 | 0 | 266 |
 
-- A proof stands against a label only where the label is wrong, as a refutation does: 6795
-  proofs of the 10890 questions, 5 against one. Two kinds of wrong label lie in a proof's
+- A proof stands against a label only where the label is wrong, as a refutation does: 6848
+  proofs of the 10890 questions, 6 against one. Two kinds of wrong label lie in a proof's
   direction. In `nonvalid/ref.json` the generator writes a `not` around the properties of the
   suite's tree of nodes and labels the tree it lists outside, where the `jsonschema` package
   admits it, and the tree's membership proves it inside: 3 proofs, one per draft but 04. In
   draft 2020-12's `nonvalid/dynamicRef.json` it labels `["foo", "bar"]` outside two schemas
-  the official suite's own `dynamicRef.json` holds it valid in: 2 proofs. A proof against a
-  label in any other category fails `tests/test_docs.py`.
-- Each of the 287 refutations against a label is a wrong label, and the `jsonschema`
+  the official suite's own `dynamicRef.json` holds it valid in: 2 proofs. There too it puts
+  the `$ref` of the suite's relative dynamic reference under a `not`, which the reference
+  reaches again through the dynamic scope, and labels the object the suite holds valid
+  outside it, where the `jsonschema` package admits it: 1 proof. A proof against a label in
+  any other category fails `tests/test_docs.py`.
+- Each of the 289 refutations against a label is a wrong label, and the `jsonschema`
   package's validator for the draft admits the witness to one side and refuses it from the
   other. In every draft the generator writes two kinds. In `universal/items.json`,
   `universal/ref.json` and, in draft 2020-12, `universal/unevaluatedItems.json`,

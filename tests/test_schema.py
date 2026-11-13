@@ -148,16 +148,6 @@ class TestEmbeddedResources:
         assert compile_schema(schema).is_valid(1)
         assert not compile_schema(schema).is_valid("1")
 
-    def test_a_recursive_ref_where_two_resources_set_the_anchor_is_refused(self):
-        inner = {"$id": "http://example.com/i", "$recursiveAnchor": True, "$recursiveRef": "#"}
-        schema = {
-            "$schema": "https://json-schema.org/draft/2019-09/schema",
-            "$recursiveAnchor": True,
-            "properties": {"a": inner},
-        }
-        with pytest.raises(Unsupported, match="two resources set"):
-            compile_schema(schema)
-
 
 def _keyed(key, value):
     return {"properties": {key: {"const": value}}, "required": [key]}
@@ -261,15 +251,82 @@ class TestDynamicReferences:
         assert s.is_valid({"next": {"next": {"v": 1}}})
         assert not s.is_valid({"next": {"v": "1"}})
 
-    def test_a_dynamic_reference_two_schema_objects_anchor_is_refused(self):
-        inner = {"$id": "http://example.com/i", "$dynamicAnchor": "n", "$dynamicRef": "#n"}
-        schema = {"$dynamicAnchor": "n", "properties": {"a": inner}}
-        with pytest.raises(Unsupported, match="two schema objects set"):
-            compile_schema(schema)
-        other = {"$id": "http://example.com/b", "$dynamicAnchor": "n", **_STR}
-        flat = {"$defs": {"a": {"$dynamicAnchor": "n", **_INT}, "b": other}, "$dynamicRef": "#n"}
-        with pytest.raises(Unsupported, match="two schema objects set"):
-            compile_schema(flat)
+    # A fragment names an anchor percent-decoded, as a `$ref` reads it.
+    @pytest.mark.parametrize("fragment", ["node", "n%6Fde"])
+    def test_a_dynamic_reference_reaches_the_outermost_anchor_in_scope(self, fragment):
+        # The draft 2020-12 release notes' tree, and the strict tree extending it.
+        tree = {
+            "$id": "http://example.com/tree",
+            "$dynamicAnchor": "node",
+            "type": "object",
+            "properties": {"data": True, "children": {"items": {"$dynamicRef": f"#{fragment}"}}},
+        }
+        strict = {
+            "$id": "http://example.com/strict",
+            "$dynamicAnchor": "node",
+            "$ref": "tree",
+            "unevaluatedProperties": False,
+        }
+        s = compile_schema(strict, documents={"http://example.com/tree": tree})
+        assert s.is_valid({"children": [{"data": 1}]})
+        assert not s.is_valid({"children": [{"daat": 1}]})
+        # Compiled as itself, the tree has the strict one in no scope.
+        loose = compile_schema(tree, documents={"http://example.com/strict": strict})
+        assert loose.is_valid({"children": [{"daat": 1}]})
+
+    def test_an_embedded_resource_is_kept_for_the_scope_entering_it(self):
+        # `t` and the resource around it set one anchor: reached directly, `t` binds it;
+        # reached through `p`, `p` does, and the two sets are not one.
+        p = {
+            "$id": "http://example.com/p",
+            "$dynamicAnchor": "z",
+            "type": "object",
+            "properties": {"viaP": {"$ref": "t"}},
+            "$defs": {
+                "t": {"$id": "t", "$dynamicAnchor": "z", "properties": {"n": {"$dynamicRef": "#z"}}}
+            },
+        }
+        root = {
+            "properties": {
+                "direct": {"$ref": "http://example.com/t"},
+                "viaP": {"$ref": "http://example.com/p"},
+            }
+        }
+        s = compile_schema(root, documents={"http://example.com/p": p})
+        assert s.is_valid({"direct": {"n": 1}})
+        assert s.is_valid({"viaP": {"viaP": {"n": {}}}})
+        assert not s.is_valid({"viaP": {"viaP": {"n": 1}}})
+
+    def test_unevaluated_cases_enter_the_resources_on_the_way_to_a_dynamic_reference(self):
+        a = {
+            "$id": "http://example.com/a",
+            "$defs": {"x": {"$dynamicAnchor": "x", "properties": {"fromA": True}}},
+            "$ref": "b",
+        }
+        b = {
+            "$id": "http://example.com/b",
+            "$defs": {"x": {"$dynamicAnchor": "x", "properties": {"fromB": True}}},
+            "$dynamicRef": "#x",
+        }
+        root = {"$ref": "http://example.com/a", "unevaluatedProperties": False}
+        documents = {"http://example.com/a": a, "http://example.com/b": b}
+        s = compile_schema(root, documents=documents)
+        assert s.is_valid({"fromA": 1})
+        assert not s.is_valid({"fromB": 1})
+
+    def test_a_cycle_only_the_scope_closes_is_a_fixpoint(self):
+        # No `$ref` reaches `r` again; the `$dynamicRef` in `b` does, under r's binding.
+        b = {
+            "$id": "http://example.com/b",
+            "$defs": {"leaf": {"$dynamicAnchor": "x", **_STR}},
+            "properties": {"next": {"$dynamicRef": "#x"}},
+        }
+        r = {"$id": "http://example.com/r", "$dynamicAnchor": "x", "$ref": "b", "type": "object"}
+        documents = {"http://example.com/b": b}
+        for by_predicate in (False, True):
+            s = Compiler(r, by_predicate=by_predicate, documents=documents).compile(r)
+            assert s.is_valid({"next": {"next": {}}})
+            assert not s.is_valid({"next": {"next": "a"}})
 
     def test_a_dynamic_anchor_names_its_schema_as_a_plain_one(self):
         schema = {"$defs": {"n": {"$dynamicAnchor": "n", **_INT}}, "$ref": "#n"}
@@ -353,16 +410,6 @@ class TestDocuments:
         assert s.is_valid({"$schema": "x"})
         assert not s.is_valid({"$schema": 1})
 
-    def test_a_supplied_document_setting_a_recursive_anchor_is_refused_where_named(self):
-        draft2019 = "https://json-schema.org/draft/2019-09/schema"
-        anchored = {"$schema": draft2019, "$recursiveAnchor": True, "type": "object"}
-        documents = {"http://example.com/a.json": anchored, "http://example.com/n.json": _INT}
-        assert compile_schema({"$ref": "http://example.com/n.json"}, documents=documents).is_valid(
-            1
-        )
-        with pytest.raises(Unsupported, match="recursiveAnchor"):
-            compile_schema({"$ref": "http://example.com/a.json"}, documents=documents)
-
     def test_a_document_in_a_dialect_not_read_is_refused_only_where_named(self):
         documents = {
             "http://example.com/old.json": {"$schema": "http://json-schema.org/draft-03/schema#"},
@@ -393,6 +440,29 @@ class TestContainmentLabels:
         assert compiled.is_valid(["foo", "bar"])
         assert not compiled.is_valid(["foo", 42])
         assert compile_schema({"const": ["foo", "bar"]}).relation_to(compiled) == "subset"
+
+    def test_the_object_labeled_outside_a_not_the_dynamic_scope_reaches_is_inside_it(self):
+        # The generator puts the `$ref` of the suite's relative dynamic reference under a
+        # `not`, which the reference reaches again: the object the suite holds valid is in.
+        root = "https://test.json-schema.org/relative-dynamic-reference/root"
+        extended = {"$id": "extended", "$dynamicAnchor": "meta", "type": "object"}
+        extended["properties"] = {"bar": {"$ref": "bar"}}
+        bar = {"$id": "bar", "type": "object"}
+        bar["properties"] = {"baz": {"$dynamicRef": "extended#meta"}}
+        schema = {
+            "$id": root,
+            "$dynamicAnchor": "meta",
+            "type": "object",
+            "properties": {"foo": {"const": "pass"}},
+            "$defs": {"extended": extended, "bar": bar},
+            "not": {"$ref": "extended"},
+        }
+        listed = {"foo": "pass", "bar": {"baz": {"foo": "pass"}}}
+        compiled = compile_schema(schema)
+        assert compiled.is_valid(listed)
+        assert not compiled.is_valid({"bar": {}})
+        # The study proves a schema that spells its values out by each value's membership.
+        assert constants({"const": listed}) == [listed]
 
     def test_the_meet_labeled_empty_with_no_not_holds_the_empty_array(self):
         # The generator renames the copy and leaves out the `not` it writes elsewhere.
@@ -1155,6 +1225,103 @@ class TestOlderDrafts:
     )
     def test_a_keyword_the_draft_does_not_know_asserts_nothing(self, draft, keywords, value):
         assert compile_schema({"$schema": draft, **keywords}).is_valid(value)
+
+
+class TestRecursiveReferences:
+    D2019 = "https://json-schema.org/draft/2019-09/schema"
+
+    def _tree(self, uri, leaf):
+        return {
+            "$schema": self.D2019,
+            "$id": uri,
+            "$recursiveAnchor": True,
+            "anyOf": [leaf, {"type": "object", "additionalProperties": {"$recursiveRef": "#"}}],
+        }
+
+    def test_upgrade_writes_the_recursion_as_a_dynamic_anchor_with_no_name(self):
+        schema = {"$schema": self.D2019, "$recursiveAnchor": True, "items": {"$recursiveRef": "#"}}
+        upgraded = upgrade(schema, 2019)
+        assert upgraded == {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$dynamicAnchor": "",
+            "items": {"$dynamicRef": "#"},
+        }
+        # The empty name is no draft 2020-12 anchor, but where `upgrade` writes it.
+        with pytest.raises(Unsupported, match="dynamicAnchor"):
+            compile_schema(json.loads(json.dumps(upgraded)))
+
+    def test_a_recursive_ref_reaches_the_outermost_anchored_resource(self):
+        outer = self._tree("http://example.com/outer.json", _STR)
+        outer["$defs"] = {"inner": self._tree("inner.json", _INT)}
+        outer["anyOf"] = [_STR, {"$ref": "inner.json"}]
+        s = compile_schema(outer)
+        assert s.is_valid({"a": {"b": "c"}})
+        assert s.is_valid({"a": {"b": 1}})
+        assert not s.is_valid({"a": {"b": None}})
+
+    def test_a_recursive_ref_reaches_past_a_resource_without_the_anchor(self):
+        # Draft 2019-09 reads the outermost schema in scope setting the anchor (section
+        # 8.2.4.2.2); the `jsonschema` package stops at the first resource without it.
+        between = {"$schema": self.D2019, "$id": "http://example.com/b", "$ref": "c"}
+        outer = self._tree("http://example.com/a", _STR)
+        outer["anyOf"] = [_STR, {"$ref": "b"}]
+        inner = self._tree("http://example.com/c", _INT)
+        documents = {"http://example.com/b": between, "http://example.com/c": inner}
+        s = compile_schema(outer, documents=documents)
+        assert s.is_valid({"a": "s"})
+        assert not s.is_valid({"a": None})
+
+    def test_a_recursive_ref_reads_the_scope_across_supplied_documents(self):
+        tree = {
+            "$schema": self.D2019,
+            "$id": "http://example.com/tree",
+            "$recursiveAnchor": True,
+            "type": "object",
+            "properties": {"data": True, "children": {"items": {"$recursiveRef": "#"}}},
+        }
+        strict = {
+            "$schema": self.D2019,
+            "$id": "http://example.com/strict",
+            "$recursiveAnchor": True,
+            "$ref": "tree",
+            "unevaluatedProperties": False,
+        }
+        s = compile_schema(strict, documents={"http://example.com/tree": tree})
+        assert s.is_valid({"children": [{"data": 1}]})
+        assert not s.is_valid({"children": [{"daat": 1}]})
+
+    def test_a_dynamic_reference_naming_no_fragment_reads_no_recursive_anchor(self):
+        # Inside a scope a 2019-09 resource anchored, a `$dynamicRef` to an anchored root
+        # names no anchor, the empty one included: it is the `$ref` it resolves as.
+        tree = {
+            "$schema": self.D2019,
+            "$id": "http://example.com/tree",
+            "$recursiveAnchor": True,
+            "type": "object",
+        }
+        named = {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "http://example.com/named",
+            "$dynamicRef": "http://example.com/tree",
+        }
+        outer = {
+            "$schema": self.D2019,
+            "$id": "http://example.com/outer",
+            "$recursiveAnchor": True,
+            "properties": {"t": {"$ref": "named"}},
+            "additionalProperties": False,
+        }
+        documents = {"http://example.com/tree": tree, "http://example.com/named": named}
+        s = compile_schema(outer, documents=documents)
+        assert s.is_valid({"t": {"other": 1}})
+        assert not s.is_valid({"t": 1})
+
+    def test_a_recursive_anchor_starting_no_resource_is_refused(self):
+        schema = {"$schema": self.D2019, "properties": {"a": {"$recursiveAnchor": True}}}
+        with pytest.raises(Unsupported, match="starts no resource"):
+            compile_schema(schema)
+        unset = {"$schema": self.D2019, "properties": {"a": {"$recursiveAnchor": False}}}
+        assert compile_schema(unset).is_valid({"a": 1})
 
 
 def test_an_unknown_keyword_is_an_annotation_and_recorded():

@@ -60,6 +60,12 @@ def test_the_pages_quote_the_corpus_totals():
     assert f"on {total['disagreed']} of the {total['values']} values" in page
 
 
+#: The categories of the containment suite where the results page names a label the
+#: specification refutes in the proof's direction, each kind with its witness in
+#: `TestContainmentLabels`. A proof against a label anywhere else is a defect.
+PROVEN_AGAINST_A_WRONG_LABEL = frozenset({"nonvalid"})
+
+
 def test_the_pages_quote_the_containment_totals():
     rows = _study("containment.json")["rows"]
     keys = ("questions", "refused", "proven", "refuted", "undecided")
@@ -69,11 +75,17 @@ def test_the_pages_quote_the_containment_totals():
         total = [sum(r[k] for r in rows if r["draft"] == draft) for k in keys]
         assert f"| {draft} | " + " | ".join(map(str, total)) + " |" in page
     grand = {k: sum(r[k] for r in rows) for k in keys}
-    assert grand["proven_against"] == 0
-    assert f"{grand['proven']} proofs of the {grand['questions']} questions, 0 against one" in page
+    proven, against = grand["proven"], grand["proven_against"]
+    assert f"{proven} proofs of the {grand['questions']} questions, {against} against" in page
     assert f"{grand['questions']} labeled questions" in readme
-    assert f"{grand['proven']} proven, none against a label" in readme
+    assert f"{proven} proven, {against} against a label" in readme
     assert f"each of the {grand['refuted_against']} refutations against a label" in readme
+
+
+def test_a_proof_against_a_label_is_in_a_category_the_page_names():
+    rows = _study("containment.json")["rows"]
+    proven = {r["category"] for r in rows if r["proven_against"]}
+    assert proven <= PROVEN_AGAINST_A_WRONG_LABEL
 
 
 @pytest.mark.parametrize("page", ["README.md", "docs/05-mcp.md"])

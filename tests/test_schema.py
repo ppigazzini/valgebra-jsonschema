@@ -338,6 +338,30 @@ class TestDocuments:
 class TestContainmentLabels:
     # Pairs of the containment test suite carry a label the specification refutes, in the
     # kinds the results page names; each value here is the witness of one kind.
+    def test_the_tree_labeled_outside_a_tree_under_not_is_inside_it(self):
+        # The `not` around the properties holds of a tree whose nodes hold subtrees that are
+        # not trees: each child's own nodes satisfy the properties, so the child fails it.
+        node = {
+            "$id": "http://localhost:1234/node",
+            "type": "object",
+            "properties": {"value": {"type": "number"}, "subtree": {"$ref": "tree"}},
+            "required": ["value"],
+        }
+        nodes = {"type": "array", "items": {"$ref": "node"}}
+        schema = {
+            "$id": "http://localhost:1234/tree",
+            "type": "object",
+            "required": ["meta", "nodes"],
+            "$defs": {"node": node},
+            "not": {"properties": {"meta": {"type": "string"}, "nodes": nodes}},
+        }
+        child = {"meta": "child", "nodes": [{"value": 1.1}, {"value": 1.2}]}
+        tree = {"meta": "root", "nodes": [{"value": 1, "subtree": child}]}
+        compiled = compile_schema(schema)
+        assert compiled.is_valid(tree)
+        assert not compiled.is_valid(child)
+        assert compile_schema({"const": tree}).relation_to(compiled) != "not_subset"
+
     def test_the_schema_labeled_universal_leaves_out_a_number(self):
         def tree(n):
             sub = f"#/anyOf/{n}/$defs/sub-item"

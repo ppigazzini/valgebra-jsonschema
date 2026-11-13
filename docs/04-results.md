@@ -92,7 +92,12 @@ the four the suite study runs.
 | 6 | 2524 | 12 | 1621 | 690 | 201 | 0 | 4 |
 | 4 | 1933 | 4 | 890 | 809 | 230 | 0 | 263 |
 
-- No proof contradicts a label: 6564 proofs of the 10890 questions, 0 against one.
+- A proof stands against a label only where the label is wrong, as a refutation does: 6564
+  proofs of the 10890 questions, 0 against one. One kind of wrong label lies in a proof's
+  direction: in `nonvalid/ref.json` the generator writes a `not` around the properties of the
+  suite's tree of nodes and labels the tree it lists outside, where the `jsonschema` package
+  admits it; valgebra 0.0.25 leaves those three questions undecided. A proof against a label
+  in any other category fails `tests/test_docs.py`.
 - Each of the 279 refutations against a label is a wrong label, and the `jsonschema`
   package's validator for the draft admits the witness to one side and refuses it from the
   other. In every draft the generator writes two kinds. In `universal/items.json`,

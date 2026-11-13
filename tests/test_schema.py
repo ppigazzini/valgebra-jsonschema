@@ -250,6 +250,45 @@ class TestUnevaluated:
         assert s.is_equivalent(compile_schema({**named, "additionalProperties": False}))
 
 
+class TestDynamicReferences:
+    def test_a_dynamic_reference_one_schema_object_anchors_is_a_reference(self):
+        schema = {
+            "$dynamicAnchor": "node",
+            "type": "object",
+            "properties": {"next": {"$dynamicRef": "#node"}, "v": _INT},
+        }
+        s = compile_schema(schema)
+        assert s.is_valid({"next": {"next": {"v": 1}}})
+        assert not s.is_valid({"next": {"v": "1"}})
+
+    def test_a_dynamic_reference_two_schema_objects_anchor_is_refused(self):
+        inner = {"$id": "http://example.com/i", "$dynamicAnchor": "n", "$dynamicRef": "#n"}
+        schema = {"$dynamicAnchor": "n", "properties": {"a": inner}}
+        with pytest.raises(Unsupported, match="two schema objects set"):
+            compile_schema(schema)
+        other = {"$id": "http://example.com/b", "$dynamicAnchor": "n", **_STR}
+        flat = {"$defs": {"a": {"$dynamicAnchor": "n", **_INT}, "b": other}, "$dynamicRef": "#n"}
+        with pytest.raises(Unsupported, match="two schema objects set"):
+            compile_schema(flat)
+
+    def test_a_dynamic_anchor_names_its_schema_as_a_plain_one(self):
+        schema = {"$defs": {"n": {"$dynamicAnchor": "n", **_INT}}, "$ref": "#n"}
+        assert compile_schema(schema).is_valid(1)
+        assert not compile_schema(schema).is_valid("1")
+
+    def test_a_dynamic_reference_through_a_pointer_is_a_reference(self):
+        schema = {"$defs": {"n": _INT}, "$dynamicRef": "#/$defs/n"}
+        assert compile_schema(schema).is_valid(1)
+        assert not compile_schema(schema).is_valid("1")
+
+    def test_unevaluated_properties_read_what_a_dynamic_reference_evaluates(self):
+        target = {"$dynamicAnchor": "n", "properties": {"a": {}}}
+        schema = {"$defs": {"n": target}, "$dynamicRef": "#n", "unevaluatedProperties": False}
+        s = compile_schema(schema)
+        assert s.is_valid({"a": 1})
+        assert not s.is_valid({"b": 1})
+
+
 class TestDocuments:
     def test_a_reference_reaches_a_supplied_document(self):
         documents = {"http://example.com/s.json": {"$defs": {"n": _INT}}}
@@ -339,6 +378,36 @@ class TestDocuments:
 class TestContainmentLabels:
     # Pairs of the containment test suite carry a label the specification refutes, in the
     # kinds the results page names; each value here is the witness of one kind.
+    def test_the_array_labeled_outside_a_dynamic_reference_is_inside_it(self):
+        # The official suite holds `["foo", "bar"]` valid here, where the generator labels
+        # it outside: a `$dynamicRef` to a `$dynamicAnchor` of its own resource is the
+        # `$ref` it resolves as.
+        root = "https://test.json-schema.org/dynamicRef-dynamicAnchor-same-schema/root"
+        schema = {
+            "$id": root,
+            "type": "array",
+            "items": {"$dynamicRef": "#items"},
+            "$defs": {"foo": {"$dynamicAnchor": "items", "type": "string"}},
+        }
+        compiled = compile_schema(schema)
+        assert compiled.is_valid(["foo", "bar"])
+        assert not compiled.is_valid(["foo", 42])
+        assert compile_schema({"const": ["foo", "bar"]}).relation_to(compiled) == "subset"
+
+    def test_the_meet_labeled_empty_with_no_not_holds_the_empty_array(self):
+        # The generator renames the copy and leaves out the `not` it writes elsewhere.
+        def copy(n):
+            return {
+                "$id": f"https://test{n}.json-schema.org/root",
+                "type": "array",
+                "items": {"$dynamicRef": f"#items{n}"},
+                "$defs": {"foo": {"$dynamicAnchor": f"items{n}", "type": "string"}},
+            }
+
+        compiled = compile_schema({"allOf": [copy(""), copy(1)]})
+        assert compiled.is_valid([])
+        assert compiled.relation_to(nothing) == "not_subset"
+
     def test_the_tree_labeled_outside_a_tree_under_not_is_inside_it(self):
         # The `not` around the properties holds of a tree whose nodes hold subtrees that are
         # not trees: each child's own nodes satisfy the properties, so the child fails it.

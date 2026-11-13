@@ -13,9 +13,9 @@ uv run python tools/suite.py --draft 6 --check docs/studies/json-schema-test-sui
 uv run python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
 ```
 
-Draft 2020-12, with the four optional files on regular expressions and large numbers: 1341
-of the 1341 cases run pass; 57 are skipped: 52 read a dynamic reference, the meta-schema's
-among them, and 5 a custom metaschema. Through `upgrade`: draft 2019-09, 1239 of the 1239
+Draft 2020-12, with the four optional files on regular expressions and large numbers: 1356
+of the 1356 cases run pass; 42 are skipped: 37 read a dynamic reference whose anchor two
+schema objects set, the meta-schema's among them, and 5 a custom metaschema. Through `upgrade`: draft 2019-09, 1239 of the 1239
 cases run pass, 22 skipped, a `$recursiveRef` where two resources set `$recursiveAnchor`
 among them; draft-07, 929
 of the 929 cases run pass, 0 skipped; draft-06, 841 of the 841 cases run pass, 0 skipped;
@@ -88,29 +88,33 @@ the four the suite study runs.
 
 | draft | questions | refused | proven | refuted | undecided | proven against the label | refuted against the label |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 2020-12 | 3645 | 162 | 2324 | 1035 | 124 | 1 | 8 |
+| 2020-12 | 3645 | 111 | 2363 | 1047 | 124 | 3 | 13 |
 | 7 | 2788 | 12 | 1854 | 839 | 83 | 1 | 4 |
 | 6 | 2524 | 12 | 1669 | 765 | 78 | 1 | 4 |
 | 4 | 1933 | 4 | 909 | 815 | 205 | 0 | 266 |
 
-- A proof stands against a label only where the label is wrong, as a refutation does: 6756
-  proofs of the 10890 questions, 3 against one. One kind of wrong label lies in a proof's
-  direction: in `nonvalid/ref.json` the generator writes a `not` around the properties of the
+- A proof stands against a label only where the label is wrong, as a refutation does: 6795
+  proofs of the 10890 questions, 5 against one. Two kinds of wrong label lie in a proof's
+  direction. In `nonvalid/ref.json` the generator writes a `not` around the properties of the
   suite's tree of nodes and labels the tree it lists outside, where the `jsonschema` package
-  admits it, and the tree's membership proves it inside: the 3 proofs against a label, one per
-  draft but 04. A proof against a label
-  in any other category fails `tests/test_docs.py`.
-- Each of the 282 refutations against a label is a wrong label, and the `jsonschema`
+  admits it, and the tree's membership proves it inside: 3 proofs, one per draft but 04. In
+  draft 2020-12's `nonvalid/dynamicRef.json` it labels `["foo", "bar"]` outside two schemas
+  the official suite's own `dynamicRef.json` holds it valid in: 2 proofs. A proof against a
+  label in any other category fails `tests/test_docs.py`.
+- Each of the 287 refutations against a label is a wrong label, and the `jsonschema`
   package's validator for the draft admits the witness to one side and refuses it from the
   other. In every draft the generator writes two kinds. In `universal/items.json`,
-  `universal/ref.json` and, in draft 2020-12, `universal/unevaluatedItems.json` and
-  `universal/unevaluatedProperties.json` it leaves keywords outside the `not` it writes,
+  `universal/ref.json` and, in draft 2020-12, `universal/unevaluatedItems.json`,
+  `universal/unevaluatedProperties.json` and `universal/dynamicRef.json` it leaves keywords
+  outside the `not` it writes,
   such as `type` and `items: false`, or `type` and `required`, so the schema it labels
   universal leaves out a value: `1`, `{}`, `1.5` or `{"prop1": 1}`. In `unsatisfiable/ref.json` and
   `unsatisfiable/id.json`, and in draft 2020-12's `unsatisfiable/anchor.json`, it renames a
   `$ref`, an `$id` or an `$anchor` inside an `enum` or `const` value as well as in the
   schema, so the two copies differ and the schema it labels empty holds the value it
-  lists, such as `{"$ref": "#/allOf/0/$defs/a_string"}`. In draft-04, 262 more pairs put `const`, which draft-06 added, in a draft-04
+  lists, such as `{"$ref": "#/allOf/0/$defs/a_string"}`. In draft 2020-12's
+  `unsatisfiable/dynamicRef.json` it renames the copy and writes no `not` at all, so the
+  meet it labels empty holds `[]`. In draft-04, 262 more pairs put `const`, which draft-06 added, in a draft-04
   schema: the draft reads it as an annotation, so the first schema admits every value.
 - A question is refused where the compiler refuses a schema of its pair, as the inventory
   of [`03-conformance.md`](03-conformance.md) lists; an undecided one is kept and counted.

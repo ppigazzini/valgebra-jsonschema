@@ -158,7 +158,9 @@ SUPPORTED = frozenset(
     {
         "$id",
         "$anchor",
+        "$dynamicAnchor",
         "$ref",
+        "$dynamicRef",
         "prefixItems",
         "items",
         "contains",
@@ -203,8 +205,6 @@ SUPPORTED = frozenset(
 #: other keyword it has no handler for is outside the vocabularies, so an annotation.
 REFUSED = frozenset(
     {
-        "$dynamicRef",
-        "$dynamicAnchor",
         "$recursiveRef",
         "$recursiveAnchor",
         "additionalItems",
@@ -370,6 +370,9 @@ class Compiler:
         self._anchors: dict[tuple[str, str], tuple[object, str]] = {}
         #: Why each supplied document a reference may not read is refused, by its URI.
         self._refused: dict[str, str] = {}
+        #: How many schema objects set each ``$dynamicAnchor`` name, over every document.
+        self._dynamic: Counter[str] = Counter()
+        self._indexed = False
         #: The base URI inside each schema object being compiled.
         self._bases: list[str] = [""]
         self._typed: list[frozenset[str] | None] = []
@@ -492,7 +495,7 @@ class Compiler:
         for keyword in schema:
             if (
                 keyword in ANNOTATIONS
-                or keyword == "$anchor"
+                or keyword in ("$anchor", "$dynamicAnchor")
                 or (keyword == "$id" and self._inert(schema))
             ):
                 continue
@@ -660,6 +663,7 @@ class Compiler:
                 continue
             self._resources.setdefault(key, (document, key))
             stack.append((document, key))
+        self._indexed = True
         while stack:
             node, around = stack.pop()
             if not isinstance(node, dict):
@@ -667,9 +671,19 @@ class Compiler:
             base = _within(around, node)
             if node is root or isinstance(node.get("$id"), str):
                 self._resources.setdefault(base, (node, around))
+            if isinstance(dynamic := node.get("$dynamicAnchor"), str):
+                # A dynamic anchor names its schema object as a plain one does too.
+                self._dynamic[dynamic] += 1
+                self._anchors.setdefault((base, dynamic), (node, around))
             if isinstance(node.get("$anchor"), str):
                 self._anchors.setdefault((base, node["$anchor"]), (node, around))
             stack.extend((sub, base) for sub in _subschemas(node))
+
+    def dynamic_anchors(self, name: str) -> int:
+        """Return how many schema objects of every document set ``$dynamicAnchor`` ``name``."""
+        if not self._indexed:
+            self._index(self.root)
+        return self._dynamic[name]
 
     def evaluations(self, schema: dict[str, Any]) -> list[Case]:
         """Return the cases a schema object being compiled evaluates on.
@@ -704,6 +718,7 @@ class Compiler:
             self._if_cases(schema, here, seen),
             self._dependent_cases(schema.get("dependentSchemas", {}), here, seen),
             self._ref_cases(schema.get("$ref"), here, seen),
+            self._ref_cases(schema.get("$dynamicRef"), here, seen),
         ):
             cases = _product(cases, options)
         if len(cases) > _EVALUATION_CASES:
@@ -821,7 +836,7 @@ class Compiler:
 
     def _resource(self, uri: str, reference: str) -> tuple[object, str]:
         """Return the resource ``uri`` names, and the base URI around it."""
-        if uri == self._root_base and not self._resources:
+        if uri == self._root_base and not self._indexed:
             return self.root, ""
         if uri in self._resources:
             return self._resources[uri]
@@ -843,7 +858,7 @@ class Compiler:
         uri, _, fragment = _join(base, reference).partition("#")
         fragment = unquote(fragment)
         anchor = fragment and not fragment.startswith("/")
-        if not self._resources and (anchor or uri != self._root_base):
+        if not self._indexed and (anchor or uri != self._root_base):
             self._index(self.root)
         node, around = self._resource(uri, reference)
         if anchor:
@@ -948,7 +963,10 @@ def _subschemas(schema: dict[str, Any]) -> Iterator[object]:
 
 
 def _references(node: object, base: str) -> list[str]:
-    """Return every ``$ref`` string in ``node``'s subtree, resolved against its base URI."""
+    """Return every reference in ``node``'s subtree, resolved against its base URI.
+
+    A ``$dynamicRef`` counts as the ``$ref`` it is read as (`_dynamic_ref`).
+    """
     found: list[str] = []
     stack: list[tuple[object, str]] = [(node, base)]
     while stack:
@@ -957,6 +975,8 @@ def _references(node: object, base: str) -> list[str]:
             if "$id" in here:
                 around = _within(around, here)
             if isinstance(reference := here.get("$ref"), str):
+                found.append(_join(around, reference))
+            if isinstance(reference := here.get("$dynamicRef"), str):
                 found.append(_join(around, reference))
             values: Iterable[object] = here.values()
         elif isinstance(here, list):
@@ -1776,6 +1796,22 @@ def _ref(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     return c.ref(s["$ref"])
 
 
+def _dynamic_ref(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
+    """Return the set a ``$dynamicRef`` names, where it names one statically.
+
+    It resolves as ``$ref`` does, and reads the dynamic scope only where that target sets a
+    ``$dynamicAnchor`` of the fragment's name: then it names the outermost schema object of
+    the scope that sets one (draft 2020-12, section 8.2.3.2). Where at most one schema
+    object of every document sets that name, the two are one, and the reference is a
+    ``$ref``; anywhere else it is refused.
+    """
+    reference = s["$dynamicRef"]
+    if c.dynamic_anchors(reference.partition("#")[2]) > 1:
+        msg = f"keyword '$dynamicRef' holds {reference!r:.60}, an anchor two schema objects set"
+        raise Unsupported(msg)
+    return c.ref(reference)
+
+
 def _unevaluated_properties(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     """Return the objects whose keys no keyword or holding subschema evaluates are in a set.
 
@@ -1869,6 +1905,8 @@ _SHAPES: Mapping[str, Callable[[object], bool]] = {
     "exclusiveMaximum": _is_number,
     "pattern": lambda v: isinstance(v, str),
     "$ref": lambda v: isinstance(v, str),
+    "$dynamicRef": lambda v: isinstance(v, str),
+    "$dynamicAnchor": lambda v: isinstance(v, str) and _ANCHOR.fullmatch(v) is not None,
     "$anchor": lambda v: isinstance(v, str) and _ANCHOR.fullmatch(v) is not None,
     "uniqueItems": lambda v: isinstance(v, bool),
     "items": _is_schema,
@@ -1951,6 +1989,7 @@ _HANDLERS: dict[str, Callable[[Compiler, dict[str, Any]], Validator[Any]]] = {
     "not": _not,
     "if": _if,
     "$ref": _ref,
+    "$dynamicRef": _dynamic_ref,
     "unevaluatedProperties": _unevaluated_properties,
     "unevaluatedItems": _unevaluated_items,
     "$id": _schema_id,

@@ -38,6 +38,13 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   that way: it proves 6756 of its 10890 questions and leaves 490 undecided, and its 3 proofs
   against a label are `nonvalid/ref.json`'s tree, which the `jsonschema` package admits.
 
+- `$dynamicAnchor` names its schema object as `$anchor` does, and a `$dynamicRef` whose
+  anchor one schema object of every document sets is the `$ref` it resolves as (draft 2020-12,
+  section 8.2.3.2); where two set it, the reference reads the dynamic scope and is refused.
+  The draft 2020-12 suite study runs 1356 cases, each passing, and the containment study
+  refuses 139 of its questions rather than 190, its 2 more proofs against a label being
+  `nonvalid/dynamicRef.json`'s, which the official suite labels the other way.
+
 ### Changed
 
 - `oneOf` leaves out the complement of a branch valgebra proves disjoint from another, which

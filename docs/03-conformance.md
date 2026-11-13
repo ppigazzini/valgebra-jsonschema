@@ -54,10 +54,10 @@ Every keyword of the draft 2020-12 vocabularies is in exactly one class, and
 
 | class | keywords |
 |---|---|
-| translated exactly | `type`, `enum`, `const`, `maximum`, `exclusiveMaximum`, `minimum`, `exclusiveMinimum`, an integral `multipleOf`, `minLength`, `maxLength`, `pattern`, `prefixItems`, `items`, `contains`, `minItems`, `maxItems`, `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`, `patternProperties`, `propertyNames`, `dependentRequired`, `dependentSchemas`, `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`, `else`, `$ref`, `$id`, `$anchor`, `unevaluatedProperties`, `unevaluatedItems` |
+| translated exactly | `type`, `enum`, `const`, `maximum`, `exclusiveMaximum`, `minimum`, `exclusiveMinimum`, an integral `multipleOf`, `minLength`, `maxLength`, `pattern`, `prefixItems`, `items`, `contains`, `minItems`, `maxItems`, `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`, `patternProperties`, `propertyNames`, `dependentRequired`, `dependentSchemas`, `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`, `else`, `$ref`, `$id`, `$anchor`, `$dynamicAnchor`, a `$dynamicRef` whose anchor one schema object sets, `unevaluatedProperties`, `unevaluatedItems` |
 | translated as an opaque predicate | `uniqueItems`, `minContains`, `maxContains`, a fractional `multipleOf`, `patternProperties` past four patterns or in a schema past valgebra's limit, a `propertyNames` reading more than words and no boolean schema |
 | annotations | `title`, `description`, `default`, `examples`, `deprecated`, `readOnly`, `writeOnly`, `format`, `contentEncoding`, `contentMediaType`, `contentSchema`, `$schema`, `$vocabulary`, `$comment`, `$defs`, `definitions` |
-| refused | `$dynamicRef`, `$dynamicAnchor`, `$recursiveRef`, `$recursiveAnchor`, `additionalItems`, `dependencies` |
+| refused | `$recursiveRef`, `$recursiveAnchor`, `additionalItems`, `dependencies` |
 
 `$ref` resolves against the base URI it sits under, as draft 2020-12's section 8.2 states: `$id`
 sets the base of its resource, and the reference names a resource of the document by its URI,

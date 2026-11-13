@@ -41,6 +41,7 @@ bare meet where it declines that of a meet holding the recursive universe.
 | `if`, `then`, `else` | `(if & then) | (~if & else)` |
 | `unevaluatedProperties`, `unevaluatedItems` | on each case of which in-place subschemas hold, the keys or items no keyword beside it nor holding subschema evaluates (draft 2020-12, section 11), read as the object group or the array of a prefix that leaves them to the subschema: an `anyOf` of more than four branches beside one, more than 64 cases, or a `$ref` reaching itself at one instance is refused |
 | `$ref` | resolved against the base URI it sits under, to a resource of the document and a JSON pointer or `$anchor` in it; compiled as a `recursive` fixpoint over its target |
+| `$dynamicRef`, `$dynamicAnchor` | a `$dynamicAnchor` names its schema object as an `$anchor` does; a `$dynamicRef` reads the dynamic scope only where its target sets a dynamic anchor of the fragment's name, and names the outermost schema object of the scope that sets one (draft 2020-12, section 8.2.3.2), so where one schema object of every document sets that name it is the `$ref` it resolves as |
 
 Annotations assert nothing and are skipped: `title`, `description`, `default`, `examples`,
 `deprecated`, `readOnly`, `writeOnly`, `format` (the format-annotation vocabulary is the
@@ -116,7 +117,7 @@ compiled from their subschema, and each compilation holds its own.
 
 ## Refused, and ignored
 
-`Unsupported` names the keyword: `$dynamicRef`, `$dynamicAnchor`, references to a document neither the one compiled nor
+`Unsupported` names the keyword: a `$dynamicRef` whose anchor two schema objects set, references to a document neither the one compiled nor
 `documents` holds, a supplied document in a dialect not read where a reference names it, an
 embedded `$id` whose resource declares another `$schema`, a draft other than 2020-12, 2019-09,
 07, 06 and 04, and a property name ending in `?` (valgebra reads that suffix as "optional"). A keyword outside the
@@ -130,7 +131,7 @@ uv run python tools/suite.py --check docs/studies/json-schema-test-suite.json
 
 The official JSON-Schema-Test-Suite at commit `89e83a740146`, vendored with its MIT
 license. Draft 2020-12, with the four optional files on regular expressions and large
-numbers: 1341 cases run, 1341 passed, 0 failed; 57 skipped by the refusals above; 99 of
+numbers: 1356 cases run, 1356 passed, 0 failed; 42 skipped by the refusals above; 99 of
 the run cases go through an opaque predicate. A case's remote documents are the suite's
 `remotes/`, vendored with it, and the drafts' meta-schemas from the `jsonschema-specifications`
 package, passed as `documents`. Draft-07, through `upgrade`:

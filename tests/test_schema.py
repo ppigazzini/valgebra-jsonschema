@@ -733,6 +733,18 @@ class TestRecursionThroughCallbacks:
         c.ref("#/$defs/h")
         assert c.compile(_PATTERNED).is_valid({"k": 1})
 
+    def test_the_set_compiled_again_reads_format_as_the_compiler_does(self):
+        # Five patterns are past what a clause holds, so each key's value is checked through
+        # a callback, against the fixpoint compiled again at membership time.
+        patterns = {p: {"$ref": "#/$defs/t"} for p in ("^a", "^b", "^c", "^d", "^e")}
+        ipv4 = {"type": "string", "format": "ipv4"}
+        t = {"anyOf": [{"type": "object", "patternProperties": patterns}, ipv4]}
+        compiled = compile_schema({"$defs": {"t": t}, "$ref": "#/$defs/t"}, assert_format=True)
+        assert not compiled.is_valid("nope")
+        assert not compiled.is_valid({"a": "nope"})
+        assert not compiled.is_valid({"a": {"b": "nope"}})
+        assert compiled.is_valid({"a": {"b": "1.2.3.4"}})
+
 
 @pytest.mark.parametrize(
     "schema",

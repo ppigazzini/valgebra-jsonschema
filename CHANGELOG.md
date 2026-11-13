@@ -52,6 +52,10 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   paths: an array of a million numbers validates in 56 ms against 31 ms for a bare float. The
   containment study refutes 809 draft-04 questions rather than 811, the two whose only witness
   valgebra found was NaN.
+- A set a callback checks against, compiled again at membership time because it holds a
+  fixpoint then being built, reads `format` and keys narrowed by a pattern as the compiler
+  does: under `assert_format=True`, `"nope"` one level down a recursion through five
+  `patternProperties` is refused as `ipv4`, as it is at the top.
 
 ## [0.0.1] - 2026-11-12
 

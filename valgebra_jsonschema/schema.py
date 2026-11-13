@@ -550,7 +550,12 @@ class Compiler:
 
         def get() -> Validator[Any]:
             if not cache:
-                again = Compiler(root, documents=self.documents)
+                again = Compiler(
+                    root,
+                    assert_format=self.assert_format,
+                    by_clauses=self.by_clauses,
+                    documents=self.documents,
+                )
                 cache.append(again._compile_at(schema, base))
             return cache[0]
 

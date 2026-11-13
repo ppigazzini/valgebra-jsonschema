@@ -90,7 +90,7 @@ the four the suite study runs.
 | 2020-12 | 3645 | 162 | 2248 | 911 | 324 | 0 | 8 |
 | 7 | 2788 | 12 | 1805 | 764 | 207 | 0 | 4 |
 | 6 | 2524 | 12 | 1621 | 690 | 201 | 0 | 4 |
-| 4 | 1933 | 4 | 890 | 811 | 228 | 0 | 263 |
+| 4 | 1933 | 4 | 890 | 809 | 230 | 0 | 263 |
 
 - No proof contradicts a label: 6564 proofs of the 10890 questions, 0 against one.
 - Each of the 279 refutations against a label is a wrong label, and the `jsonschema`

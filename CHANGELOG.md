@@ -43,6 +43,16 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   study proves 6047 of its 10890 questions, and 95 of the 1071 draft 2020-12 suite cases run
   go through an opaque predicate.
 
+### Fixed
+
+- NaN is a value of no schema. JSON has none (RFC 8259 §6), and in the universe it refuted
+  inclusions every JSON number satisfies: `{"type": "number"}` below `{"anyOf": [{"maximum":
+  10}, {"minimum": 5}]}`. An infinity stays, as `json.loads`'s reading of a number past the
+  float range. A float leaf is a bound, which valgebra 0.0.25 walks outside its scalar fast
+  paths: an array of a million numbers validates in 56 ms against 31 ms for a bare float. The
+  containment study refutes 809 draft-04 questions rather than 811, the two whose only witness
+  valgebra found was NaN.
+
 ## [0.0.1] - 2026-11-12
 
 ### Added

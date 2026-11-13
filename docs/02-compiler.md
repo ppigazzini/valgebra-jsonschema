@@ -3,8 +3,10 @@
 `valgebra_jsonschema/schema.py` compiles JSON Schema draft 2020-12, and drafts 2019-09, 07, 06
 and 04 through `upgrade`, into valgebra sets. [`03-conformance.md`](03-conformance.md) holds the keyword inventory
 and the ledger of differences. The universe is
-what `json.loads` returns — `None`, `bool`, `int`, `float`, `str`, `list`, and `dict` with
-`str` keys, nested. On it the translation is exact for every keyword it accepts, with
+what `json.loads` returns for a JSON text — `None`, `bool`, `int`, a `float` that is not NaN,
+`str`, `list`, and `dict` with `str` keys, nested. JSON has no NaN (RFC 8259 §6), and
+`json.loads` builds one only from the token `NaN`, so no schema admits it; an infinity is
+`json.loads`'s reading of a number past the float range, such as `1e400`, and stands for it. On it the translation is exact for every keyword it accepts, with
 patterns read as ECMA-262 defines them; where a pattern uses a construct valgebra's engine
 refuses, the schema is refused.
 

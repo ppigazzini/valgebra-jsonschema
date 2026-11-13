@@ -1,4 +1,6 @@
 import contextlib
+import json
+import math
 import random
 
 import pytest
@@ -413,6 +415,35 @@ class TestUniverse:
         assert compiled.is_valid("a")
         assert compiled.is_valid(3)
         assert not compiled.is_valid(2)
+
+    @pytest.mark.parametrize(
+        "schema", [True, {"type": "number"}, {"not": {"type": "string"}}, {"minimum": 0}]
+    )
+    def test_nan_is_a_value_of_no_schema(self, schema):
+        # RFC 8259 has no NaN; `json.loads` builds one from the token `NaN` alone.
+        assert not compile_schema(schema).is_valid(math.nan)
+
+    def test_an_infinity_stands_for_a_number_past_the_float_range(self):
+        huge = json.loads("1e400")
+        assert compile_schema({"type": "number"}).is_valid(huge)
+        assert not compile_schema({"maximum": 1e308}).is_valid(huge)
+        assert not compile_schema({"type": "integer"}).is_valid(huge)
+
+    def test_every_number_lies_below_one_of_two_overlapping_bounds(self):
+        # A NaN in the universe would be outside both bounds and refute what every number
+        # satisfies.
+        number = compile_schema({"type": "number"})
+        union = compile_schema({"anyOf": [{"maximum": 10}, {"minimum": 5}]})
+        assert number.relation_to(union) == "subset"
+        negative = compile_schema({"type": "number", "not": {"minimum": 0}})
+        assert negative.relation_to(compile_schema({"exclusiveMaximum": 0})) == "subset"
+
+    def test_a_fraction_past_the_float_range_is_a_number_past_every_bound(self):
+        # `1` followed by 400 zeros and `.5` is a JSON number with a fraction; `json.loads`
+        # reads it as an infinity, which keeps the inclusion false, as JSON's numbers make it.
+        fractional = compile_schema({"type": "number", "not": {"type": "integer"}})
+        assert json.loads("1" + "0" * 400 + ".5") == math.inf
+        assert fractional.relation_to(compile_schema({"maximum": 2**53})) == "not_subset"
 
     @pytest.mark.parametrize("schema", [{"minimum": 3}, {"maxLength": 2}, {"required": ["a"]}])
     def test_a_schema_without_a_type_lies_inside_the_universe(self, schema):

@@ -286,8 +286,8 @@
    "refused": 0,
    "timed_out": 0,
    "proven": 60,
-   "refuted": 414,
-   "undecided": 124,
+   "refuted": 412,
+   "undecided": 126,
    "proven_against": 0,
    "refuted_against": 207
   }

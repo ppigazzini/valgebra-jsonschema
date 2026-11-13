@@ -69,14 +69,21 @@ from valgebra_jsonschema._valgebra import (
 )
 from valgebra_jsonschema.formats import LANGUAGES, PREDICATES
 
-#: Every value ``json.loads`` can return.
-JSON = recursive(lambda j: union(None, bool, int, float, str, [j], {str: j}))
+#: The floats ``json.loads`` returns for a JSON number: every float but NaN. RFC 8259 §6 has
+#: no NaN, which ``json.loads`` builds from the token ``NaN`` alone, and so a NaN is a value
+#: of no schema. An infinity is ``json.loads``'s reading of a number past the float range,
+#: ``1e400`` or a 400-digit decimal with a fraction, and stands for those.
+JSON_FLOAT = Annotated[float, Ge(-math.inf)]
+
+#: Every value ``json.loads`` returns for a JSON text.
+JSON = recursive(lambda j: union(None, bool, int, JSON_FLOAT, str, [j], {str: j}))
 
 NULL = Validator(None)
 BOOLEAN = Validator(bool)
-#: JSON Schema's integer: a number with no fractional part, however it is written.
+#: JSON Schema's integer: a number with no fractional part, however it is written. A
+#: multiple of 1 holds no NaN and no infinity.
 INTEGER = intersection(union(int, Annotated[float, MultipleOf(1)]), NOT_BOOL)
-NUMBER = intersection(union(int, float), NOT_BOOL)
+NUMBER = intersection(union(int, JSON_FLOAT), NOT_BOOL)
 STRING = Validator(str)
 ARRAY = Validator([JSON])
 OBJECT = Validator({str: JSON})

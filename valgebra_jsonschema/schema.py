@@ -54,6 +54,7 @@ from valgebra_jsonschema._valgebra import (
     NOT_BOOL,
     Regex,
     Validator,
+    anything,
     complement,
     each,
     exactly_one,
@@ -298,6 +299,27 @@ def _field(key: str) -> str:
     return key
 
 
+def _whole(parts: list[object], *, met: bool) -> Validator[Any]:
+    """Return the meet of a schema's keyword sets, with the universe where ``met``."""
+    if met:
+        return intersection(*parts, JSON)
+    return intersection(*parts) if parts else JSON
+
+
+def _body(parts: list[object]) -> Validator[Any]:
+    """Return the meet of a schema's keyword sets alone: everything, for none."""
+    return intersection(*parts) if parts else anything
+
+
+def _past_valgebras_limit(exc: ValueError) -> Unsupported:
+    """Return valgebra's refusal of a set as a refusal of the schema.
+
+    Its nesting limit, its node bound and a key that is no Unicode text refuse the schema,
+    and a caller handles them as `Unsupported`.
+    """
+    return Unsupported(f"{_PAST_VALGEBRAS_LIMIT}: {exc}")
+
+
 class Compiler:
     """Compile one root document, resolving ``$ref`` against it.
 
@@ -370,10 +392,45 @@ class Compiler:
 
     def compile(self, schema: object) -> Validator[Any]:
         """Return the set of JSON values ``schema`` admits."""
+        parts, met = self._parts(schema)
+        try:
+            return _whole(parts, met=met)
+        except ValueError as exc:
+            raise _past_valgebras_limit(exc) from exc
+
+    def compile_body(self, schema: object) -> Validator[Any]:
+        """Return a set that agrees with ``schema``'s on every JSON value, to complement.
+
+        It is the meet of the schema's keywords without the universe `compile` meets it with.
+        Every complement the compiler writes is met with a set inside the universe, where
+        ``~(P & JSON)`` and ``~P`` agree, and valgebra's set reading declines the complement
+        of a meet holding the recursive universe where it decides the bare one.
+        """
+        parts, _ = self._parts(schema)
+        try:
+            return _body(parts)
+        except ValueError as exc:
+            raise _past_valgebras_limit(exc) from exc
+
+    def compile_with_body(self, schema: object) -> tuple[Validator[Any], Validator[Any]]:
+        """Return ``schema``'s set and its body (`compile_body`), read in one pass.
+
+        A branch of a ``oneOf`` and the condition of an ``if`` are used whole and
+        complemented both; a pass for each would compile a ``oneOf`` nested ``d`` levels
+        down ``2**d`` times.
+        """
+        parts, met = self._parts(schema)
+        try:
+            return _whole(parts, met=met), _body(parts)
+        except ValueError as exc:
+            raise _past_valgebras_limit(exc) from exc
+
+    def _parts(self, schema: object) -> tuple[list[object], bool]:
+        """Return the sets of ``schema``'s keywords, and whether a guard reaches past JSON."""
         if schema is True:
-            return JSON
+            return [], False
         if schema is False:
-            return nothing
+            return [nothing], False
         if not isinstance(schema, dict):
             msg = f"a schema is an object or a boolean, got {type(schema).__name__}"
             raise Unsupported(msg)
@@ -396,12 +453,9 @@ class Compiler:
         except Unsupported:
             raise
         except ValueError as exc:
-            # valgebra's own refusals -- its nesting limit, a key that is no Unicode text --
-            # are refusals of the schema, and a caller handles them as one.
-            msg = f"{_PAST_VALGEBRAS_LIMIT}: {exc}"
-            raise Unsupported(msg) from exc
+            raise _past_valgebras_limit(exc) from exc
 
-    def _compile_object(self, schema: dict[str, Any]) -> Validator[Any]:
+    def _compile_object(self, schema: dict[str, Any]) -> tuple[list[object], bool]:
         _check_shapes(schema)
         if len(self._typed) >= MAX_SCHEMA_DEPTH:
             # Python's recursion stops a few hundred levels down with no keyword to name.
@@ -427,9 +481,7 @@ class Compiler:
         # there alone, and only where no `type`, `enum` or `const` pins the kind: anywhere
         # else the meet is the same set, with a recursive term every question about it
         # would carry.
-        if escaped and not (typed or "enum" in schema or "const" in schema):
-            parts.append(JSON)
-        return intersection(*parts) if parts else JSON
+        return parts, escaped and not (typed or "enum" in schema or "const" in schema)
 
     def _keywords(self, schema: dict[str, Any], parts: list[object]) -> None:
         seen: set[str] = set()
@@ -1021,7 +1073,7 @@ def _contains(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     if "contains" not in s:
         return JSON
     if "minContains" not in s and "maxContains" not in s:
-        inner = c.compile(s["contains"])
+        inner = c.compile_body(s["contains"])
         return c.guard("array", intersection(ARRAY, complement(each(complement(inner)))))
     c.opaque.add("minContains/maxContains")
     low = _count(s, "minContains") if "minContains" in s else 1
@@ -1644,20 +1696,23 @@ def _any_of(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
 
 def _one_of(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     """Return the values in exactly one branch."""
-    return exactly_one(*(c.compile(sub) for sub in s["oneOf"]))
+    compiled = [c.compile_with_body(sub) for sub in s["oneOf"]]
+    return exactly_one(
+        *(whole for whole, _ in compiled), complemented=[body for _, body in compiled]
+    )
 
 
 def _not(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
-    return intersection(JSON, complement(c.compile(s["not"])))
+    return intersection(JSON, complement(c.compile_body(s["not"])))
 
 
 def _if(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     """Return ``(if & then) | (~if & else)``; ``then`` and ``else`` alone assert nothing."""
     if "if" not in s:
         return JSON
-    return implies(
-        c.compile(s["if"]), c.compile(s.get("then", True)), c.compile(s.get("else", True))
-    )
+    condition, body = c.compile_with_body(s["if"])
+    then, otherwise = c.compile(s.get("then", True)), c.compile(s.get("else", True))
+    return implies(condition, then, otherwise, complemented=body)
 
 
 def _ref(c: Compiler, s: dict[str, Any]) -> Validator[Any]:

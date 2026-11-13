@@ -13,6 +13,7 @@ an ``annotated_types`` marker, the one constraint vocabulary it reads.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from itertools import combinations
 from typing import Annotated, Any
 
@@ -55,9 +56,21 @@ __all__ = [
 NOT_BOOL = complement(bool)
 
 
-def implies(condition: object, then: object, otherwise: object = anything) -> Validator[Any]:
-    """Return ``(condition & then) | (~condition & otherwise)``: the conditional recipe."""
-    return union(intersection(condition, then), intersection(complement(condition), otherwise))
+def implies(
+    condition: object,
+    then: object,
+    otherwise: object = anything,
+    *,
+    complemented: object | None = None,
+) -> Validator[Any]:
+    """Return ``(condition & then) | (~condition & otherwise)``: the conditional recipe.
+
+    ``complemented``, where given, is the set ``condition`` is complemented as: one that
+    agrees with it on every value ``otherwise`` holds, so the complement can leave out a meet
+    ``otherwise`` already carries.
+    """
+    negated = complement(condition if complemented is None else complemented)
+    return union(intersection(condition, then), intersection(negated, otherwise))
 
 
 def guard(kind: object, refined: object) -> Validator[Any]:
@@ -74,7 +87,9 @@ def has(key: str) -> Validator[Any]:
     return Validator({key: anything}).open()
 
 
-def exactly_one(*branches: Validator[Any]) -> Validator[Any]:
+def exactly_one(
+    *branches: Validator[Any], complemented: Sequence[Validator[Any]] | None = None
+) -> Validator[Any]:
     """Return the values in exactly one branch: each branch minus every other it may meet.
 
     A branch valgebra proves disjoint from another holds none of its values, so ``b & ~o``
@@ -83,7 +98,11 @@ def exactly_one(*branches: Validator[Any]) -> Validator[Any]:
     every level, past valgebra's node bound. A pair not proved disjoint keeps the
     complement, and a placeholder of a fixpoint still being built is never proved empty,
     so the set is the same either way.
+
+    ``complemented``, where given, holds the set each branch is complemented as: one that
+    agrees with it on every value a branch holds.
     """
+    negated = branches if complemented is None else complemented
     meet = {
         (i, j): not intersection(branches[i], branches[j]).is_empty()
         for i, j in combinations(range(len(branches)), 2)
@@ -94,7 +113,7 @@ def exactly_one(*branches: Validator[Any]) -> Validator[Any]:
                 b,
                 *(
                     complement(o)
-                    for j, o in enumerate(branches)
+                    for j, o in enumerate(negated)
                     if j != i and meet[min(i, j), max(i, j)]
                 ),
             )

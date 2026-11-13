@@ -476,6 +476,49 @@ class TestUniverse:
         assert compile_schema(schema).is_subtype_of(JSON)
 
 
+_JSON_VALUES = (None, True, 0, 1, 2, 2.5, -3, "", "a", "abcde", [], [1], [2, 3, 4], {}, {"a": 1})
+
+
+class TestComplements:
+    # A complement inside the universe reads a schema's body, its keywords' meet without the
+    # universe, which valgebra decides where the complement of a meet with it declines.
+    @pytest.mark.parametrize(
+        ("subject", "schema", "answer"),
+        [
+            ({"type": "integer"}, {"oneOf": [{"type": "integer"}, {"minimum": 2}]}, "not_subset"),
+            (
+                {"type": "string"},
+                {"not": {"type": "string", "oneOf": [{"minLength": 2}, {"maxLength": 4}]}},
+                "not_subset",
+            ),
+            ({"const": [1]}, {"not": {"maxItems": 2}}, "not_subset"),
+            ({"type": "integer"}, {"if": {"minimum": 2}, "then": {"type": "integer"}}, "subset"),
+            ({"type": "number"}, {"if": {"minimum": 2}, "then": {"type": "integer"}}, "not_subset"),
+            ({"const": ["foo"]}, {"contains": True}, "subset"),
+            ({"const": [2, 3, 4]}, {"contains": {"minimum": 5}}, "not_subset"),
+        ],
+    )
+    def test_a_complement_inside_the_universe_is_decided(self, subject, schema, answer):
+        assert compile_schema(subject).relation_to(compile_schema(schema)) == answer
+
+    @pytest.mark.parametrize(
+        "schema",
+        [
+            True,
+            {},
+            {"minimum": 2},
+            {"type": "string", "minLength": 2},
+            {"oneOf": [{"type": "integer"}, {"minimum": 2}]},
+            {"not": {"maxItems": 1}},
+            {"properties": {"a": {"type": "string"}}},
+        ],
+    )
+    def test_a_body_and_its_schema_agree_on_every_json_value(self, schema):
+        compiler = Compiler(schema)
+        whole, body = compiler.compile(schema), compiler.compile_body(schema)
+        assert [whole.is_valid(v) for v in _JSON_VALUES] == [body.is_valid(v) for v in _JSON_VALUES]
+
+
 class TestDecisions:
     def test_disjoint_patterns_are_proven_disjoint(self):
         a = compile_schema({"type": "string", "pattern": "^cus_[a-z0-9]{8}$"})

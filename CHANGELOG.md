@@ -42,6 +42,12 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   empty object alone: both are sets a relation reads rather than predicates. The containment
   study proves 6047 of its 10890 questions, and 95 of the 1071 draft 2020-12 suite cases run
   go through an opaque predicate.
+- `not`, `oneOf`, `if` and `contains` complement a schema's keywords without the universe the
+  schema is met with where used as itself: inside the JSON values the two agree, and valgebra
+  decides the bare complement. The containment study proves 6574 of its 10890 questions and
+  leaves 863 undecided, and the 3 more refutations against a label are draft-04 `const`
+  pairs. `Compiler.compile_body` returns the meet, and one pass reads both, so a `oneOf`
+  nested twelve deep compiles in 10 ms.
 
 ### Fixed
 

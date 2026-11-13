@@ -87,18 +87,18 @@ the four the suite study runs.
 
 | draft | questions | refused | proven | refuted | undecided | proven against the label | refuted against the label |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 2020-12 | 3645 | 162 | 2248 | 911 | 324 | 0 | 8 |
-| 7 | 2788 | 12 | 1805 | 764 | 207 | 0 | 4 |
-| 6 | 2524 | 12 | 1621 | 690 | 201 | 0 | 4 |
-| 4 | 1933 | 4 | 890 | 809 | 230 | 0 | 263 |
+| 2020-12 | 3645 | 162 | 2251 | 937 | 295 | 0 | 8 |
+| 7 | 2788 | 12 | 1808 | 792 | 176 | 0 | 4 |
+| 6 | 2524 | 12 | 1624 | 719 | 169 | 0 | 4 |
+| 4 | 1933 | 4 | 891 | 815 | 223 | 0 | 266 |
 
-- A proof stands against a label only where the label is wrong, as a refutation does: 6564
+- A proof stands against a label only where the label is wrong, as a refutation does: 6574
   proofs of the 10890 questions, 0 against one. One kind of wrong label lies in a proof's
   direction: in `nonvalid/ref.json` the generator writes a `not` around the properties of the
   suite's tree of nodes and labels the tree it lists outside, where the `jsonschema` package
   admits it; valgebra 0.0.25 leaves those three questions undecided. A proof against a label
   in any other category fails `tests/test_docs.py`.
-- Each of the 279 refutations against a label is a wrong label, and the `jsonschema`
+- Each of the 282 refutations against a label is a wrong label, and the `jsonschema`
   package's validator for the draft admits the witness to one side and refuses it from the
   other. In every draft the generator writes two kinds. In `universal/items.json`,
   `universal/ref.json` and, in draft 2020-12, `universal/unevaluatedItems.json` and
@@ -108,7 +108,7 @@ the four the suite study runs.
   `unsatisfiable/id.json`, and in draft 2020-12's `unsatisfiable/anchor.json`, it renames a
   `$ref`, an `$id` or an `$anchor` inside an `enum` or `const` value as well as in the
   schema, so the two copies differ and the schema it labels empty holds the value it
-  lists, such as `{"$ref": "#/allOf/0/$defs/a_string"}`. In draft-04, 259 more pairs put `const`, which draft-06 added, in a draft-04
+  lists, such as `{"$ref": "#/allOf/0/$defs/a_string"}`. In draft-04, 262 more pairs put `const`, which draft-06 added, in a draft-04
   schema: the draft reads it as an annotation, so the first schema admits every value.
 - A question is refused where the compiler refuses a schema of its pair, as the inventory
   of [`03-conformance.md`](03-conformance.md) lists; an undecided one is kept and counted.

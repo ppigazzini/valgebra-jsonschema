@@ -17,6 +17,12 @@ admits `"a"`. Each such keyword compiles to `complement(kind) | refined`, and a 
 object to the meet of its keywords. Where `type` already confines the instance to the
 keyword's kind, the guard's other half is empty after the meet and is left out.
 
+A schema whose guard reaches past the JSON values is met with them, and only where it is
+used as itself. Where `not`, `oneOf`, `if` and `contains` complement a schema, the
+complement reads its keywords' meet alone (`Compiler.compile_body`): it is met with a set
+inside the JSON values, where the two agree, and valgebra decides the complement of the
+bare meet where it declines that of a meet holding the recursive universe.
+
 | keyword | set |
 |---|---|
 | `type` | union of kinds; `integer` is an `int` that is not a `bool`, or a `float` that is a multiple of 1 |

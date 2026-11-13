@@ -77,6 +77,14 @@ in a 2020-12 schema rather than ignored: a schema carrying them was written to a
 where they assert, and ignoring them would admit values its author meant to refuse. In a
 draft-07 schema `upgrade` translates them.
 
+A `pattern` is read by translating it into valgebra's dialect, and one the translation cannot
+write, a lookaround past the pattern's start or a backreference, refuses its schema: 5 of
+JSONSchemaBench's 9558. A second engine reading ECMA-262 for those alone, as a predicate, would
+split this package's reading of a pattern in two, the translation's and the engine's, whose
+agreement nothing tests past the patterns it takes, and would make a package of Python over
+valgebra carry a native dependency for them. Refusing a schema it cannot evaluate is what the
+specification's next release requires.
+
 ## Differences ledger
 
 | what | the specification | `jsonschema` 4.26.0 | this package | why |

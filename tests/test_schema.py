@@ -14,6 +14,7 @@ from valgebra_jsonschema.schema import (
     Compiler,
     Unsupported,
     compile_schema,
+    constants,
     json_key,
     upgrade,
 )
@@ -477,6 +478,42 @@ class TestUniverse:
 
 
 _JSON_VALUES = (None, True, 0, 1, 2, 2.5, -3, "", "a", "abcde", [], [1], [2, 3, 4], {}, {"a": 1})
+
+
+class TestConstants:
+    @pytest.mark.parametrize(
+        ("schema", "values"),
+        [
+            ({"const": [1, 2]}, [[1, 2]]),
+            ({"enum": [1, "a"], "title": "t"}, [1, "a"]),
+            ({"anyOf": [{"const": 1}, {"enum": [1.0, 2]}]}, [1, 2]),
+            ({"oneOf": [{"const": 1}, {"enum": [1.0, 2]}]}, [2]),
+            (False, []),
+            (True, None),
+            ({"const": 1, "type": "integer"}, None),
+            ({"const": 1, "enum": [1]}, None),
+            ({"anyOf": [{"const": 1}, {"type": "string"}]}, None),
+        ],
+    )
+    def test_the_values_a_schema_spells_out(self, schema, values):
+        assert constants(schema) == values
+
+    def test_a_draft_04_const_is_an_annotation_and_spells_nothing(self):
+        assert constants(upgrade({"const": 1}, 4)) is None
+
+    def test_a_finite_set_is_related_by_the_membership_of_each_value(self):
+        # valgebra reads no predicate for a relation; each value's membership decides it.
+        unique = compile_schema({"uniqueItems": True})
+        listed = compile_schema({"enum": [[1, 2], [1, 1]]})
+        assert listed.relation_to(unique) == "undecided"
+        repeated, distinct = (
+            constants({"enum": [[1, 2], [1, 1]]}),
+            constants({"enum": [[1, 2], [3]]}),
+        )
+        assert repeated is not None
+        assert distinct is not None
+        assert not all(unique.is_valid(v) for v in repeated)
+        assert all(unique.is_valid(v) for v in distinct)
 
 
 class TestComplements:

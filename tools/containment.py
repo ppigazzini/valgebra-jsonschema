@@ -35,7 +35,7 @@ from typing import Any
 from jsonschema_specifications import REGISTRY
 
 from valgebra_jsonschema._valgebra import Validator
-from valgebra_jsonschema.schema import Compiler, Unsupported, upgrade
+from valgebra_jsonschema.schema import Compiler, Unsupported, constants, upgrade
 from valgebra_jsonschema.study import (
     CONTAINMENT,
     ContainmentRow,
@@ -89,9 +89,18 @@ def files(cache: Path, directory: str) -> list[Path]:
 METASCHEMAS = {uri: resource.contents for uri, resource in REGISTRY.items()}
 
 
-def _compile(schema: object, older: int | None) -> Validator[Any]:
+def _compile(schema: object, older: int | None) -> tuple[Validator[Any], list[Any] | None]:
+    """Return a schema's set and, where it spells them out, the values it admits."""
     document = upgrade(schema, older) if older is not None else schema
-    return Compiler(document, documents=METASCHEMAS).compile(document)
+    return Compiler(document, documents=METASCHEMAS).compile(document), constants(document)
+
+
+def _relation(subject: tuple[Validator[Any], list[Any] | None], supertype: Validator[Any]) -> str:
+    """Return the relation of a set to another: by each value of a finite one, else valgebra's."""
+    compiled, values = subject
+    if values is None:
+        return compiled.relation_to(supertype)
+    return "subset" if all(supertype.is_valid(v) for v in values) else "not_subset"
 
 
 class _OutOfTimeError(Exception):
@@ -119,7 +128,7 @@ def one(job: tuple[str, Path]) -> tuple[str, str, Counter[str]]:
         for key, a, b in labeled:
             signal.alarm(TIMEOUT)
             try:
-                relation = schemas[a].relation_to(schemas[b])
+                relation = _relation(schemas[a], schemas[b][0])
             except _OutOfTimeError:
                 counts["timed_out"] += 1
                 continue

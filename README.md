@@ -49,7 +49,10 @@ assert wider.relation_to(arguments) == "not_subset"
 
 `relation_to` answers `subset`, `not_subset` or `undecided`. It is `undecided` where valgebra
 can prove neither, which is never a wrong proof, and a keyword this package does not read raises
-`Unsupported` naming it, since skipping one would admit values the schema refuses.
+`Unsupported` naming it, since skipping one would admit values the schema refuses. A schema
+that spells its values out, with `const`, `enum`, or an `anyOf` or `oneOf` of them, is related
+by each value: `constants(schema)` lists them, and the schema lies inside another exactly
+where `is_valid` admits each, a keyword valgebra reads as a predicate included.
 
 ## What it reads
 
@@ -81,8 +84,8 @@ uv run python tools/containment.py --check docs/studies/containment.json
 - **Real-world schemas** (JSONSchemaBench, 9558 schemas from GitHub, the JSON Schema Store,
   Kubernetes and function-calling data): 9473 compile, none crashes; membership differs from the
   `jsonschema` package's on 12 of 404298 values, each a reading the ledger records.
-- **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 6634 proven,
-  0 against a label; each of the 282 refutations against a label is a wrong label, which
+- **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 6756 proven,
+  3 against a label, each a wrong label; each of the 282 refutations against a label is a wrong label, which
   [`docs/04-results.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/04-results.md)
   names.
 

@@ -42,6 +42,7 @@ import functools
 import itertools
 import math
 import re
+from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from fractions import Fraction
@@ -1642,6 +1643,48 @@ def _property_names(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
         return all(names.is_valid(k) for k in obj)
 
     return c.guard("object", opaque(dict[str, Any], admits))
+
+
+#: The keywords a schema spells its values out with, beside annotations.
+_SPELLED = frozenset({"const", "enum", "anyOf", "oneOf"})
+
+
+def constants(schema: object) -> list[Any] | None:
+    """Return the JSON values ``schema`` admits where it spells them out, or ``None``.
+
+    A schema of one ``const``, one ``enum``, or an ``anyOf`` or ``oneOf`` of such schemas,
+    beside annotations alone, admits the values it lists, and ``oneOf`` those exactly one
+    branch lists under JSON's equality; ``false`` admits none. A finite set lies inside
+    another exactly where each of its values does, so membership relates such a schema to
+    any other, predicates included [FCB08, §4.1]: every leaf answers a value's spellings
+    alike, and the compiler's predicates answer from the value alone. A draft-04 ``const``
+    is an annotation, so the document `upgrade` returns is the one to read.
+    """
+    if not isinstance(schema, dict):
+        return [] if schema is False else None
+    spelled = set(schema) & _SPELLED
+    if len(spelled) != 1 or set(schema) - ANNOTATIONS - _SPELLED:
+        return None
+    (key,) = spelled
+    listed = schema[key]
+    if key == "const":
+        return [listed]
+    if not isinstance(listed, list):
+        return None
+    if key == "enum":
+        return list(listed)
+    return _in_branches([constants(branch) for branch in listed], exactly_one=key == "oneOf")
+
+
+def _in_branches(branches: list[list[Any] | None], *, exactly_one: bool) -> list[Any] | None:
+    """Return the values some branch lists, or exactly one does, under JSON's equality."""
+    if any(values is None for values in branches):
+        return None
+    distinct = [{json_key(v): v for v in values or []} for values in branches]
+    if not exactly_one:
+        return list({k: v for values in distinct for k, v in values.items()}.values())
+    held = Counter(k for values in distinct for k in values)
+    return [v for values in distinct for k, v in values.items() if held[k] == 1]
 
 
 def json_key(value: Any) -> object:

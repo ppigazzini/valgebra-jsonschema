@@ -32,6 +32,12 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   reads no dynamic reference, 1341 of draft 2020-12 and 1239 of 2019-09, each passing, and
   the containment study proves 6564 of its 10890 questions.
 
+- `constants(schema)` lists the values a schema spells out with `const`, `enum`, or an `anyOf`
+  or `oneOf` of them, and such a schema lies inside another exactly where each value is a
+  member of it, over a predicate as well. The containment study asks a finite first schema
+  that way: it proves 6756 of its 10890 questions and leaves 490 undecided, and its 3 proofs
+  against a label are `nonvalid/ref.json`'s tree, which the `jsonschema` package admits.
+
 ### Changed
 
 - `oneOf` leaves out the complement of a branch valgebra proves disjoint from another, which

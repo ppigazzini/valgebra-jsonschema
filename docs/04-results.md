@@ -82,21 +82,23 @@ The JSON Schema containment test suite (Attouche et al. 2021, MIT), fetched at c
 `446fb41c527c` into `results/` and never vendored: pairs of schemas generated from the
 JSON-Schema-Test-Suite, each labeling whether the first is a subset of the second, the
 converse, or both. A labeled direction is a question, asked of valgebra with
-`relation_to`; the older drafts are read through `upgrade`, and the only optional files read are
+`relation_to`, or, where the first schema spells its values out (`constants`), of each
+value's membership in the second; the older drafts are read through `upgrade`, and the only optional files read are
 the four the suite study runs.
 
 | draft | questions | refused | proven | refuted | undecided | proven against the label | refuted against the label |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 2020-12 | 3645 | 162 | 2265 | 937 | 281 | 0 | 8 |
-| 7 | 2788 | 12 | 1822 | 792 | 162 | 0 | 4 |
-| 6 | 2524 | 12 | 1638 | 719 | 155 | 0 | 4 |
+| 2020-12 | 3645 | 162 | 2324 | 1035 | 124 | 1 | 8 |
+| 7 | 2788 | 12 | 1854 | 839 | 83 | 1 | 4 |
+| 6 | 2524 | 12 | 1669 | 765 | 78 | 1 | 4 |
 | 4 | 1933 | 4 | 909 | 815 | 205 | 0 | 266 |
 
-- A proof stands against a label only where the label is wrong, as a refutation does: 6634
-  proofs of the 10890 questions, 0 against one. One kind of wrong label lies in a proof's
+- A proof stands against a label only where the label is wrong, as a refutation does: 6756
+  proofs of the 10890 questions, 3 against one. One kind of wrong label lies in a proof's
   direction: in `nonvalid/ref.json` the generator writes a `not` around the properties of the
   suite's tree of nodes and labels the tree it lists outside, where the `jsonschema` package
-  admits it; valgebra 0.0.25 leaves those three questions undecided. A proof against a label
+  admits it, and the tree's membership proves it inside: the 3 proofs against a label, one per
+  draft but 04. A proof against a label
   in any other category fails `tests/test_docs.py`.
 - Each of the 282 refutations against a label is a wrong label, and the `jsonschema`
   package's validator for the draft admits the witness to one side and refuses it from the

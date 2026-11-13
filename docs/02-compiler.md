@@ -120,7 +120,7 @@ compiled from their subschema, and each compilation holds its own.
 `Unsupported` names the keyword: a `$dynamicRef` whose anchor two schema objects set, references to a document neither the one compiled nor
 `documents` holds, a supplied document in a dialect not read where a reference names it, an
 embedded `$id` whose resource declares another `$schema`, a draft other than 2020-12, 2019-09,
-07, 06 and 04, and a property name ending in `?` (valgebra reads that suffix as "optional"). A keyword outside the
+07, 06 and 04, and a property name holding a lone surrogate. A keyword outside the
 vocabularies is an annotation, as draft 2020-12 says, and `Compiler.ignored` records it.
 
 ## Measured

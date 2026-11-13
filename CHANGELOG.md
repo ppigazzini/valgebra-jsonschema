@@ -45,6 +45,10 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   refuses 139 of its questions rather than 190, its 2 more proofs against a label being
   `nonvalid/dynamicRef.json`'s, which the official suite labels the other way.
 
+- A property name ending in `?` is that name. valgebra's record literal reads the suffix as
+  "optional", so such a key is written with one more and, where it is required, met with its
+  presence, which a `TypedDict` names whole: one more JSONSchemaBench schema compiles.
+
 ### Changed
 
 - `oneOf` leaves out the complement of a branch valgebra proves disjoint from another, which

@@ -16,11 +16,11 @@
   {
    "subset": "Github_hard",
    "schemas": 1240,
-   "compiled": 1222,
-   "refused": 18,
+   "compiled": 1223,
+   "refused": 17,
    "crashed": 0,
    "timed_out": 0,
-   "values": 48064,
+   "values": 48112,
    "disagreed": 0
   },
   {
@@ -116,10 +116,6 @@
   {
    "reason": "a pattern outside valgebra's regex dialect",
    "schemas": 5
-  },
-  {
-   "reason": "a property name valgebra cannot hold",
-   "schemas": 1
   },
   {
    "reason": "a set valgebra refuses to build",

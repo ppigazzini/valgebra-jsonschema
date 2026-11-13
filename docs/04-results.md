@@ -50,7 +50,7 @@ draft.
 | subset | schemas | compiled | refused | crashed | timed out | values | disagreed |
 |---|---:|---:|---:|---:|---:|---:|---:|
 | Github_easy | 1943 | 1934 | 9 | 0 | 0 | 84201 | 2 |
-| Github_hard | 1240 | 1222 | 18 | 0 | 0 | 48064 | 0 |
+| Github_hard | 1240 | 1223 | 17 | 0 | 0 | 48112 | 0 |
 | Github_medium | 1976 | 1965 | 11 | 0 | 0 | 83613 | 0 |
 | Github_trivial | 444 | 444 | 0 | 0 | 0 | 17098 | 10 |
 | Github_ultra | 164 | 156 | 8 | 0 | 0 | 5470 | 0 |
@@ -59,15 +59,15 @@ draft.
 | Kubernetes | 1064 | 1063 | 1 | 0 | 0 | 44463 | 0 |
 | Snowplow | 403 | 400 | 3 | 0 | 0 | 17745 | 0 |
 | WashingtonPost | 125 | 125 | 0 | 0 | 0 | 5275 | 0 |
-| all | 9558 | 9473 | 85 | 0 | 0 | 404298 | 12 |
+| all | 9558 | 9474 | 84 | 0 | 0 | 404346 | 12 |
 
-- 9473 of the 9558 schemas compile, none crashes, none times out. Of the 85 refused, 58
+- 9474 of the 9558 schemas compile, none crashes, none times out. Of the 84 refused, 58
   use `dependencies` or `additionalItems` in a schema declaring no older draft, 13 build
   sets valgebra refuses, 5 hold a pattern outside valgebra's regex dialect, 4 of them a
   lookahead past the pattern's start and 1 a backreference, and 7 a `$ref` to nothing in the document; the rest
   are listed by `tools/corpus.py`. A schema may name a draft's meta-schema, which both the
   compiler and the `jsonschema` package read from the `jsonschema-specifications` package.
-- Membership differs from the package's on 12 of the 404298 values, each a reading the
+- Membership differs from the package's on 12 of the 404346 values, each a reading the
   ledger records: 11 are an integral float, `1e300` or `-0.0`, under a draft-04
   `integer`, and 1 is `"\n"` under a pattern ending in `$`, which Python's `re` matches
   before a final newline.

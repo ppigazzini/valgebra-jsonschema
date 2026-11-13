@@ -662,7 +662,6 @@ class TestRefusals:
             {"$ref": "http://example.com/x.json"},
             {"$ref": "#anchor"},
             {"properties": {"a": {"$id": "x", "$ref": "#/$defs/b"}}, "$defs": {"b": {}}},
-            {"properties": {"opt?": {"type": "string"}}},
         ],
     )
     def test_it_refuses_what_it_cannot_translate(self, schema):
@@ -1184,6 +1183,31 @@ _HEADERS = {
 
 
 class TestKeys:
+    def test_a_key_ending_in_a_question_mark_is_that_key(self):
+        # valgebra's record literal reads a trailing `?` as "optional": a required key is
+        # met with its presence, and an optional one escaped.
+        asked = "in which school did you spend most of your education?"
+        survey = compile_schema(
+            {
+                "type": "object",
+                "properties": {asked: {"type": "string"}, "opt?": {"type": "integer"}},
+                "required": [asked],
+                "additionalProperties": False,
+            }
+        )
+        assert survey.is_valid({asked: "x", "opt?": 1})
+        assert not survey.is_valid({})
+        assert not survey.is_valid({asked[:-1]: "x"})
+        assert not survey.is_valid({asked: "x", "opt": 1})
+        assert not survey.is_valid({asked: "x", "opt?": "1"})
+        constant = compile_schema({"const": {"a?": 1}})
+        assert constant.is_valid({"a?": 1})
+        assert not constant.is_valid({"a": 1})
+        assert not constant.is_valid({})
+        depends = compile_schema({"dependentRequired": {"x": ["y?"]}})
+        assert depends.is_valid({"x": 1, "y?": 1})
+        assert not depends.is_valid({"x": 1, "y": 1})
+
     def test_a_pattern_is_a_clause_a_relation_reads(self):
         headers = compile_schema(_HEADERS)
         strings = compile_schema({"type": "object", "additionalProperties": {"type": "string"}})

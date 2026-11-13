@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from itertools import combinations
-from typing import Annotated, Any
+from typing import Annotated, Any, TypedDict
 
 from annotated_types import Len, Predicate
 from valgebra import (
@@ -83,7 +83,13 @@ def guard(kind: object, refined: object) -> Validator[Any]:
 
 
 def has(key: str) -> Validator[Any]:
-    """Return the mappings that carry ``key``: an open record requiring it."""
+    """Return the mappings that carry ``key``: an open record requiring it.
+
+    A key ending in ``?`` is named through a ``TypedDict``, which takes a key whole, where
+    the dict literal reads that suffix as "optional"; opened, the two records are one set.
+    """
+    if key.endswith("?"):
+        return Validator(TypedDict("Has", {key: Any})).open()  # ty: ignore[invalid-argument-type]
     return Validator({key: anything}).open()
 
 

@@ -258,7 +258,8 @@ def _constant(value: object) -> Validator[Any]:
     if isinstance(value, list):
         return fixed([_constant(v) for v in value])
     if isinstance(value, dict):
-        return Validator({_field(k): _constant(v) for k, v in value.items()})
+        record = Validator({_record_key(k, required=True): _constant(v) for k, v in value.items()})
+        return intersection(record, *_carried(value))
     msg = f"constant {value!r} is not a JSON value"
     raise Unsupported(msg)
 
@@ -289,12 +290,23 @@ def _literal(value: object) -> object:
 _SURROGATES = range(0xD800, 0xE000)
 
 
+def _record_key(key: str, *, required: bool) -> str:
+    """Return ``key`` as valgebra's record literal spells it.
+
+    The literal reads a trailing ``?`` as "optional" and strips one, so an optional key is
+    written with one more, and a required key that ends in ``?`` is written as an optional
+    one and met with `has`, which names it whole (`_carried`).
+    """
+    name = _field(key)
+    return name if required and not name.endswith("?") else f"{name}?"
+
+
+def _carried(required: Iterable[str]) -> list[Validator[Any]]:
+    """Return the presence of each required key the record literal writes as optional."""
+    return [has(key) for key in required if key.endswith("?")]
+
+
 def _field(key: str) -> str:
-    # valgebra reads a trailing `?` on a record key as "optional"; a JSON key that ends in
-    # one cannot be told apart from that marker.
-    if key.endswith("?"):
-        msg = f"property name {key!r} ends in '?', which valgebra reads as optional"
-        raise Unsupported(msg)
     if any(ord(ch) in _SURROGATES for ch in key):
         msg = f"property name {key!r} holds a lone surrogate, which is no Unicode text"
         raise Unsupported(msg)
@@ -1132,12 +1144,12 @@ def _object(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     extra = c.compile(s.get("additionalProperties", True))
     record: dict[object, object] = {}
     for key, sub in props.items():
-        record[_field(key) if key in required else f"{_field(key)}?"] = c.compile(sub)
+        record[_record_key(key, required=key in required)] = c.compile(sub)
     for key in sorted(required - set(props)):
-        record[_field(key)] = extra
+        record[_record_key(key, required=True)] = extra
     if not extra.is_empty():
         record[str] = extra
-    return c.guard("object", record)
+    return c.guard("object", intersection(record, *_carried(required)))
 
 
 #: ECMA-262's ``\d``, ``\w`` and ``\s`` as code point ranges: ASCII digits, ASCII word
@@ -1583,10 +1595,9 @@ def _object_by_cells(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
         return intersection(*named, *matched) if named or matched else extra
 
     for key, sub in props.items():
-        field = _field(key) if key in required else f"{_field(key)}?"
-        record[field] = reading(key, [c.compile(sub)])
+        record[_record_key(key, required=key in required)] = reading(key, [c.compile(sub)])
     for key in sorted(required - set(props)):
-        record[_field(key)] = reading(key, [])
+        record[_record_key(key, required=True)] = reading(key, [])
     for chosen in itertools.product((True, False), repeat=len(patterns)):
         keys = intersection(
             str,
@@ -1599,7 +1610,7 @@ def _object_by_cells(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
         value = intersection(*taken) if taken else extra
         if not value.is_empty():
             record[keys] = value
-    return c.guard("object", record)
+    return c.guard("object", intersection(record, *_carried(required)))
 
 
 def _object_by_pattern(c: Compiler, s: dict[str, Any]) -> Validator[Any]:

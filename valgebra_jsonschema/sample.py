@@ -18,7 +18,7 @@ import string
 from collections.abc import Mapping
 from typing import Any
 
-from valgebra_jsonschema.schema import Compiler, Unsupported
+from valgebra_jsonschema.schema import Compiler, Unsupported, compile_with_fallbacks
 
 _ALPHABET = string.ascii_letters + string.digits + "_-@."
 #: The longest string and list a draw builds. Generated schemas bound lengths by 2**31 - 1,
@@ -47,12 +47,8 @@ class Sampler:
 
     def draw(self, schema: object, tries: int = 40) -> list[Any]:
         """Return up to ``tries`` distinct candidates that the compiled schema admits."""
-        try:
-            target = self.compiler.compile(schema)
-        except Unsupported:
-            # A schema past valgebra's limit reads by predicate, as `compile_schema` has it.
-            self.compiler = Compiler(self.root, by_clauses=False, documents=self.documents)
-            target = self.compiler.compile(schema)
+        # A schema past valgebra's limit reads by predicate, as `compile_schema` has it.
+        self.compiler, target = compile_with_fallbacks(self.root, schema, documents=self.documents)
         found: list[Any] = []
         seen: set[str] = set()
         for _ in range(tries):

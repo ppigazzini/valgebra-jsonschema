@@ -114,6 +114,7 @@ compiled from their subschema, and each compilation holds its own.
 | `uniqueItems` | needs equality across elements |
 | `minContains`, `maxContains` | need counting |
 | `multipleOf` with a fractional step | `0.0075 % 0.0001` is not zero in binary floating point |
+| `oneOf`, and a `$ref` to a definition that does not reach itself, in a schema past valgebra's limit with keys read by predicate too | "exactly one" of two branches is their exclusive or, which no formula writes with each branch once, and a definition inlined at each use is written once per use: the union is met with a count of the branches that hold, and the reference checks the definition's own set |
 
 ## Refused, and ignored
 

@@ -55,7 +55,7 @@ Every keyword of the draft 2020-12 vocabularies is in exactly one class, and
 | class | keywords |
 |---|---|
 | translated exactly | `type`, `enum`, `const`, `maximum`, `exclusiveMaximum`, `minimum`, `exclusiveMinimum`, an integral `multipleOf`, `minLength`, `maxLength`, `pattern`, `prefixItems`, `items`, `contains`, `minItems`, `maxItems`, `properties`, `required`, `additionalProperties`, `minProperties`, `maxProperties`, `patternProperties`, `propertyNames`, `dependentRequired`, `dependentSchemas`, `allOf`, `anyOf`, `oneOf`, `not`, `if`, `then`, `else`, `$ref`, `$id`, `$anchor`, `$dynamicAnchor`, a `$dynamicRef` whose anchor one schema object sets, `unevaluatedProperties`, `unevaluatedItems` |
-| translated as an opaque predicate | `uniqueItems`, `minContains`, `maxContains`, a fractional `multipleOf`, `patternProperties` past four patterns or in a schema past valgebra's limit, a `propertyNames` reading more than words and no boolean schema |
+| translated as an opaque predicate | `uniqueItems`, `minContains`, `maxContains`, a fractional `multipleOf`, `patternProperties` past four patterns or in a schema past valgebra's limit, a `propertyNames` reading more than words and no boolean schema, and `oneOf` and a `$ref` to a definition that does not reach itself in a schema past valgebra's limit with keys read by predicate too |
 | annotations | `title`, `description`, `default`, `examples`, `deprecated`, `readOnly`, `writeOnly`, `format`, `contentEncoding`, `contentMediaType`, `contentSchema`, `$schema`, `$vocabulary`, `$comment`, `$defs`, `definitions` |
 | refused | `$recursiveRef`, `$recursiveAnchor`, `additionalItems`, `dependencies` |
 

@@ -1182,6 +1182,46 @@ _HEADERS = {
 }
 
 
+def _nested_one_of(depth):
+    schema = {"type": "integer"}
+    for i in range(depth):
+        branches = [{"minimum": i}, {"maximum": i + 3}, {"multipleOf": 2}, schema]
+        schema = {"oneOf": branches}
+    return schema
+
+
+_DEFINED = {
+    "$defs": {"word": {"type": "string", "maxLength": 3}, "pair": {"type": "array"}},
+    "properties": {"a": {"$ref": "#/$defs/word"}, "b": {"$ref": "#/$defs/word"}},
+    "oneOf": [{"required": ["a"]}, {"required": ["b"]}, {"$ref": "#/$defs/pair"}],
+}
+
+
+class TestPastTheLimit:
+    def test_a_one_of_past_the_limit_is_counted_at_membership(self):
+        import jsonschema  # noqa: PLC0415 - the second implementation, a test dependency
+
+        schema = _nested_one_of(6)
+        with pytest.raises(Unsupported, match="valgebra refuses"):
+            Compiler(schema, by_clauses=False).compile(schema)
+        compiled = compile_schema(schema)
+        reference = jsonschema.Draft202012Validator(schema)
+        values = [*range(-4, 12), 2.5, "a", None]
+        assert [compiled.is_valid(v) for v in values] == [reference.is_valid(v) for v in values]
+
+    @pytest.mark.parametrize(
+        ("schema", "opaque"), [(_nested_one_of(3), {"oneOf"}), (_DEFINED, {"oneOf", "$ref"})]
+    )
+    def test_the_predicate_reading_admits_what_the_exact_one_does(self, schema, opaque):
+        exact = Compiler(schema).compile(schema)
+        counted = Compiler(schema, by_predicate=True)
+        compiled = counted.compile(schema)
+        values = [*range(-2, 8), 1.5, "ab", "abcd", [], [1], {}, {"a": "x"}, {"b": 1}, None]
+        values += [{"a": "x", "b": "y"}, {"a": "toolong"}]
+        assert [compiled.is_valid(v) for v in values] == [exact.is_valid(v) for v in values]
+        assert counted.opaque == opaque
+
+
 class TestKeys:
     def test_a_key_ending_in_a_question_mark_is_that_key(self):
         # valgebra's record literal reads a trailing `?` as "optional": a required key is

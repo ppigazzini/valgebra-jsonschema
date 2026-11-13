@@ -348,6 +348,7 @@ class Compiler:
         *,
         assert_format: bool = False,
         by_clauses: bool = True,
+        by_predicate: bool = False,
         documents: Mapping[str, object] | None = None,
     ) -> None:
         self.root = root
@@ -357,6 +358,12 @@ class Compiler:
         #: Read a key narrowed by a pattern as a clause, which a relation can read, rather than
         #: as a predicate. `compile_schema` turns it off for a schema past valgebra's limit.
         self.by_clauses = by_clauses
+        #: Read a ``oneOf`` as its union met with a predicate counting the branches that hold,
+        #: and a reference to a definition that does not reach itself as a predicate over the
+        #: definition's own set: each is one node where its exact spelling writes a branch
+        #: once per branch and a definition once per use. `compile_schema` turns it on for a
+        #: schema past valgebra's limit with keys read by predicate too.
+        self.by_predicate = by_predicate
         #: Read ``format`` as an assertion, which draft 2020-12 leaves to the caller's request.
         self.assert_format = assert_format
         self.opaque: set[str] = set()
@@ -563,7 +570,7 @@ class Compiler:
             return built
         mark = len(self._used)
         if not self._reaches_itself(node, around):
-            built = self._compile_at(node, around)
+            built = (self._checked_at if self.by_predicate else self._compile_at)(node, around)
         else:
 
             def body(this: Validator[Any]) -> Validator[Any]:
@@ -594,6 +601,16 @@ class Compiler:
             self._done[target] = built
         return built
 
+    def _checked_at(self, schema: object, base: str) -> Validator[Any]:
+        """Return the values of ``schema``, under ``base``, as a predicate over its own set."""
+        self._bases.append(base)
+        try:
+            get = self.closed(schema)
+        finally:
+            self._bases.pop()
+        self.opaque.add("$ref")
+        return intersection(JSON, opaque(object, lambda value: get().is_valid(value)))
+
     def _compile_at(self, schema: object, base: str) -> Validator[Any]:
         """Return the set ``schema`` compiles to where ``base`` is the base URI around it."""
         self._bases.append(base)
@@ -610,10 +627,14 @@ class Compiler:
         nothing. Such a set is compiled again, by a fresh compiler, the first time the
         callback asks for it; any other is the set compiled now.
         """
+        return self.compile_closed(schema)[1]
+
+    def compile_closed(self, schema: object) -> tuple[Validator[Any], Callable[[], Validator[Any]]]:
+        """Return the set ``schema`` compiles to now, and the getter `closed` returns."""
         mark = len(self._used)
         built = self.compile(schema)
         if len(self._used) == mark:
-            return lambda: built
+            return built, lambda: built
         root, base = self.root, self._bases[-1]
         cache: list[Validator[Any]] = []
 
@@ -623,12 +644,13 @@ class Compiler:
                     root,
                     assert_format=self.assert_format,
                     by_clauses=self.by_clauses,
+                    by_predicate=self.by_predicate,
                     documents=self.documents,
                 )
                 cache.append(again._compile_at(schema, base))
             return cache[0]
 
-        return get
+        return built, get
 
     def _inert(self, resource: dict[str, Any]) -> bool:
         """Return whether a schema's ``$id`` starts a resource in the document's dialect.
@@ -1784,10 +1806,29 @@ def _any_of(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
 
 def _one_of(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     """Return the values in exactly one branch."""
+    if c.by_predicate:
+        return _one_of_by_count(c, s["oneOf"])
     compiled = [c.compile_with_body(sub) for sub in s["oneOf"]]
     return exactly_one(
         *(whole for whole, _ in compiled), complemented=[body for _, body in compiled]
     )
+
+
+def _one_of_by_count(c: Compiler, branches: list[object]) -> Validator[Any]:
+    """Return the values in some branch that no second branch holds, counted at membership.
+
+    "Exactly one" of two branches is their exclusive or, which no formula spells writing each
+    branch once, so the exact union of differences writes each branch once per branch; this
+    spelling writes each once and counts the branches that hold a value.
+    """
+    c.opaque.add("oneOf")
+    closed = [c.compile_closed(sub) for sub in branches]
+    held = [get for _, get in closed]
+
+    def one(value: object) -> bool:
+        return sum(get().is_valid(value) for get in held) <= 1
+
+    return intersection(union(*(built for built, _ in closed)), opaque(object, one))
 
 
 def _not(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
@@ -2394,15 +2435,43 @@ def compile_schema(
         documents = in_dialect(documents, schema["$schema"])
     if (draft := older(schema)) is not None:
         schema = upgrade(schema, draft)
-    try:
-        return Compiler(schema, assert_format=assert_format, documents=documents).compile(schema)
-    except Unsupported as exc:
-        if not str(exc).startswith(_PAST_VALGEBRAS_LIMIT):
-            raise
-    # A clause per cell of keys is more nodes than the predicate it reads, so a schema past
-    # valgebra's limit keeps its membership that way, and its relations go undecided.
-    compiler = Compiler(schema, assert_format=assert_format, by_clauses=False, documents=documents)
-    return compiler.compile(schema)
+    return compile_with_fallbacks(schema, schema, assert_format=assert_format, documents=documents)[
+        1
+    ]
+
+
+#: The readings `compile_with_fallbacks` asks in turn: a clause per cell of keys is more
+#: nodes than the predicate it reads, and an exact ``oneOf`` or a definition inlined at each
+#: use more than the predicate counting or checking it, so a schema past valgebra's limit
+#: keeps its membership these ways, and the relations that read inside those parts go
+#: undecided.
+_FALLBACKS: tuple[dict[str, bool], ...] = (
+    {},
+    {"by_clauses": False},
+    {"by_clauses": False, "by_predicate": True},
+)
+
+
+def compile_with_fallbacks(
+    root: object,
+    schema: object,
+    *,
+    assert_format: bool = False,
+    documents: Mapping[str, object] | None = None,
+) -> tuple[Compiler, Validator[Any]]:
+    """Return a compiler of ``root`` and the set ``schema`` compiles to.
+
+    It is read the first way `_FALLBACKS` lists that stays inside valgebra's limit.
+    """
+    for options in _FALLBACKS[:-1]:
+        compiler = Compiler(root, assert_format=assert_format, documents=documents, **options)
+        try:
+            return compiler, compiler.compile(schema)
+        except Unsupported as exc:
+            if not str(exc).startswith(_PAST_VALGEBRAS_LIMIT):
+                raise
+    compiler = Compiler(root, assert_format=assert_format, documents=documents, **_FALLBACKS[-1])
+    return compiler, compiler.compile(schema)
 
 
 def in_dialect(documents: Mapping[str, object], dialect: str) -> dict[str, object]:

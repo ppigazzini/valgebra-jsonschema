@@ -49,6 +49,13 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   "optional", so such a key is written with one more and, where it is required, met with its
   presence, which a `TypedDict` names whole: one more JSONSchemaBench schema compiles.
 
+- A schema past valgebra's node limit with keys read by predicate reads each `oneOf` as its
+  union met with a count of the branches that hold, and each reference to a definition that
+  does not reach itself through the definition's own set: membership stays exact, and a
+  relation reading inside those parts declines. The 12 JSONSchemaBench schemas past the limit
+  compile, 9486 of the 9558. `compile_with_fallbacks` is the cascade `compile_schema` and
+  `Sampler` share.
+
 ### Changed
 
 - `oneOf` leaves out the complement of a branch valgebra proves disjoint from another, which

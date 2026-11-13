@@ -46,11 +46,11 @@
   {
    "subset": "Github_ultra",
    "schemas": 164,
-   "compiled": 156,
-   "refused": 8,
+   "compiled": 164,
+   "refused": 0,
    "crashed": 0,
    "timed_out": 0,
-   "values": 5470,
+   "values": 5704,
    "disagreed": 0
   },
   {
@@ -66,21 +66,21 @@
   {
    "subset": "JsonSchemaStore",
    "schemas": 492,
-   "compiled": 475,
-   "refused": 17,
+   "compiled": 478,
+   "refused": 14,
    "crashed": 0,
    "timed_out": 0,
-   "values": 18576,
-   "disagreed": 0
+   "values": 18674,
+   "disagreed": 1
   },
   {
    "subset": "Kubernetes",
    "schemas": 1064,
-   "compiled": 1063,
-   "refused": 1,
+   "compiled": 1064,
+   "refused": 0,
    "crashed": 0,
    "timed_out": 0,
-   "values": 44463,
+   "values": 44505,
    "disagreed": 0
   },
   {
@@ -119,7 +119,7 @@
   },
   {
    "reason": "a set valgebra refuses to build",
-   "schemas": 13
+   "schemas": 1
   },
   {
    "reason": "the keyword additionalItems",

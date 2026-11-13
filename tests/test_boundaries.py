@@ -132,8 +132,9 @@ def test_the_page_lists_each_class_as_the_code_does():
     rows = _inventory()
     exact, opaque = rows["translated exactly"], rows["translated as an opaque predicate"]
     assert exact | opaque == set(SUPPORTED)
-    # A step is exact where it is whole, and a key where it is words in few enough cells.
-    assert exact & opaque == {"multipleOf", "patternProperties", "propertyNames"}
+    # A step is exact where it is whole, a key where it is words in few enough cells, and a
+    # oneOf and a reference where the schema is inside valgebra's limit.
+    assert exact & opaque == {"multipleOf", "patternProperties", "propertyNames", "oneOf", "$ref"}
     assert rows["annotations"] == set(ANNOTATIONS)
     assert rows["refused"] == set(REFUSED)
 

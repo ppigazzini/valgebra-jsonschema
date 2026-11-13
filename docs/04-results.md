@@ -87,12 +87,12 @@ the four the suite study runs.
 
 | draft | questions | refused | proven | refuted | undecided | proven against the label | refuted against the label |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 2020-12 | 3645 | 162 | 2251 | 937 | 295 | 0 | 8 |
-| 7 | 2788 | 12 | 1808 | 792 | 176 | 0 | 4 |
-| 6 | 2524 | 12 | 1624 | 719 | 169 | 0 | 4 |
-| 4 | 1933 | 4 | 891 | 815 | 223 | 0 | 266 |
+| 2020-12 | 3645 | 162 | 2265 | 937 | 281 | 0 | 8 |
+| 7 | 2788 | 12 | 1822 | 792 | 162 | 0 | 4 |
+| 6 | 2524 | 12 | 1638 | 719 | 155 | 0 | 4 |
+| 4 | 1933 | 4 | 909 | 815 | 205 | 0 | 266 |
 
-- A proof stands against a label only where the label is wrong, as a refutation does: 6574
+- A proof stands against a label only where the label is wrong, as a refutation does: 6634
   proofs of the 10890 questions, 0 against one. One kind of wrong label lies in a proof's
   direction: in `nonvalid/ref.json` the generator writes a `not` around the properties of the
   suite's tree of nodes and labels the tree it lists outside, where the `jsonschema` package

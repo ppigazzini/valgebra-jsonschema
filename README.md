@@ -81,7 +81,7 @@ uv run python tools/containment.py --check docs/studies/containment.json
 - **Real-world schemas** (JSONSchemaBench, 9558 schemas from GitHub, the JSON Schema Store,
   Kubernetes and function-calling data): 9473 compile, none crashes; membership differs from the
   `jsonschema` package's on 12 of 404298 values, each a reading the ledger records.
-- **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 6574 proven,
+- **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 6634 proven,
   0 against a label; each of the 282 refutations against a label is a wrong label, which
   [`docs/04-results.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/04-results.md)
   names.

@@ -520,6 +520,14 @@ class TestComplements:
 
 
 class TestDecisions:
+    @pytest.mark.parametrize(
+        "schema",
+        [{"uniqueItems": True}, {"multipleOf": 0.5}, {"type": "array", "uniqueItems": True}],
+    )
+    def test_a_schema_over_a_predicate_compiled_twice_is_below_itself(self, schema):
+        # The two compilations hold one callable, which valgebra relates to itself.
+        assert compile_schema(schema).relation_to(compile_schema(schema)) == "subset"
+
     def test_disjoint_patterns_are_proven_disjoint(self):
         a = compile_schema({"type": "string", "pattern": "^cus_[a-z0-9]{8}$"})
         b = compile_schema({"type": "string", "pattern": "^sub_[a-z0-9]{8}$"})

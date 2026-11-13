@@ -48,6 +48,9 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   leaves 863 undecided, and the 3 more refutations against a label are draft-04 `const`
   pairs. `Compiler.compile_body` returns the meet, and one pass reads both, so a `oneOf`
   nested twelve deep compiles in 10 ms.
+- `uniqueItems` is one predicate in every schema, and a fractional `multipleOf` one per step,
+  so a schema holding either is proved below itself: the containment study proves 6634 of its
+  10890 questions.
 
 ### Fixed
 

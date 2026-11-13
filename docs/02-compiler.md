@@ -101,6 +101,10 @@ object it admits is the empty one.
 These have no counterpart in valgebra's set language, so they compile to
 predicates: membership is exact, and a relation that has to look inside one answers
 "undecided", never a wrong proof. `Compiler.opaque` lists those a schema used.
+`uniqueItems` is one callable in every schema, and a fractional `multipleOf` one per step,
+so valgebra relates each to itself: `{"uniqueItems": true}` compiled twice is proved below
+itself. The predicates of `minContains`, `maxContains` and `propertyNames` hold a set
+compiled from their subschema, and each compilation holds its own.
 
 | keyword | why |
 |---|---|

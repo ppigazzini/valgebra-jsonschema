@@ -38,6 +38,7 @@ every inclusion decided from it would be wrong.
 
 from __future__ import annotations
 
+import functools
 import itertools
 import math
 import re
@@ -1001,7 +1002,16 @@ def _multiple_of(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     if isinstance(step, int) or step.is_integer():
         return c.guard("number", _number(MultipleOf(int(step))))
     c.opaque.add("multipleOf")
-    exact = Fraction(str(step))
+    multiple = _multiples(Fraction(str(step)))
+    return c.guard("number", intersection(opaque(int | float, multiple), NOT_BOOL))
+
+
+@functools.cache
+def _multiples(exact: Fraction) -> Callable[[float], bool]:
+    """Return the test of a multiple of ``exact``, one callable per step.
+
+    Two schemas asking one step hold one predicate, which valgebra relates to itself.
+    """
 
     def multiple(value: float) -> bool:
         if isinstance(value, float) and not math.isfinite(value):
@@ -1013,7 +1023,7 @@ def _multiple_of(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
             return Fraction(int(value)) % exact == 0
         return Fraction(str(value)) % exact == 0
 
-    return c.guard("number", intersection(opaque(int | float, multiple), NOT_BOOL))
+    return multiple
 
 
 def _count(s: dict[str, Any], key: str) -> int:
@@ -1656,12 +1666,16 @@ def _unique_items(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     if not s["uniqueItems"]:
         return JSON
     c.opaque.add("uniqueItems")
+    return c.guard("array", opaque(list[Any], _unique))
 
-    def unique(items: list[Any]) -> bool:
-        keys = [json_key(v) for v in items]
-        return len(set(keys)) == len(keys)
 
-    return c.guard("array", opaque(list[Any], unique))
+def _unique(items: list[Any]) -> bool:
+    """Return whether no two items are equal as JSON values.
+
+    One callable serves every schema, so valgebra relates the keyword to itself.
+    """
+    keys = [json_key(v) for v in items]
+    return len(set(keys)) == len(keys)
 
 
 def _min_properties(c: Compiler, s: dict[str, Any]) -> Validator[Any]:

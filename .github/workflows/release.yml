@@ -40,7 +40,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.3.3
-        with: { version: "0.13.7", python-version: "3.15", enable-cache: false }
+        with: { version: "0.13.8", python-version: "3.15", enable-cache: false }
       # Without `[tool.uv.sources]`, as every other build frontend reads the project, and with
       # the backend of the group `build`.
       - run: |
@@ -73,7 +73,7 @@ jobs:
           name: dist
           path: dist
       - uses: astral-sh/setup-uv@v10.3.3
-        with: { version: "0.13.7", python-version: "3.15", enable-cache: false }
+        with: { version: "0.13.8", python-version: "3.15", enable-cache: false }
       # The metadata, and the README as the index renders it.
       - run: uvx twine==7.0.0 check --strict dist/*
 
@@ -101,7 +101,7 @@ jobs:
           name: suite
       - uses: astral-sh/setup-uv@v10.3.3
         with:
-          version: "0.13.7"
+          version: "0.13.8"
           python-version: ${{ matrix.python }}
           # Nothing is checked out yet for the cache to key on.
           enable-cache: false

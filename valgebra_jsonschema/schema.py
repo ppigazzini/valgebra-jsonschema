@@ -325,11 +325,18 @@ def _whole(parts: list[object], *, met: bool) -> Validator[Any]:
     """Return the meet of a schema's keyword sets, with the universe where ``met``."""
     if met:
         return intersection(*parts, JSON)
-    return intersection(*parts) if parts else JSON
+    return _body(parts) if parts else JSON
 
 
 def _body(parts: list[object]) -> Validator[Any]:
-    """Return the meet of a schema's keyword sets alone: everything, for none."""
+    """Return the meet of a schema's keyword sets alone: everything, for none.
+
+    The meet of one validator is that validator: `intersection` would copy it into a new
+    one, schema, constants and definitions alike, and most schema objects hold one keyword
+    set, a ``$ref`` among them.
+    """
+    if len(parts) == 1 and isinstance(only := parts[0], Validator):
+        return only
     return intersection(*parts) if parts else anything
 
 
@@ -1148,7 +1155,8 @@ def _references(node: object, base: str) -> list[str]:
 def _type(_c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     names = s["type"] if isinstance(s["type"], list) else [s["type"]]
     try:
-        return union(*(KINDS[n] for n in names))
+        # Hand on a single kind's set itself, which `union` would copy (`_body`).
+        return KINDS[names[0]] if len(names) == 1 else union(*(KINDS[n] for n in names))
     except KeyError as exc:
         msg = f"unknown type {exc.args[0]!r}"
         raise Unsupported(msg) from exc

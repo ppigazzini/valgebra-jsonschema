@@ -98,6 +98,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   its type alone, rather than from its items: `{"minItems": 1}` over an array of 100,000
   records validates in 13.6 ms rather than 124 ms, and `{"minProperties": 1}` over an object
   of 100,000 keys in 16.6 ms rather than 119 ms.
+- A meet or a union of one set is that set, handed on rather than copied: most schema objects
+  hold one keyword set, a `$ref` or a single `type` among them, and valgebra's `intersection`
+  and `union` copy a lone operand whole. Every compiled set is the one it was. The 9558
+  JSONSchemaBench schemas compile in 15.9 s rather than 17.7 s in one process, and
+  CloudFormation's in 1.87 s rather than 2.03 s.
 
 ### Fixed
 

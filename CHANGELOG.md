@@ -113,6 +113,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   compiled set is the one it was. JSONSchemaBench's `JsonSchemaStore/service-schema`
   compiles in 285 ms rather than 413 ms, and `Kubernetes/kb_1161_Normalized` in 163 ms rather
   than 214 ms.
+- A reference is located once from each base URI a compile reads it under, where every use
+  resolved it and walked its JSON pointer again. Every compiled set is the one it was.
+  JSONSchemaBench's 1064 Kubernetes schemas compile in 0.776 s rather than 0.823 s, its 492
+  JSON Schema Store schemas in 6.75 s rather than 7.19 s, and its 164 hardest GitHub schemas
+  in 2.43 s rather than 2.63 s.
 
 ### Fixed
 

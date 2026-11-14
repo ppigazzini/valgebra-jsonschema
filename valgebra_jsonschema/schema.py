@@ -411,6 +411,9 @@ class Compiler:
         #: base URI around it, with the node held: each target's walk reads the subtrees the
         #: others read.
         self._subtree_references: dict[_Target, tuple[object, list[str]]] = {}
+        #: What each reference names from a base URI, and the base around it (`_locate`).
+        #: `_index` empties it: a document supplied at the root's URI names it from then on.
+        self._located: dict[tuple[str, str], tuple[object, str]] = {}
         #: Each pair of ``oneOf`` branches asked whether it meets (`exactly_one`).
         self.asked: Asked = {}
         #: Each resource by its URI and each anchor by its resource's URI and its name, with
@@ -800,6 +803,7 @@ class Compiler:
         dialect through `upgrade`; one this compiler does not read is refused only where a
         reference names it.
         """
+        self._located.clear()
         stack: list[tuple[object, str]] = [(root, "")]
         for uri, document in self.documents.items():
             key = uri.partition("#")[0]
@@ -1028,6 +1032,13 @@ class Compiler:
         if not isinstance(reference, str):
             msg = f"keyword '$ref' holds {reference!r:.60}, as no schema may"
             raise Unsupported(msg)
+        if (found := self._located.get((reference, base))) is None:
+            found = self._find(reference, base)
+            # Keep it after `_find`, which may index the documents and empty the table.
+            self._located[reference, base] = found
+        return found
+
+    def _find(self, reference: str, base: str) -> tuple[object, str]:
         uri, _, fragment = _join(base, reference).partition("#")
         fragment = unquote(fragment)
         anchor = fragment and not fragment.startswith("/")

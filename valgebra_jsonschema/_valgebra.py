@@ -34,6 +34,7 @@ from valgebra import (
 __all__ = [
     "MAX_SCHEMA_DEPTH",
     "NOT_BOOL",
+    "Asked",
     "Regex",
     "ValidationError",
     "Validator",
@@ -93,8 +94,16 @@ def has(key: str) -> Validator[Any]:
     return Validator({key: anything}).open()
 
 
+#: Whether valgebra leaves the meet of two sets possibly nonempty, by the two objects in the
+#: order asked, each entry holding its two so that neither id is another object's while it
+#: stands.
+Asked = dict[tuple[int, int], tuple[Validator[Any], Validator[Any], bool]]
+
+
 def exactly_one(
-    *branches: Validator[Any], complemented: Sequence[Validator[Any]] | None = None
+    *branches: Validator[Any],
+    complemented: Sequence[Validator[Any]] | None = None,
+    asked: Asked | None = None,
 ) -> Validator[Any]:
     """Return the values in exactly one branch: each branch minus every other it may meet.
 
@@ -106,11 +115,15 @@ def exactly_one(
     so the set is the same either way.
 
     ``complemented``, where given, holds the set each branch is complemented as: one that
-    agrees with it on every value a branch holds.
+    agrees with it on every value a branch holds. ``asked``, where given, holds the pairs
+    asked before and takes the ones asked here: a pair of the same two objects, asked in
+    the same order, is the same question, and a document whose ``oneOf`` names the same
+    targets at every use asks it at each.
     """
     negated = branches if complemented is None else complemented
+    asked = {} if asked is None else asked
     meet = {
-        (i, j): not intersection(branches[i], branches[j]).is_empty()
+        (i, j): _meets(branches[i], branches[j], asked)
         for i, j in combinations(range(len(branches)), 2)
     }
     return union(
@@ -126,6 +139,14 @@ def exactly_one(
             for i, b in enumerate(branches)
         )
     )
+
+
+def _meets(a: Validator[Any], b: Validator[Any], asked: Asked) -> bool:
+    """Return whether valgebra leaves ``a & b`` possibly nonempty, asking once a pair."""
+    key = (id(a), id(b))
+    if (kept := asked.get(key)) is None:
+        kept = asked[key] = (a, b, not intersection(a, b).is_empty())
+    return kept[2]
 
 
 def each(schema: object) -> Validator[Any]:

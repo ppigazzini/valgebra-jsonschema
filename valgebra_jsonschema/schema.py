@@ -54,6 +54,7 @@ from annotated_types import Ge, Gt, Le, Lt, MaxLen, MinLen, MultipleOf
 from valgebra_jsonschema._valgebra import (
     MAX_SCHEMA_DEPTH,
     NOT_BOOL,
+    Asked,
     Regex,
     Validator,
     anything,
@@ -333,7 +334,8 @@ def _body(parts: list[object]) -> Validator[Any]:
 
     The meet of one validator is that validator: `intersection` would copy it into a new
     one, schema, constants and definitions alike, and most schema objects hold one keyword
-    set, a ``$ref`` among them.
+    set, a ``$ref`` among them. Handing the set itself on also lets a ``oneOf`` that names
+    one target twice ask its question of one object (`exactly_one`).
     """
     if len(parts) == 1 and isinstance(only := parts[0], Validator):
         return only
@@ -405,6 +407,8 @@ class Compiler:
         self._dynamic_in: dict[str, dict[str, tuple[object, str]]] = {}
         #: Whether each target reaches itself through references.
         self._recursive: dict[_Target, bool] = {}
+        #: Each pair of ``oneOf`` branches asked whether it meets (`exactly_one`).
+        self.asked: Asked = {}
         #: Each resource by its URI and each anchor by its resource's URI and its name, with
         #: the base URI around the schema object it names: `_index` fills both at the first
         #: reference past the root's own resource, which most documents never make.
@@ -1942,7 +1946,9 @@ def _one_of(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
         return _one_of_by_count(c, s["oneOf"])
     compiled = [c.compile_with_body(sub) for sub in s["oneOf"]]
     return exactly_one(
-        *(whole for whole, _ in compiled), complemented=[body for _, body in compiled]
+        *(whole for whole, _ in compiled),
+        complemented=[body for _, body in compiled],
+        asked=c.asked,
     )
 
 

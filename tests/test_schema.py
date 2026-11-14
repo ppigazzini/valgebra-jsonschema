@@ -938,6 +938,20 @@ def test_a_one_of_whose_branches_meet_holds_a_value_in_exactly_one():
     assert [s.is_valid(v) for v in (5, -1, 0.5, "x", -1.5)] == [False, True, True, True, False]
 
 
+def test_a_one_of_naming_two_targets_asks_once_whether_they_meet():
+    # Each use of a reference is the one set compiled for its target, so the second `oneOf`
+    # is the first one's question, and the two compile to one set.
+    a = {"type": "object", "required": ["a"]}
+    b = {"type": "object", "required": ["b"]}
+    one_of = {"oneOf": [{"$ref": "#/$defs/a"}, {"$ref": "#/$defs/b"}]}
+    root = {"$defs": {"a": a, "b": b}, "properties": {"x": one_of, "y": one_of}}
+    compiler = Compiler(root)
+    s = compiler.compile(root)
+    assert len(compiler.asked) == 1
+    assert s.is_valid({"x": {"a": 1}, "y": {"b": 1}})
+    assert not s.is_valid({"x": {"a": 1, "b": 1}})
+
+
 def test_a_one_of_nested_in_its_disjoint_branches_stays_under_the_node_bound():
     # Each level's second branch would be spelled twice, whole and complemented: 2**20
     # copies at the root, where twelve levels already pass valgebra's node bound.

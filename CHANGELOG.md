@@ -103,6 +103,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   and `union` copy a lone operand whole. Every compiled set is the one it was. The 9558
   JSONSchemaBench schemas compile in 15.9 s rather than 17.7 s in one process, and
   CloudFormation's in 1.87 s rather than 2.03 s.
+- A `oneOf` asks valgebra whether two branches meet once for each pair of the same two sets,
+  where a document whose every `oneOf` names the same targets asked it at each. Every compiled
+  set is the one it was, and a grammar of five mutually recursive queries whose `oneOf`s each
+  name all five, JSONSchemaBench's `Github_medium/o3626`, compiles in 425 ms rather than
+  933 ms.
 
 ### Fixed
 

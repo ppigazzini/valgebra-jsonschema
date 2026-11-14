@@ -85,7 +85,7 @@ uv run python tools/containment.py --check docs/studies/containment.json
   Kubernetes and function-calling data): 9486 compile, none crashes; membership differs from the
   `jsonschema` package's on 13 of 404720 values, each a reading the ledger records.
 - **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 7048 proven,
-  6 against a label, each a wrong label; each of the 300 refutations against a label is a wrong label, which
+  6 against a label, each a wrong label; each of the 338 refutations against a label is a wrong label, which
   [`docs/04-results.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/04-results.md)
   names.
 

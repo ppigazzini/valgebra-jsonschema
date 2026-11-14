@@ -88,6 +88,16 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   `$id` or `$anchor` inside the value a schema labeled universal leaves out under `not`, and
   two are draft-04 `const` pairs whose witness, `2**64` or `-2**64`, lies past a bound
   beyond 64 bits.
+- A keyword's guard complements the bare kind, `list` or `dict`, rather than the JSON arrays
+  or objects: the two agree inside the JSON values every compiled set is met with, and
+  valgebra decides the complement of the bare kind. `true` is refuted below a `prefixItems`
+  or a `patternProperties`, where it stayed `undecided`, and the containment study refutes
+  47 more draft-04 questions and leaves 250 undecided; each of the 38 of them against a label
+  is a draft-04 `const` pair with a witness the `jsonschema` package admits, such as `[1]` or
+  `{"🐲": "x"}`. The walk reads whether an array or an object lies outside the kind from
+  its type alone, rather than from its items: `{"minItems": 1}` over an array of 100,000
+  records validates in 13.6 ms rather than 124 ms, and `{"minProperties": 1}` over an object
+  of 100,000 keys in 16.6 ms rather than 119 ms.
 
 ### Fixed
 

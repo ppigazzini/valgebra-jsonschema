@@ -250,10 +250,10 @@
    "refused": 0,
    "timed_out": 0,
    "proven": 9,
-   "refuted": 53,
-   "undecided": 16,
+   "refuted": 59,
+   "undecided": 10,
    "proven_against": 0,
-   "refuted_against": 53
+   "refuted_against": 59
   },
   {
    "draft": "4",
@@ -286,10 +286,10 @@
    "refused": 0,
    "timed_out": 0,
    "proven": 60,
-   "refuted": 420,
-   "undecided": 118,
+   "refuted": 461,
+   "undecided": 77,
    "proven_against": 0,
-   "refuted_against": 211
+   "refuted_against": 243
   }
  ]
 }

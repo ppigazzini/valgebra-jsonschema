@@ -233,12 +233,16 @@ class UnsupportedDialect(Unsupported):
     """
 
 
-#: The kind each family of assertion keywords constrains, and the ``type`` names in it.
-FAMILIES: Mapping[str, tuple[Validator[Any], frozenset[str]]] = {
-    "number": (NUMBER, frozenset({"integer", "number"})),
-    "string": (STRING, frozenset({"string"})),
-    "array": (ARRAY, frozenset({"array"})),
-    "object": (OBJECT, frozenset({"object"})),
+#: The kind each family of assertion keywords constrains, the kind its guard complements,
+#: and the ``type`` names in it. An array's and an object's guard complements the bare
+#: ``list`` and ``dict``: every compiled set is met with the JSON values, inside which
+#: ``~list`` and ``~[JSON]`` agree, and valgebra's set reading decides the complement of the
+#: bare kind where it declines that of the recursive one.
+FAMILIES: Mapping[str, tuple[Validator[Any], Validator[Any], frozenset[str]]] = {
+    "number": (NUMBER, NUMBER, frozenset({"integer", "number"})),
+    "string": (STRING, STRING, frozenset({"string"})),
+    "array": (ARRAY, Validator(list), frozenset({"array"})),
+    "object": (OBJECT, Validator(dict), frozenset({"object"})),
 }
 
 
@@ -419,13 +423,18 @@ class Compiler:
         guard's other half is empty after the meet with ``type``, so it is left out: the
         set is the same and every decision over it is cheaper.
         """
-        kind, names = FAMILIES[family]
+        kind, complemented, names = FAMILIES[family]
         typed = self._typed[-1] if self._typed else None
         if typed is not None and typed <= names:
             return Validator(refined)
         if self._escaped:
             self._escaped[-1] = True
-        return guard(kind, refined)
+        whole = guard(kind, refined)
+        # A refinement holding the whole kind leaves every value, which the union with the
+        # kind's complement folds to and the one with the bare kind's does not.
+        if complemented is kind or whole == anything:
+            return whole
+        return guard(complemented, refined)
 
     def compile(self, schema: object) -> Validator[Any]:
         """Return the set of JSON values ``schema`` admits."""

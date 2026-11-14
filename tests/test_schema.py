@@ -609,6 +609,34 @@ class TestUniverse:
         assert json.loads("1" + "0" * 400 + ".5") == math.inf
         assert fractional.relation_to(compile_schema({"maximum": 2**53})) == "not_subset"
 
+    @pytest.mark.parametrize(
+        "schema",
+        [
+            {"prefixItems": [{"type": "integer"}, {"type": "string"}]},
+            {"patternProperties": {"f.*o": {"type": "integer"}}},
+        ],
+    )
+    def test_the_universe_is_refuted_below_a_keyword_of_one_kind(self, schema):
+        # A keyword's guard complements the bare kind, `list` or `dict`, which agrees with
+        # the JSON one inside the universe and which valgebra's set reading decides.
+        assert compile_schema(True).relation_to(compile_schema(schema)) == "not_subset"
+
+    @pytest.mark.parametrize(
+        "schema",
+        [
+            {"items": True},
+            {"additionalProperties": True},
+            {"properties": {}},
+            {"required": []},
+            {"dependentRequired": {}},
+            {"unevaluatedItems": True},
+        ],
+    )
+    def test_a_keyword_admitting_every_value_compiles_to_the_universe(self, schema):
+        # Its guard is every value: the refinement holds the whole kind, and the guard of
+        # the bare kind, which would not fold, is not written.
+        assert compile_schema(schema) == JSON
+
     @pytest.mark.parametrize("schema", [{"minimum": 3}, {"maxLength": 2}, {"required": ["a"]}])
     def test_a_schema_without_a_type_lies_inside_the_universe(self, schema):
         # A keyword's guard admits every value outside its kind, a tuple included; the meet
@@ -687,6 +715,8 @@ class TestComplements:
             {"oneOf": [{"type": "integer"}, {"minimum": 2}]},
             {"not": {"maxItems": 1}},
             {"properties": {"a": {"type": "string"}}},
+            {"prefixItems": [{"type": "integer"}, {"type": "string"}]},
+            {"patternProperties": {"f.*o": {"type": "integer"}}},
         ],
     )
     def test_a_body_and_its_schema_agree_on_every_json_value(self, schema):

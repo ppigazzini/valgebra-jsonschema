@@ -15,7 +15,12 @@ refuses, the schema is refused.
 An assertion keyword constrains one kind and passes every other kind: `{"minimum": 3}`
 admits `"a"`. Each such keyword compiles to `complement(kind) | refined`, and a schema
 object to the meet of its keywords. Where `type` already confines the instance to the
-keyword's kind, the guard's other half is empty after the meet and is left out.
+keyword's kind, the guard's other half is empty after the meet and is left out. An array's
+kind in a guard is the bare `list`, and an object's the bare `dict`: every compiled set is
+met with the JSON values, inside which the bare kind and the JSON one agree, and valgebra
+decides the complement of the bare kind where it declines that of the recursive one. The
+walk reads whether an array or an object lies outside the kind from its type alone, rather
+than from its items.
 
 A schema whose guard reaches past the JSON values is met with them, and only where it is
 used as itself. Where `not`, `oneOf`, `if` and `contains` complement a schema, the

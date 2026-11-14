@@ -128,11 +128,12 @@ compiled from their subschema, and each compilation holds its own.
 ## Refused, and ignored
 
 `Unsupported` names the keyword: references to a document neither the one compiled nor
-`documents` holds, a supplied document in a dialect not read where a reference names it, an
-embedded `$id` whose resource declares another `$schema`, a draft other than 2020-12, 2019-09,
-07, 06 and 04, a draft 2019-09 `$recursiveAnchor: true` on a schema object starting no resource,
-and a property name holding a lone surrogate. A keyword outside the
-vocabularies is an annotation, as draft 2020-12 says, and `Compiler.ignored` records it.
+`documents` holds, a reference to a URI two schema objects of one document claim or to an anchor
+two of one resource set, a supplied document in a dialect not read where a reference names it,
+an embedded `$id` whose resource declares another `$schema`, a draft other than 2020-12,
+2019-09, 07, 06 and 04, a draft 2019-09 `$recursiveAnchor: true` on a schema object starting no
+resource, and a property name holding a lone surrogate. A keyword outside the vocabularies is an
+annotation, as draft 2020-12 says, and `Compiler.ignored` records it.
 
 ## Measured
 

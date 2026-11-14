@@ -433,6 +433,69 @@ class TestDocuments:
         assert s.is_valid({"r": "x"})
         assert not s.is_valid({"r": 1})
 
+    def test_a_uri_two_schema_objects_of_one_document_claim_names_neither(self):
+        # Draft 2020-12 asks for an error where two schemas claim one URI (section 9.1.2),
+        # and `jsonschema` reads either, by the order Python's string hashing gives its
+        # keywords. A pointer to either names a location, and compiles.
+        base = "http://example.com/"
+        defs = {"one": {"$id": base + "a", **_STR}, "two": {"$id": base + "a", **_INT}}
+        root = {"$id": base + "root", "$defs": defs}
+        with pytest.raises(Unsupported, match="two schema objects of one document claim"):
+            compile_schema({**root, "properties": {"x": {"$ref": base + "a"}}})
+        s = compile_schema({**root, "properties": {"x": {"$ref": "#/$defs/one"}}})
+        assert s.is_valid({"x": "s"})
+        assert not s.is_valid({"x": 1})
+        # Of two documents, the first read names the URI: the supplied one.
+        one = {"$id": base + "root", "$defs": {"one": defs["one"]}}
+        x = {"properties": {"x": {"$ref": base + "a"}}}
+        s = compile_schema({**one, **x}, documents={base + "a": _INT})
+        assert s.is_valid({"x": 1})
+        assert not s.is_valid({"x": "s"})
+        # A supplied document claims the URI it is supplied by.
+        claims = {"$defs": {"e": {"$id": base + "a", **_STR}}, **_INT}
+        with pytest.raises(Unsupported, match="two schema objects of one document claim"):
+            compile_schema({"$id": base + "root", **x}, documents={base + "a": claims})
+        # The compiled document names its own URI against an embedded claim of it, on both
+        # sides of the index the anchor reference builds.
+        own = {
+            "$id": base + "root",
+            "$defs": {"a": _STR, "e": {"$id": base + "root", "$defs": {"a": _INT}}},
+            "properties": {
+                "p": {"$ref": "#/$defs/a"},
+                "q": {"$ref": "#b"},
+                "r": {"$ref": "#/$defs/a"},
+            },
+        }
+        own["$defs"]["b"] = {"$anchor": "b"}
+        s = compile_schema(own)
+        assert [s.is_valid({key: "x"}) for key in ("p", "r")] == [True, True]
+        assert [s.is_valid({key: 1}) for key in ("p", "r")] == [False, False]
+
+    def test_an_anchor_two_schema_objects_of_one_resource_set_names_neither(self):
+        defs = {"s": {"$anchor": "s", **_STR}, "t": {"$anchor": "s", **_INT}}
+        with pytest.raises(Unsupported, match="two schema objects of its resource set"):
+            compile_schema({"$defs": defs, "properties": {"x": {"$ref": "#s"}}})
+        assert compile_schema({"$defs": defs}).is_valid({"x": 1})
+
+    def test_a_dynamic_reference_reaching_an_anchor_set_twice_is_refused(self):
+        inner = {
+            "$id": "http://example.com/inner",
+            "$defs": {"n": {"$dynamicAnchor": "n", "type": "null"}},
+            "properties": {"v": {"$dynamicRef": "#n"}},
+        }
+        defs: dict[str, object] = {"a": {"$dynamicAnchor": "n", **_STR}, "inner": inner}
+        outer = {
+            "$id": "http://example.com/outer",
+            "$defs": defs,
+            "$ref": "http://example.com/inner",
+        }
+        s = compile_schema(outer)
+        assert s.is_valid({"v": "s"})
+        assert not s.is_valid({"v": None})
+        defs["b"] = {"$dynamicAnchor": "n", **_INT}
+        with pytest.raises(Unsupported, match="reaches an anchor two schema objects"):
+            compile_schema(outer)
+
     def test_a_property_named_schema_in_a_resource_is_a_name(self):
         # A meta-schema declares the property `$schema`, which declares no dialect.
         resource = {"$id": "http://example.com/m", "properties": {"$schema": _STR}}

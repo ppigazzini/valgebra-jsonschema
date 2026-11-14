@@ -64,7 +64,10 @@ sets the base of its resource, and the reference names a resource of the documen
 then a schema in it by a JSON pointer or by an `$anchor`. A document the caller supplies in
 `compile_schema(schema, documents={uri: document})` is a resource at its URI, read in its own
 dialect, or in the compiled document's where it declares none. The compiled document names
-its own URI, and a document supplied at that URI is not read. A reference to any other
+its own URI, and a document supplied at that URI is not read. A URI two schema objects of one
+document claim, and an anchor two of one resource set, name neither: a reference to one is
+refused, and a document that names neither compiles. Of two documents, the one supplied at a
+URI names it, then an embedded `$id` of the document supplied last. A reference to any other
 document is refused and never fetched, and so is an embedded resource declaring another
 `$schema`. An older draft's `$id` fragment that is a plain name is the `$anchor` it names.
 `$dynamicRef` reads the dynamic scope across every document, as draft 2020-12's sections 7.1 and
@@ -103,6 +106,7 @@ specification's next release requires.
 | `format: hostname` under `assert_format`, on an `xn--` label | the label is an IDNA A-label, so its Punycode and what it decodes to are read | not read | the label as it is spelled: 23 of the suite's 66 cases, each of them invalid and admitted | reading a label takes IDNA2008's tables, a package of their own and no dependency here |
 | `additionalItems`, `dependencies` in a 2020-12 schema | not keywords: annotations | annotations | refused | see the inventory |
 | a document supplied at the compiled document's own URI | no URI identifies two schemas, and a validator SHOULD raise an error where two claim one (section 9.1.2) | the compiled document: `referencing` registers the root at its `$id` over the registry's resource | the compiled document; the supplied one is not read | section 9.1.1 makes the root's `$id` its canonical URI, and a registry a caller passes may hold the compiled document; JSONSchemaBench's CloudFormation schema declares the draft-04 meta-schema's URI as its `$id`, the corpus study supplies that meta-schema, and the schema's 9092 references name its own definitions |
+| a URI two schema objects of one document claim, or an anchor two of one resource set | no URI identifies two schemas, and a validator SHOULD raise an error where two claim one (section 9.1.2); two anchors of one name are undefined, and an implementation MAY raise one (section 8.2.2) | one of the two: the first written of two siblings, and of two under different keywords, one that changes with Python's string hashing (`PYTHONHASHSEED`) | neither: a `$ref` or `$dynamicRef` naming it is refused | the error the specification asks for, raised where a reference meets the ambiguity: 15 JSONSchemaBench documents hold such a URI, none names it, and each compiles; the semantics of Attouche et al. (POPL 2024, section 3) reads a URI as naming one schema |
 | a draft 2019-09 `$recursiveRef` whose dynamic scope enters a resource without `$recursiveAnchor` between two with it | the outermost schema in the scope setting it (section 8.2.4.2.2) | the outermost of the resources setting it entered since the last one without it | the outermost schema in the scope setting it | the specification, and the draft 2020-12 release notes, whose `$dynamicRef` works the same way |
 
 ## The valgebra boundary

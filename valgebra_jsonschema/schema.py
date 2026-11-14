@@ -425,6 +425,10 @@ class Compiler:
         self._root_base = _within("", root)
         self._resources: dict[str, tuple[object, str]] = {}
         self._anchors: dict[tuple[str, str], tuple[object, str]] = {}
+        #: Each URI two schema objects of one document claim, and each anchor, by its
+        #: resource's URI and its name, two of one resource set: `_index` fills it, and a
+        #: reference naming one is refused.
+        self._claimed_twice: set[str | tuple[str, str]] = set()
         #: Why each supplied document a reference may not read is refused, by its URI.
         self._refused: dict[str, str] = {}
         #: How many schema objects set each ``$dynamicAnchor`` name, over every document.
@@ -724,7 +728,14 @@ class Compiler:
         binding = dict(self._scope[-1]).get(name)
         if binding is None:
             return (node, around), False
-        return self._bound[binding], True
+        bound, outside = self._bound[binding]
+        if (_within(outside, bound), name) in self._claimed_twice:
+            msg = (
+                f"$dynamicRef {reference!r} reaches an anchor two schema objects of one "
+                "resource set"
+            )
+            raise Unsupported(msg)
+        return (bound, outside), True
 
     def _compile_at(self, schema: object, base: str) -> Validator[Any]:
         """Return the set ``schema`` compiles to where ``base`` is the base URI around it."""
@@ -799,19 +810,25 @@ class Compiler:
         A schema object's ``$id`` resolves against the base URI around it and starts a
         resource with the result as its base, and an ``$anchor`` names a schema object
         inside its resource (draft 2020-12, section 8.2). Only the keywords that hold
-        subschemas are descended into, so an ``$id`` inside an ``enum`` names nothing. The
-        first of two schema objects one URI names is the one it names.
+        subschemas are descended into, so an ``$id`` inside an ``enum`` names nothing. A URI
+        two schema objects of one document claim, and an anchor two of one resource set,
+        name neither, and a reference to one is refused: section 9.1.2 asks for an error
+        where two schemas claim one URI, section 8.2.2 leaves two anchors of one name
+        undefined, and the semantics of Attouche et al. (POPL 2024, section 3) reads a URI as
+        naming one schema. Of two documents claiming one URI, the first read names it.
 
         A supplied document is a resource at the URI it is supplied by, read in its own
         dialect through `upgrade`; one this compiler does not read is refused only where a
         reference names it. The document compiled names its own URI, as it does before the
         index is built, and a supplied document at that URI is not read: section 9.1.1 makes
-        the root's ``$id`` its canonical URI, and `jsonschema` resolves the same way. Section
-        9.1.2 asks for an error where two schemas claim one URI, and
-        ``docs/03-conformance.md`` records why none is raised.
+        the root's ``$id`` its canonical URI, and `jsonschema` resolves the same way.
+        ``docs/03-conformance.md`` records why no error is raised for a URI two documents
+        claim.
         """
         self._resources[self._root_base] = (root, "")
-        stack: list[tuple[object, str]] = [(root, "")]
+        # The schema object that claimed each URI and anchor first, and its document.
+        first: dict[str | tuple[str, str], tuple[object, object]] = {}
+        stack: list[tuple[object, str, object]] = [(root, "", root)]
         for uri, document in self.documents.items():
             key = uri.partition("#")[0]
             if key == self._root_base:
@@ -821,24 +838,42 @@ class Compiler:
             except Unsupported as exc:
                 self._refused.setdefault(key, str(exc))
                 continue
+            self._claim(key, document, document, first)
             self._resources.setdefault(key, (document, key))
-            stack.append((document, key))
+            stack.append((document, key, document))
         self._indexed = True
         while stack:
-            node, around = stack.pop()
+            node, around, document = stack.pop()
             if not isinstance(node, dict):
                 continue
             base = _within(around, node)
             if node is root or isinstance(node.get("$id"), str):
+                self._claim(base, node, document, first)
                 self._resources.setdefault(base, (node, around))
             if isinstance(dynamic := node.get("$dynamicAnchor"), str):
                 # A dynamic anchor names its schema object as a plain one does too.
                 self._dynamic[dynamic] += 1
+                self._claim((base, dynamic), node, document, first)
                 self._anchors.setdefault((base, dynamic), (node, around))
                 self._dynamic_in.setdefault(base, {}).setdefault(dynamic, (node, around))
-            if isinstance(node.get("$anchor"), str):
-                self._anchors.setdefault((base, node["$anchor"]), (node, around))
-            stack.extend((sub, base) for sub in _subschemas(node))
+            if isinstance(anchor := node.get("$anchor"), str):
+                self._claim((base, anchor), node, document, first)
+                self._anchors.setdefault((base, anchor), (node, around))
+            stack.extend((sub, base, document) for sub in _subschemas(node))
+
+    def _claim(
+        self,
+        key: str | tuple[str, str],
+        node: object,
+        document: object,
+        first: dict[str | tuple[str, str], tuple[object, object]],
+    ) -> None:
+        """Record that ``node``, of ``document``, claims a URI or an anchor."""
+        if key == self._root_base:
+            return
+        claimant, claimed_in = first.setdefault(key, (node, document))
+        if claimed_in is document and claimant is not node:
+            self._claimed_twice.add(key)
 
     def dynamic_anchors(self, name: str) -> int:
         """Return how many schema objects of every document set ``$dynamicAnchor`` ``name``."""
@@ -1024,6 +1059,11 @@ class Compiler:
         """Return the resource ``uri`` names, and the base URI around it."""
         if uri == self._root_base and not self._indexed:
             return self.root, ""
+        if uri in self._claimed_twice:
+            msg = (
+                f"$ref {reference!r} names {uri!r}, which two schema objects of one document claim"
+            )
+            raise Unsupported(msg)
         if uri in self._resources:
             return self._resources[uri]
         if uri in self._refused:
@@ -1053,6 +1093,9 @@ class Compiler:
             self._index(self.root)
         node, around = self._resource(uri, reference)
         if anchor:
+            if (uri, fragment) in self._claimed_twice:
+                msg = f"$ref {reference!r} names an anchor two schema objects of its resource set"
+                raise Unsupported(msg)
             if (uri, fragment) not in self._anchors:
                 msg = f"$ref {reference!r} names no anchor of its resource"
                 raise Unsupported(msg)

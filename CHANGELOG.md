@@ -124,6 +124,13 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Fixed
 
+- A URI two schema objects of one document claim, and an anchor two of one resource set, name
+  neither, and a `$ref` or `$dynamicRef` naming one is refused, as draft 2020-12 asks for an
+  error (sections 8.2.2 and 9.1.2). Two sibling `$defs` with one `$id` read as the last
+  written; `jsonschema` 4.26.0 reads the first written of two siblings and, of two under
+  different keywords, one that changes with Python's string hashing. A document that names
+  neither compiles, as each of the 15 JSONSchemaBench documents holding such a URI does, and
+  the suite studies, the corpus and the containment study read as before.
 - The compiled document names its own URI throughout a compile, and a document supplied at
   that URI is not read. A reference into the compiled document named it until a reference to
   an anchor or to another document built the index of resources, and the supplied document

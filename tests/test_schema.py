@@ -6,6 +6,7 @@ import random
 import pytest
 from valgebra import complement, intersection, nothing
 
+from valgebra_jsonschema import schema as schema_module
 from valgebra_jsonschema.schema import (
     ANNOTATIONS,
     JSON,
@@ -970,6 +971,29 @@ def test_a_one_of_nested_in_its_disjoint_branches_stays_under_the_node_bound():
         value = {"t": "node", "next": value}
     assert s.is_valid(value)
     assert not s.is_valid({"t": "node", "next": {"t": "other"}})
+
+
+def test_a_chain_of_references_reads_each_subtree_once(monkeypatch: pytest.MonkeyPatch):
+    # Each target's walk for whether it reaches itself reads the subtrees the walks of the
+    # targets above it read: once a compile, a chain of n reads n + 1 subtrees, and read at
+    # every walk, n * n / 2.
+    n = 40
+    defs: dict[str, object] = {
+        f"d{i}": {"allOf": [{"$ref": f"#/$defs/d{i + 1}"}]} for i in range(n)
+    }
+    defs[f"d{n}"] = {"type": "string"}
+    reads: list[object] = []
+    read = schema_module._references
+
+    def counted(node: object, base: str) -> list[str]:
+        reads.append(node)
+        return read(node, base)
+
+    monkeypatch.setattr(schema_module, "_references", counted)
+    s = compile_schema({"$defs": defs, "$ref": "#/$defs/d0"})
+    assert s.is_valid("x")
+    assert not s.is_valid(1)
+    assert len(reads) == n + 1
 
 
 def test_a_reference_that_reaches_itself_is_a_fixpoint():

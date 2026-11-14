@@ -108,6 +108,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   set is the one it was, and a grammar of five mutually recursive queries whose `oneOf`s each
   name all five, JSONSchemaBench's `Github_medium/o3626`, compiles in 425 ms rather than
   933 ms.
+- Whether a reference reaches itself is read with each subtree's references read once a
+  compile: a chain of `n` references reads `n + 1` subtrees rather than `n * n / 2`. Every
+  compiled set is the one it was. JSONSchemaBench's `JsonSchemaStore/service-schema`
+  compiles in 285 ms rather than 413 ms, and `Kubernetes/kb_1161_Normalized` in 163 ms rather
+  than 214 ms.
 
 ### Fixed
 

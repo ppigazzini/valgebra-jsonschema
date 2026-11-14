@@ -407,6 +407,10 @@ class Compiler:
         self._dynamic_in: dict[str, dict[str, tuple[object, str]]] = {}
         #: Whether each target reaches itself through references.
         self._recursive: dict[_Target, bool] = {}
+        #: Every reference in a node's subtree, resolved (`_references`), by the node and the
+        #: base URI around it, with the node held: each target's walk reads the subtrees the
+        #: others read.
+        self._subtree_references: dict[_Target, tuple[object, list[str]]] = {}
         #: Each pair of ``oneOf`` branches asked whether it meets (`exactly_one`).
         self.asked: Asked = {}
         #: Each resource by its URI and each anchor by its resource's URI and its name, with
@@ -979,7 +983,7 @@ class Compiler:
 
     def _walks_back(self, target: object, around: str) -> bool:
         seen: set[int] = set()
-        stack = _references(target, around)
+        stack = list(self._references_under(target, around))
         while stack:
             try:
                 node, base = self._locate(stack.pop(), "")
@@ -989,8 +993,15 @@ class Compiler:
                 return True
             if id(node) not in seen:
                 seen.add(id(node))
-                stack.extend(_references(node, base))
+                stack.extend(self._references_under(node, base))
         return False
+
+    def _references_under(self, node: object, base: str) -> list[str]:
+        """Return `_references` of ``node`` under ``base``, read once a compile."""
+        key = (id(node), base)
+        if (kept := self._subtree_references.get(key)) is None:
+            kept = self._subtree_references[key] = (node, _references(node, base))
+        return kept[1]
 
     def resolve(self, reference: str) -> object:
         """Return the schema a reference names from the document's root, or raise `Unsupported`."""

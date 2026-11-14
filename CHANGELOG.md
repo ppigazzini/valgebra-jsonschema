@@ -118,6 +118,9 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   JSONSchemaBench's 1064 Kubernetes schemas compile in 0.776 s rather than 0.823 s, its 492
   JSON Schema Store schemas in 6.75 s rather than 7.19 s, and its 164 hardest GitHub schemas
   in 2.43 s rather than 2.63 s.
+- A property name of ASCII alone is not scanned for a lone surrogate, which no ASCII code
+  point is: checked as a property name, every key of the JSONSchemaBench documents,
+  1,364,539 strings, takes 73 ms rather than 732 ms.
 
 ### Fixed
 

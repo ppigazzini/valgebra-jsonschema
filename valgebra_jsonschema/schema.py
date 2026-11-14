@@ -316,7 +316,9 @@ def _carried(required: Iterable[str]) -> list[Validator[Any]]:
 
 
 def _field(key: str) -> str:
-    if any(ord(ch) in _SURROGATES for ch in key):
+    # Scan only a key holding a code point past ASCII, as no surrogate is one: `isascii`
+    # reads a flag the string carries, and the scan reads each character in Python.
+    if not key.isascii() and any(ord(ch) in _SURROGATES for ch in key):
         msg = f"property name {key!r} holds a lone surrogate, which is no Unicode text"
         raise Unsupported(msg)
     return key

@@ -80,14 +80,23 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 - `uniqueItems` is one predicate in every schema, and a fractional `multipleOf` one per step,
   so a schema holding either is proved below itself: the containment study proves 6634 of its
   10890 questions.
+- The package requires valgebra 0.0.26 and below 0.0.27. The suite studies and the corpus
+  read as on 0.0.25, and the containment study moves where 0.0.26 decides a pair 0.0.25 left
+  `undecided`: it proves 200 more questions, 7048 of the 10890, refutes 13 more and leaves
+  297 undecided. Each of the 11 more refutations against a label is a wrong label the
+  `jsonschema` package admits a witness against: in nine the generator renames the `$ref`,
+  `$id` or `$anchor` inside the value a schema labeled universal leaves out under `not`, and
+  two are draft-04 `const` pairs whose witness, `2**64` or `-2**64`, lies past a bound
+  beyond 64 bits.
 
 ### Fixed
 
 - NaN is a value of no schema. JSON has none (RFC 8259 §6), and in the universe it refuted
   inclusions every JSON number satisfies: `{"type": "number"}` below `{"anyOf": [{"maximum":
   10}, {"minimum": 5}]}`. An infinity stays, as `json.loads`'s reading of a number past the
-  float range. A float leaf is a bound, which valgebra 0.0.25 walks outside its scalar fast
-  paths: an array of a million numbers validates in 56 ms against 31 ms for a bare float. The
+  float range. A float leaf is a bound, which valgebra 0.0.26 walks outside its scalar fast
+  paths: an array of a million floats validates against `NUMBER` in 29 ms, against 22 ms for
+  a bare float, and `true` over a nested document in 11.0 ms against 9.4 ms. The
   containment study refutes 809 draft-04 questions rather than 811, the two whose only witness
   valgebra found was NaN.
 - A set a callback checks against, compiled again at membership time because it holds a

@@ -90,12 +90,12 @@ the four the suite study runs.
 
 | draft | questions | refused | proven | refuted | undecided | proven against the label | refuted against the label |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| 2020-12 | 3645 | 8 | 2416 | 1077 | 144 | 4 | 15 |
-| 7 | 2788 | 12 | 1854 | 839 | 83 | 1 | 4 |
-| 6 | 2524 | 12 | 1669 | 765 | 78 | 1 | 4 |
-| 4 | 1933 | 4 | 909 | 815 | 205 | 0 | 266 |
+| 2020-12 | 3645 | 8 | 2479 | 1080 | 78 | 4 | 18 |
+| 7 | 2788 | 12 | 1907 | 841 | 28 | 1 | 6 |
+| 6 | 2524 | 12 | 1718 | 767 | 27 | 1 | 6 |
+| 4 | 1933 | 4 | 944 | 821 | 164 | 0 | 270 |
 
-- A proof stands against a label only where the label is wrong, as a refutation does: 6848
+- A proof stands against a label only where the label is wrong, as a refutation does: 7048
   proofs of the 10890 questions, 6 against one. Two kinds of wrong label lie in a proof's
   direction. In `nonvalid/ref.json` the generator writes a `not` around the properties of the
   suite's tree of nodes and labels the tree it lists outside, where the `jsonschema` package
@@ -106,7 +106,7 @@ the four the suite study runs.
   reaches again through the dynamic scope, and labels the object the suite holds valid
   outside it, where the `jsonschema` package admits it: 1 proof. A proof against a label in
   any other category fails `tests/test_docs.py`.
-- Each of the 289 refutations against a label is a wrong label, and the `jsonschema`
+- Each of the 300 refutations against a label is a wrong label, and the `jsonschema`
   package's validator for the draft admits the witness to one side and refuses it from the
   other. In every draft the generator writes two kinds. In `universal/items.json`,
   `universal/ref.json` and, in draft 2020-12, `universal/unevaluatedItems.json`,
@@ -117,9 +117,12 @@ the four the suite study runs.
   `unsatisfiable/id.json`, and in draft 2020-12's `unsatisfiable/anchor.json`, it renames a
   `$ref`, an `$id` or an `$anchor` inside an `enum` or `const` value as well as in the
   schema, so the two copies differ and the schema it labels empty holds the value it
-  lists, such as `{"$ref": "#/allOf/0/$defs/a_string"}`. In draft 2020-12's
+  lists, such as `{"$ref": "#/allOf/0/$defs/a_string"}`; in `universal/ref.json`,
+  `universal/id.json` and draft 2020-12's `universal/anchor.json` the same renaming leaves
+  the value its `not` lists outside the schema it labels universal, such as
+  `{"$ref": "#/anyOf/1/$defs/a_string"}`. In draft 2020-12's
   `unsatisfiable/dynamicRef.json` it renames the copy and writes no `not` at all, so the
-  meet it labels empty holds `[]`. In draft-04, 262 more pairs put `const`, which draft-06 added, in a draft-04
+  meet it labels empty holds `[]`. In draft-04, 264 more pairs put `const`, which draft-06 added, in a draft-04
   schema: the draft reads it as an annotation, so the first schema admits every value.
 - A question is refused where the compiler refuses a schema of its pair, as the inventory
   of [`03-conformance.md`](03-conformance.md) lists; an undecided one is kept and counted.

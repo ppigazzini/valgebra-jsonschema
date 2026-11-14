@@ -27,7 +27,7 @@ dependencies = [
     "typing-extensions>=4.16.0",
     # The decision procedure every answer here rests on. Pre-alpha, so pinned below 0.1,
     # and a 0.0.x minor is a breaking release: the floor moves with each release.
-    "valgebra>=0.0.25,<0.0.26",
+    "valgebra>=0.0.26,<0.0.27",
 ]
 
 [project.urls]

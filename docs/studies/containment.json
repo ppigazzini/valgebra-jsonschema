@@ -45,11 +45,11 @@
    "questions": 596,
    "refused": 4,
    "timed_out": 0,
-   "proven": 484,
-   "refuted": 10,
-   "undecided": 98,
+   "proven": 547,
+   "refuted": 13,
+   "undecided": 32,
    "proven_against": 0,
-   "refuted_against": 10
+   "refuted_against": 13
   },
   {
    "draft": "2020-12",
@@ -117,11 +117,11 @@
    "questions": 444,
    "refused": 6,
    "timed_out": 0,
-   "proven": 367,
-   "refuted": 2,
-   "undecided": 69,
+   "proven": 420,
+   "refuted": 4,
+   "undecided": 14,
    "proven_against": 0,
-   "refuted_against": 2
+   "refuted_against": 4
   },
   {
    "draft": "7",
@@ -189,11 +189,11 @@
    "questions": 408,
    "refused": 6,
    "timed_out": 0,
-   "proven": 336,
-   "refuted": 2,
-   "undecided": 64,
+   "proven": 385,
+   "refuted": 4,
+   "undecided": 13,
    "proven_against": 0,
-   "refuted_against": 2
+   "refuted_against": 4
   },
   {
    "draft": "6",
@@ -261,11 +261,11 @@
    "questions": 302,
    "refused": 2,
    "timed_out": 0,
-   "proven": 248,
-   "refuted": 2,
-   "undecided": 50,
+   "proven": 283,
+   "refuted": 4,
+   "undecided": 13,
    "proven_against": 0,
-   "refuted_against": 2
+   "refuted_against": 4
   },
   {
    "draft": "4",
@@ -286,10 +286,10 @@
    "refused": 0,
    "timed_out": 0,
    "proven": 60,
-   "refuted": 416,
-   "undecided": 122,
+   "refuted": 420,
+   "undecided": 118,
    "proven_against": 0,
-   "refuted_against": 209
+   "refuted_against": 211
   }
  ]
 }

@@ -413,8 +413,9 @@ class Compiler:
         #: base URI around it, with the node held: each target's walk reads the subtrees the
         #: others read.
         self._subtree_references: dict[_Target, tuple[object, list[str]]] = {}
-        #: What each reference names from a base URI, and the base around it (`_locate`).
-        #: `_index` empties it: a document supplied at the root's URI names it from then on.
+        #: What each reference names from a base URI, and the base around it (`_locate`): one
+        #: schema for the whole compile, as the document compiled names its own URI before
+        #: `_index` runs and after.
         self._located: dict[tuple[str, str], tuple[object, str]] = {}
         #: Each pair of ``oneOf`` branches asked whether it meets (`exactly_one`).
         self.asked: Asked = {}
@@ -803,12 +804,18 @@ class Compiler:
 
         A supplied document is a resource at the URI it is supplied by, read in its own
         dialect through `upgrade`; one this compiler does not read is refused only where a
-        reference names it.
+        reference names it. The document compiled names its own URI, as it does before the
+        index is built, and a supplied document at that URI is not read: section 9.1.1 makes
+        the root's ``$id`` its canonical URI, and `jsonschema` resolves the same way. Section
+        9.1.2 asks for an error where two schemas claim one URI, and
+        ``docs/03-conformance.md`` records why none is raised.
         """
-        self._located.clear()
+        self._resources[self._root_base] = (root, "")
         stack: list[tuple[object, str]] = [(root, "")]
         for uri, document in self.documents.items():
             key = uri.partition("#")[0]
+            if key == self._root_base:
+                continue
             try:
                 document = _in_this_dialect(document)  # noqa: PLW2901
             except Unsupported as exc:
@@ -1035,9 +1042,7 @@ class Compiler:
             msg = f"keyword '$ref' holds {reference!r:.60}, as no schema may"
             raise Unsupported(msg)
         if (found := self._located.get((reference, base))) is None:
-            found = self._find(reference, base)
-            # Keep it after `_find`, which may index the documents and empty the table.
-            self._located[reference, base] = found
+            found = self._located[reference, base] = self._find(reference, base)
         return found
 
     def _find(self, reference: str, base: str) -> tuple[object, str]:

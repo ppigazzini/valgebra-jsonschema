@@ -124,6 +124,13 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Fixed
 
+- The compiled document names its own URI throughout a compile, and a document supplied at
+  that URI is not read. A reference into the compiled document named it until a reference to
+  an anchor or to another document built the index of resources, and the supplied document
+  from then on: compiled with `documents={U: other}`, a document whose `$id` is `U` read the
+  second of two `{"$ref": "#/$defs/a"}` as `other`'s `a`. `jsonschema` 4.26.0 reads the
+  compiled document at both, and draft 2020-12 makes the root's `$id` its canonical URI
+  (section 9.1.1). The suite studies, the corpus and the containment study read as before.
 - NaN is a value of no schema. JSON has none (RFC 8259 §6), and in the universe it refuted
   inclusions every JSON number satisfies: `{"type": "number"}` below `{"anyOf": [{"maximum":
   10}, {"minimum": 5}]}`. An infinity stays, as `json.loads`'s reading of a number past the

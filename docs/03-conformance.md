@@ -63,7 +63,8 @@ Every keyword of the draft 2020-12 vocabularies is in exactly one class, and
 sets the base of its resource, and the reference names a resource of the document by its URI,
 then a schema in it by a JSON pointer or by an `$anchor`. A document the caller supplies in
 `compile_schema(schema, documents={uri: document})` is a resource at its URI, read in its own
-dialect, or in the compiled document's where it declares none. A reference to any other
+dialect, or in the compiled document's where it declares none. The compiled document names
+its own URI, and a document supplied at that URI is not read. A reference to any other
 document is refused and never fetched, and so is an embedded resource declaring another
 `$schema`. An older draft's `$id` fragment that is a plain name is the `$anchor` it names.
 `$dynamicRef` reads the dynamic scope across every document, as draft 2020-12's sections 7.1 and
@@ -101,6 +102,7 @@ specification's next release requires.
 | integral constants above 2**53 | one number each | one number each | one number each, its float spelling only when the float is the same number | `9007199254740993` and `9007199254740992.0` are two numbers |
 | `format: hostname` under `assert_format`, on an `xn--` label | the label is an IDNA A-label, so its Punycode and what it decodes to are read | not read | the label as it is spelled: 23 of the suite's 66 cases, each of them invalid and admitted | reading a label takes IDNA2008's tables, a package of their own and no dependency here |
 | `additionalItems`, `dependencies` in a 2020-12 schema | not keywords: annotations | annotations | refused | see the inventory |
+| a document supplied at the compiled document's own URI | no URI identifies two schemas, and a validator SHOULD raise an error where two claim one (section 9.1.2) | the compiled document: `referencing` registers the root at its `$id` over the registry's resource | the compiled document; the supplied one is not read | section 9.1.1 makes the root's `$id` its canonical URI, and a registry a caller passes may hold the compiled document; JSONSchemaBench's CloudFormation schema declares the draft-04 meta-schema's URI as its `$id`, the corpus study supplies that meta-schema, and the schema's 9092 references name its own definitions |
 | a draft 2019-09 `$recursiveRef` whose dynamic scope enters a resource without `$recursiveAnchor` between two with it | the outermost schema in the scope setting it (section 8.2.4.2.2) | the outermost of the resources setting it entered since the last one without it | the outermost schema in the scope setting it | the specification, and the draft 2020-12 release notes, whose `$dynamicRef` works the same way |
 
 ## The valgebra boundary

@@ -402,6 +402,37 @@ class TestDocuments:
         assert s.is_valid(2)
         assert not s.is_valid(3)
 
+    def test_a_document_supplied_at_the_compiled_ones_uri_is_not_read(self):
+        # The second `#/$defs/a` follows an anchor reference, which builds the index of
+        # resources; the compiled document names its URI on both sides of it.
+        uri = "http://example.com/root"
+        root = {
+            "$id": uri,
+            "$defs": {"a": _STR, "b": {"$anchor": "b", "type": "null"}},
+            "properties": {
+                "p": {"$ref": "#/$defs/a"},
+                "q": {"$ref": "#b"},
+                "r": {"$ref": "#/$defs/a"},
+            },
+        }
+        other = {"$defs": {"a": _INT, "b": {"$anchor": "b", "type": "boolean"}}}
+        s = compile_schema(root, documents={uri: other})
+        assert [s.is_valid({key: "x"}) for key in ("p", "r")] == [True, True]
+        assert [s.is_valid({key: 1}) for key in ("p", "r")] == [False, False]
+        assert s.is_valid({"q": None})
+        assert not s.is_valid({"q": True})
+        other["$defs"]["c"] = {"$anchor": "c"}
+        with pytest.raises(Unsupported, match="names no anchor"):
+            compile_schema({**root, "properties": {"c": {"$ref": "#c"}}}, documents={uri: other})
+        # Nor is an embedded resource of another supplied document that claims the URI.
+        nested = {"$defs": {"e": {"$id": uri, "$defs": {"a": _INT}}}}
+        properties = {"w": {"$ref": "http://example.com/n"}, "r": {"$ref": "#/$defs/a"}}
+        s = compile_schema(
+            {**root, "properties": properties}, documents={"http://example.com/n": nested}
+        )
+        assert s.is_valid({"r": "x"})
+        assert not s.is_valid({"r": 1})
+
     def test_a_property_named_schema_in_a_resource_is_a_name(self):
         # A meta-schema declares the property `$schema`, which declares no dialect.
         resource = {"$id": "http://example.com/m", "properties": {"$schema": _STR}}

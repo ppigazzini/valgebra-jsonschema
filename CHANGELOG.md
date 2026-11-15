@@ -80,7 +80,7 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 - `uniqueItems` is one predicate in every schema, and a fractional `multipleOf` one per step,
   so a schema holding either is proved below itself: the containment study proves 6634 of its
   10890 questions.
-- The package requires valgebra 0.0.26 and below 0.0.27. The suite studies and the corpus
+- The package requires valgebra 0.0.27 and below 0.0.28. The suite studies and the corpus
   read as on 0.0.25, and the containment study moves where 0.0.26 decides a pair 0.0.25 left
   `undecided`: it proves 200 more questions, 7048 of the 10890, refutes 13 more and leaves
   297 undecided. Each of the 11 more refutations against a label is a wrong label the

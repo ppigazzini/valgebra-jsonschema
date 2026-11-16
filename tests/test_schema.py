@@ -2,14 +2,18 @@ import contextlib
 import json
 import math
 import random
+from typing import Annotated, Any
 
 import pytest
-from valgebra import complement, intersection, nothing
+from annotated_types import MinLen
+from valgebra import Validator, complement, intersection, nothing
 
 from valgebra_jsonschema import schema as schema_module
 from valgebra_jsonschema.schema import (
     ANNOTATIONS,
+    ARRAY,
     JSON,
+    OBJECT,
     REFUSED,
     SUPPORTED,
     Compiler,
@@ -731,6 +735,49 @@ class TestUniverse:
         # Its guard is every value: the refinement holds the whole kind, and the guard of
         # the bare kind, which would not fold, is not written.
         assert compile_schema(schema) == JSON
+
+    @pytest.mark.parametrize(
+        ("schema", "kind"),
+        [
+            ({"type": "array", "items": {"type": "integer"}}, ARRAY),
+            ({"type": "array", "prefixItems": [{"type": "string"}], "minItems": 1}, ARRAY),
+            (
+                {"type": ["array"], "items": {"if": {"type": "integer"}, "then": {"minimum": 0}}},
+                ARRAY,
+            ),
+            ({"type": "array", "minItems": 1}, ARRAY),
+            (
+                {"type": "object", "properties": {"a": {"type": "integer"}}, "required": ["a"]},
+                OBJECT,
+            ),
+            ({"type": "object", "additionalProperties": False}, OBJECT),
+            ({"type": "object", "required": ["a?"]}, OBJECT),
+            ({"type": "object", "patternProperties": {"^a": {"type": "integer"}}}, OBJECT),
+            # Past four patterns the object group is a predicate over every `dict`.
+            (
+                {
+                    "type": "object",
+                    "properties": {"a": {"type": "integer"}},
+                    "patternProperties": {f"^p{i}": {"type": "integer"} for i in range(5)},
+                },
+                OBJECT,
+            ),
+            ({"type": "object", "minProperties": 1}, OBJECT),
+        ],
+    )
+    def test_a_schema_of_one_kind_lies_inside_the_kind(self, schema, kind):
+        # Where `items`, `prefixItems` or the object group stand beside a `type` of their one
+        # kind, the kind's own set is not met again, and what is left lies inside it.
+        assert compile_schema(schema).is_subtype_of(kind)
+
+    def test_the_kind_a_keyword_lies_inside_is_not_met_again(self):
+        # A list or a record of subschemas, each inside the universe, is its meet with it.
+        assert compile_schema({"type": "array", "items": {"type": "string"}}) == Validator([str])
+        record = {"type": "object", "properties": {"a": {"type": "string"}}, "required": ["a"]}
+        assert compile_schema(record) == Validator({"a": str, str: JSON})
+        assert compile_schema({"type": "array", "minItems": 1}) == intersection(
+            ARRAY, Annotated[list[Any], MinLen(1)]
+        )
 
     @pytest.mark.parametrize("schema", [{"minimum": 3}, {"maxLength": 2}, {"required": ["a"]}])
     def test_a_schema_without_a_type_lies_inside_the_universe(self, schema):

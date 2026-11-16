@@ -15,7 +15,13 @@ refuses, the schema is refused.
 An assertion keyword constrains one kind and passes every other kind: `{"minimum": 3}`
 admits `"a"`. Each such keyword compiles to `complement(kind) | refined`, and a schema
 object to the meet of its keywords. Where `type` already confines the instance to the
-keyword's kind, the guard's other half is empty after the meet and is left out. An array's
+keyword's kind, the guard's other half is empty after the meet and is left out. Where `type`
+names arrays alone, `items` and `prefixItems` compile to lists whose every item is a compiled
+subschema, and where it names objects alone, `properties`, `required` and
+`additionalProperties` to a record whose every value is one: each lies inside the JSON arrays
+or objects, so the kind's own set is left out of the meet too, and a walk reads each value
+once. `{"type": "array", "items": {"type": "string"}}` is `list[str]`; `patternProperties`
+past four patterns is a predicate over every `dict`, and keeps the kind. An array's
 kind in a guard is the bare `list`, and an object's the bare `dict`: every compiled set is
 met with the JSON values, inside which the bare kind and the JSON one agree, and valgebra
 decides the complement of the bare kind where it declines that of the recursive one. The

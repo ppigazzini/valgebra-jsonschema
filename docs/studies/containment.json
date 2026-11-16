@@ -58,10 +58,10 @@
    "refused": 4,
    "timed_out": 0,
    "proven": 567,
-   "refuted": 5,
-   "undecided": 20,
+   "refuted": 6,
+   "undecided": 19,
    "proven_against": 0,
-   "refuted_against": 5
+   "refuted_against": 6
   },
   {
    "draft": "2020-12",
@@ -130,10 +130,10 @@
    "refused": 6,
    "timed_out": 0,
    "proven": 426,
-   "refuted": 2,
-   "undecided": 10,
+   "refuted": 3,
+   "undecided": 9,
    "proven_against": 0,
-   "refuted_against": 2
+   "refuted_against": 3
   },
   {
    "draft": "7",
@@ -202,10 +202,10 @@
    "refused": 6,
    "timed_out": 0,
    "proven": 390,
-   "refuted": 2,
-   "undecided": 10,
+   "refuted": 3,
+   "undecided": 9,
    "proven_against": 0,
-   "refuted_against": 2
+   "refuted_against": 3
   },
   {
    "draft": "6",
@@ -274,10 +274,10 @@
    "refused": 2,
    "timed_out": 0,
    "proven": 288,
-   "refuted": 2,
-   "undecided": 10,
+   "refuted": 3,
+   "undecided": 9,
    "proven_against": 0,
-   "refuted_against": 2
+   "refuted_against": 3
   },
   {
    "draft": "4",

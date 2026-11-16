@@ -331,6 +331,34 @@ def _whole(parts: list[object], *, met: bool) -> Validator[Any]:
     return _body(parts) if parts else JSON
 
 
+#: The keywords whose set lies inside `ARRAY`, or `OBJECT`, where ``type`` names that kind alone.
+_INSIDE_ARRAY = frozenset({"items", "prefixItems"})
+_INSIDE_OBJECT = frozenset({"properties", "required", "additionalProperties"})
+
+
+def _implied(
+    parts: list[object], schema: dict[str, Any], typed: frozenset[str] | None
+) -> list[object]:
+    """Return ``parts`` without the universe's kind ``type`` adds where another part implies it.
+
+    Where ``type`` names arrays alone, ``items`` and ``prefixItems`` compile to lists whose
+    every item is a compiled subschema, and where it names objects alone, the object group
+    compiles to a record whose every value is one: each compiled subschema lies inside the
+    universe, so that set lies inside `ARRAY` or `OBJECT`, and the meet with the kind is the
+    same set, with a walk reading every value it holds a second time. ``patternProperties``
+    past `_CELLS_FROM` patterns is a predicate over every ``dict``, which implies no kind.
+    """
+    if typed == {"array"} and not _INSIDE_ARRAY.isdisjoint(schema):
+        return [part for part in parts if part is not ARRAY]
+    if (
+        typed == {"object"}
+        and "patternProperties" not in schema
+        and not _INSIDE_OBJECT.isdisjoint(schema)
+    ):
+        return [part for part in parts if part is not OBJECT]
+    return parts
+
+
 def _body(parts: list[object]) -> Validator[Any]:
     """Return the meet of a schema's keyword sets alone: everything, for none.
 
@@ -571,7 +599,9 @@ class Compiler:
         # there alone, and only where no `type`, `enum` or `const` pins the kind: anywhere
         # else the meet is the same set, with a recursive term every question about it
         # would carry.
-        return parts, escaped and not (typed or "enum" in schema or "const" in schema)
+        return _implied(parts, schema, typed), escaped and not (
+            typed or "enum" in schema or "const" in schema
+        )
 
     def _keywords(self, schema: dict[str, Any], parts: list[object]) -> None:
         seen: set[str] = set()
@@ -1328,10 +1358,13 @@ def _items(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
 
     ``prefixItems`` constrains the first positions and admits shorter arrays; ``items``
     constrains every position after the prefix. A one-element list literal is valgebra's
-    homogeneous list, so a fixed length of one is written as a length refinement.
+    homogeneous list, so a fixed length of one is written as a length refinement. With no
+    prefix, the repeated tail is the whole set: it holds the empty array.
     """
     prefix = [c.compile(p) for p in s.get("prefixItems", [])]
     rest = c.compile(s["items"]) if "items" in s else JSON
+    if not prefix:
+        return c.guard("array", Validator([rest, ...]))
     shapes: list[object] = [Validator([])]
     shapes += [fixed(prefix[:n]) for n in range(1, len(prefix))]
     shapes.append(Validator([*prefix, rest, ...]))

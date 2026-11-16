@@ -63,6 +63,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Changed
 
+- Where `type` names arrays or objects alone, `items` and `prefixItems`, or `properties`,
+  `required` and `additionalProperties`, compile without the meet with the JSON arrays or
+  objects their set already lies inside, and an array with no `prefixItems` is its repeated
+  item alone: `{"type": "array", "items": {"type": "string"}}` is `list[str]`, whose walk reads
+  each item once rather than twice beside `list[JSON]`.
 - `oneOf` leaves out the complement of a branch valgebra proves disjoint from another, which
   holds none of its values: each branch is spelled once per branch it may meet rather than once
   per branch, which keeps 14 JSONSchemaBench schemas under valgebra's node bound, and 9448 of

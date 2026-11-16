@@ -72,7 +72,7 @@ draft.
 - The 12 schemas past valgebra's node limit compile with each `oneOf` read as its union met
   with a count of the branches that hold, and each reference to a definition that does not
   reach itself checked through the definition's own set: `cityjson` and `cloudformation`
-  in about 2 s each, the rest in under half a second.
+  in under 2 s each, the rest in under half a second.
 
 ## Inclusions against the containment test suite
 

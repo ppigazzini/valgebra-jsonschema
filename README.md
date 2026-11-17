@@ -4,6 +4,14 @@ JSON Schema read into [valgebra](https://github.com/ppigazzini/valgebra)'s sets,
 answers two questions: whether a value belongs, as the specification states it, and whether
 everything one schema admits another admits too.
 
+📖 **Documentation: <https://ppigazzini.github.io/valgebra-jsonschema/>**
+
+🤖 **For AI assistants and coding agents:** the documentation is also published as
+[`llms.txt`](https://ppigazzini.github.io/valgebra-jsonschema/llms.txt) (a curated manifest)
+and [`llms-full.txt`](https://ppigazzini.github.io/valgebra-jsonschema/llms-full.txt) (the
+full text, including the API reference) per the [llmstxt.org](https://llmstxt.org)
+convention.
+
 ```python
 from valgebra_jsonschema import compile_schema
 

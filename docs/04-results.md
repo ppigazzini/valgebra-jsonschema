@@ -1,7 +1,11 @@
+---
+description: Every measured count, with the command that prints it.
+---
+
 # Results
 
 Every number below is printed by a committed command and recorded as counts in
-[`studies/`](studies/); each tool's `--check` reruns it.
+`docs/studies/`; each tool's `--check` reruns it.
 
 ## The compiler
 

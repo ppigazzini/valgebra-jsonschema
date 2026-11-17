@@ -1,0 +1,114 @@
+site_name: valgebra-jsonschema
+site_description: JSON Schema read into valgebra's sets, for membership as the specification states it and inclusion between two schemas.
+site_url: https://ppigazzini.github.io/valgebra-jsonschema/
+repo_url: https://github.com/ppigazzini/valgebra-jsonschema
+repo_name: ppigazzini/valgebra-jsonschema
+copyright: Dual-licensed MIT OR Apache-2.0
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.footer
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+nav:
+  - Home: README.md
+  - Getting started:
+      - Reading an MCP tool: 05-mcp.md
+  - Release notes: 12-changelog.md
+  - Explanation:
+      - The compiler: 02-compiler.md
+      - Conformance: 03-conformance.md
+      - Results: 04-results.md
+  - Reference:
+      - API reference: 16-api.md
+
+# The developer set lives beside the user docs and is not published: how a release reaches
+# PyPI and the standard for every text, which describe the tree for a contributor and an agent
+# rather than the package for its user. Excluding it keeps --strict honest: every page left is
+# in the nav above. The study files are what the commands on the results page check.
+exclude_docs: |
+  dev/
+  studies/
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  # Include a file from outside docs/ verbatim, so the release notes the site serves are the
+  # changelog the repository keeps rather than a second list nothing holds to the first.
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: ["."]
+          options:
+            docstring_style: numpy
+            show_root_heading: true
+            show_root_full_path: true
+            show_source: false
+            show_signature_annotations: true
+            separate_signature: true
+            signature_crossrefs: true
+            members_order: source
+            # The package's public names are its `__all__`.
+            filters: public
+            # A public name with no docstring of its own, a constant or an alias, is still one.
+            show_if_no_docstring: true
+            heading_level: 3
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+  # Machine-readable view of the site: /llms.txt (a manifest mirroring the nav) and
+  # /llms-full.txt (the full content). Runs last, so it reads the API reference mkdocstrings
+  # renders.
+  - llmstxt:
+      markdown_description: >-
+        JSON Schema read into valgebra's sets. compile_schema reads drafts 2020-12, 07, 06 and
+        04, and 2019-09 through upgrade, into sets over the values json.loads returns, and
+        refuses a keyword it does not read by name; valgebra then decides whether a value
+        belongs, as the specification states it, and whether one schema's values all lie in
+        another's. read_tool reads an MCP tool listing into its two contracts.
+      full_output: llms-full.txt
+      sections:
+        Getting started:
+          - README.md: What valgebra-jsonschema is, how it reads JSON Schema into valgebra's sets, and the index to this guide.
+          - 05-mcp.md: Read an MCP tool listing into its two contracts, its dialects, and what its schemas may hold.
+        Release notes:
+          - 12-changelog.md: Every released version, what it changed, and what counts as a break.
+        Explanation:
+          - 02-compiler.md: How each JSON Schema keyword becomes a set, what is opaque, and what is refused.
+          - 03-conformance.md: What the compiler promises against JSON Schema, how it is checked, and where a difference may live.
+          - 04-results.md: Every measured count, with the command that prints it.
+        Reference:
+          - 16-api.md: The public names, read from the package's docstrings.

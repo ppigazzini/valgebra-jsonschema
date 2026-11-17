@@ -58,6 +58,17 @@ dev = [
 # a lock update.
 build = ["hatchling>=1.33.0"]
 
+# The site `mkdocs.yml` builds and the workflow `Docs` publishes, as valgebra's: the pages, the
+# API reference read from the docstrings, and `/llms.txt` with `/llms-full.txt` for a reader
+# that is not a browser. The llms.txt plugin reads HTML through soupsieve, whose release that
+# fixes CVE-2026-126190 needs Python 3.11.5, as valgebra's group states.
+docs = [
+    "mkdocs>=1.6.1,<2",
+    "mkdocs-material>=9.7.7,<10",
+    "mkdocstrings[python]>=1.0.6",
+    "mkdocs-llmstxt>=0.5; python_full_version >= '3.11.5'",
+]
+
 [build-system]
 requires = ["hatchling>=1.33.0"]
 build-backend = "hatchling.build"
@@ -69,8 +80,9 @@ packages = ["valgebra_jsonschema"]
 # this file, which every sdist carries. The tools fetch what they study, so they stay out.
 [tool.hatch.build.targets.sdist]
 include = ["valgebra_jsonschema", "tests", "docs", "CHANGELOG.md"]
-# The test holding `AGENTS.md` to the workflow stays out with the two files it reads.
-exclude = ["tests/test_build_surfaces.py"]
+# The tests holding `AGENTS.md` to the workflow and the lint to its rules stay out with the files
+# they read.
+exclude = ["tests/test_build_surfaces.py", "tests/test_check_markdown.py"]
 
 [tool.uv]
 default-groups = ["dev"]
@@ -83,6 +95,8 @@ faulthandler_exit_on_timeout = true
 
 [tool.ty.environment]
 python-version = "3.11"
+# The lint's test imports `tools/check_markdown.py`.
+extra-paths = ["tools"]
 
 [tool.ruff]
 line-length = 100

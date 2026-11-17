@@ -1,4 +1,4 @@
-r"""Check Markdown against the rendering rules of `docs/10-writing.md`, and for dead links.
+r"""Check Markdown against the rendering rules of `docs/dev/10-writing.md`, and for dead links.
 
 GitHub's inline math renderer is strict and its failures are silent: the page
 renders, wrongly. `$^{238}$U` becomes a dangling superscript, `\\!`
@@ -12,6 +12,11 @@ area, and this file, which names it to refuse it, are exempt.
 
     uv run python tools/check_markdown.py            # every tracked file
     uv run python tools/check_markdown.py README.md  # specific files
+
+The site rules valgebra's lint holds: a published page under `docs/` linking into `docs/dev/`,
+which `mkdocs.yml` excludes, fails, since the link answers 404 on the site; and the `llmstxt`
+sections of `mkdocs.yml` are held to its `nav` both ways, each line to its page's
+`description:`.
 
 Exit status is 1 if anything is found, so it works as a pre-commit hook.
 
@@ -125,6 +130,65 @@ def link_problems(path: Path, line: str) -> list[str]:
             problems.append(f"relative link in the README, which PyPI cannot follow -> {target}")
         elif not (path.parent / target).exists():
             problems.append(f"dead link -> {target}")
+        elif _on_the_site(path) and _unpublished(path.parent / target):
+            problems.append(
+                f"link leaves the site, where docs/dev/ is not published; name the page by its"
+                f" path -> {target}"
+            )
+    return problems
+
+
+def _parts(path: Path) -> tuple[str, ...]:
+    try:
+        return path.resolve().relative_to(ROOT).parts
+    except ValueError:
+        return ()
+
+
+def _on_the_site(path: Path) -> bool:
+    """Answer whether mkdocs renders the page: under `docs/`, outside `docs/dev/`."""
+    parts = _parts(path)
+    return len(parts) > 1 and parts[0] == "docs" and parts[1] != "dev"
+
+
+def _unpublished(path: Path) -> bool:
+    """Answer whether the page is in the developer set `mkdocs.yml` excludes."""
+    return _parts(path)[:2] == ("docs", "dev")
+
+
+DESCRIPTION = re.compile(r"^description: (.+)$", re.MULTILINE)
+
+
+def manifest_problems(config: str, pages: Path) -> list[str]:
+    """Hold the llms.txt manifest of ``config`` to its nav, both ways, and to each description.
+
+    `mkdocs.yml` names every user page twice: in `nav`, which builds the site, and in the
+    `llmstxt` sections, which build `/llms.txt` for a reader that is not a browser. A page added
+    to one alone is missing from the half no person opens; a summary is a copy of the page's
+    `description:`, and a copy that moves apart describes a page the site no longer has.
+    """
+    head, marker, tail = config.partition("  - llmstxt:")
+    if not marker:
+        return ["mkdocs.yml: no llmstxt plugin"]
+    nav = set(re.findall(r"^ +- [^:\n]+: ([A-Za-z0-9-]+\.md)$", head, re.MULTILINE))
+    lines = dict(re.findall(r"^ +- ([A-Za-z0-9-]+\.md): (.+)$", tail, re.MULTILINE))
+    if not nav or not lines:
+        return ["mkdocs.yml: the nav or the llms.txt manifest reads as empty"]
+    problems = [
+        f"mkdocs.yml: {page} is in the {here} but not the {there}"
+        for named, here, there in (
+            (nav - lines.keys(), "nav", "llms.txt manifest"),
+            (lines.keys() - nav, "llms.txt manifest", "nav"),
+        )
+        for page in sorted(named)
+    ]
+    for page, summary in sorted(lines.items()):
+        source = pages / page
+        described = (
+            DESCRIPTION.search(source.read_text(encoding="utf-8")) if source.exists() else None
+        )
+        if described is None or described.group(1).strip() != summary.strip():
+            problems.append(f"mkdocs.yml: the llms.txt line for {page} is not its description")
     return problems
 
 
@@ -157,6 +221,8 @@ def main(argv: list[str]) -> int:
     pages = [p for p in files if p.suffix == ".md"]
     problems = [msg for p in pages for msg in check(p)]
     problems += [msg for p in files for msg in internal_references(p)]
+    if not argv:
+        problems += manifest_problems((ROOT / "mkdocs.yml").read_text("utf-8"), ROOT / "docs")
     for msg in problems:
         print(msg)
     print(f"\n{len(problems)} problem(s) in {len(files)} file(s), {len(pages)} of them pages")

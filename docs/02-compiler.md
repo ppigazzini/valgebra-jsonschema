@@ -1,3 +1,7 @@
+---
+description: How each JSON Schema keyword becomes a set, what is opaque, and what is refused.
+---
+
 # The compiler
 
 `valgebra_jsonschema/schema.py` compiles JSON Schema draft 2020-12, and drafts 2019-09, 07, 06

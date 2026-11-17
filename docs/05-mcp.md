@@ -1,3 +1,7 @@
+---
+description: Read an MCP tool listing into its two contracts, its dialects, and what its schemas may hold.
+---
+
 # Reading an MCP tool
 
 A [Model Context Protocol](https://modelcontextprotocol.io) server lists each tool with an

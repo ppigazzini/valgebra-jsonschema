@@ -1,0 +1,59 @@
+name: Docs
+
+# Build the documentation site and publish it to GitHub Pages with the Actions-based deployment
+# (an uploaded artifact deployed over OIDC, no gh-pages branch), as valgebra's site is. The site
+# tracks `main`; a manual run republishes on demand. The repository's Pages source is "GitHub
+# Actions".
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege by default; the Pages permissions are granted only to the jobs that need them.
+permissions:
+  contents: read
+
+# One Pages deployment at a time; never cancel a publish already in flight.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    # configure-pages and upload-pages-artifact write the Pages artifact.
+    permissions:
+      contents: read
+      pages: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.3.3
+        with: { version: "0.13.8", python-version: "3.15", enable-cache: false }
+      - uses: actions/configure-pages@v6.0.0
+      - run: uv sync --locked --group docs
+      # --strict fails the build on a broken link or an unresolved reference.
+      - run: uv run --no-sync mkdocs build --strict
+      # mkdocs builds into ./site (upload-pages-artifact reads ./_site by default).
+      - uses: actions/upload-pages-artifact@v5.0.0
+        with:
+          path: site
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    # deploy-pages publishes the artifact and mints the OIDC token Pages verifies.
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5.0.1

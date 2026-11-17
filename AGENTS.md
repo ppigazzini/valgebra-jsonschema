@@ -10,7 +10,7 @@ deciding one; what belongs here is reading another language's schemas.
 
 - **Never add trailers to commit messages.** No `Co-Authored-By:`, no `Generated with` line,
   no tool attribution of any kind.
-- Message style: [`docs/10-writing.md`](docs/10-writing.md#commit-messages).
+- Message style: [`docs/dev/10-writing.md`](docs/dev/10-writing.md#commit-messages).
 
 ## Tooling
 
@@ -37,8 +37,12 @@ the study with `--json` in the same commit and says why the count moved.
 
 ## Conventions
 
-- `docs/10-writing.md` is the standard for pages, comments and commit messages.
-- `docs/06-releasing.md` is the order a version reaches PyPI in, and only a dispatch of
+- `docs/dev/10-writing.md` is the standard for pages, comments and commit messages.
+- `docs/` is the user guide `mkdocs.yml` builds and the workflow `Docs` publishes, with
+  `llms.txt`, at <https://ppigazzini.github.io/valgebra-jsonschema/>; a page added is a line of
+  its `nav` and of its `llmstxt` sections, the second the page's `description:`. `docs/dev/`
+  holds the developer pages, which are not published.
+- `docs/dev/06-releasing.md` is the order a version reaches PyPI in, and only a dispatch of
   `.github/workflows/release.yml` uploads one.
 - A proof is valgebra's or a concrete value's; nothing here turns "not proven" into "false" or
   "true". A relation valgebra cannot decide is `undecided`.

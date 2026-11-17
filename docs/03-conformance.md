@@ -1,3 +1,7 @@
+---
+description: What the compiler promises against JSON Schema, how it is checked, and where a difference may live.
+---
+
 # Conformance
 
 What the compiler promises against JSON Schema, how it is checked, and where a difference

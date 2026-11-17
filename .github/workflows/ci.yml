@@ -105,6 +105,32 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: uvx zizmor==1.32.0 .github/
 
+  api:
+    name: the public API against the last release
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    # Each public name a release removed or changed since the last tag, as griffe reads it from
+    # every module's `__all__`, written as an annotation on the line that changed it. Under 0.0.x
+    # a release may break any name, so nothing waits on this job: its list is what the release's
+    # changelog records under Changed and Removed.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+          # griffe loads the tag from git, so the history and its tags are fetched.
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v10.3.3
+        with: { version: "0.13.8", python-version: "3.15", enable-cache: false }
+      - name: Compare the API with the last tag
+        run: |
+          set -euo pipefail
+          if git describe --tags --abbrev=0 --match 'v*' > /dev/null 2>&1; then
+            uvx griffe==2.4.1 check valgebra_jsonschema -f github
+          else
+            echo "no release tag yet: nothing to compare"
+          fi
+
   pip-audit:
     name: the dependency audit
     runs-on: ubuntu-26.04

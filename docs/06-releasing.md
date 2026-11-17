@@ -82,7 +82,9 @@ and repository, `release.yml` and the environment.
 2. **Bump, in one commit.** `version` in `pyproject.toml`, `uv lock`, and the changelog: the
    `Unreleased` entries roll into a section for the version, dated the day of the commit, with its
    compare and tag links. It lands on `main`, and the push runs `ci.yml` on the tree about to
-   be published; the dispatches wait until it passes.
+   be published; the dispatches wait until it passes. The run's `api` job lists each public name
+   removed or changed since the last tag, and each is an entry under Changed or Removed: one it
+   lists and the changelog does not is fixed in the bump commit before any dispatch.
 3. **Dispatch to TestPyPI**, with the version confirmed:
 
    ```bash

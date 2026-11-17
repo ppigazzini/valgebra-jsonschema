@@ -1,6 +1,14 @@
 name: CI
 
-on: [push, pull_request]
+# A push to `main` or `github_ci` runs the job, and so do a pull request into `main` and a
+# manual dispatch. A tag or another branch runs nothing: the commit a tag names ran on the
+# branch that carries it.
+on:
+  push:
+    branches: [main, github_ci]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 # The job reads the repository and writes nothing back.
 permissions:

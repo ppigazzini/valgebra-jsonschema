@@ -1,0 +1,52 @@
+name: Upstream
+
+# Each Monday, and on a dispatch, the suite and every published count run on valgebra's `main`,
+# the code valgebra's next cut ships. Nothing waits on the run: a red one says a valgebra change
+# moves this package before that cut ships it, where the re-pin after the cut would meet it.
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+# The job reads the repository and writes nothing back.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  upstream:
+    name: the suite and the studies on valgebra's main
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    env:
+      # A build for the suite, not for timing: no link-time optimization, parallel code generation.
+      CARGO_PROFILE_RELEASE_LTO: "off"
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: "16"
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.3.3
+        with: { version: "0.13.8", python-version: "3.15", enable-cache: false }
+      - uses: actions/cache@v6.1.0
+        with:
+          path: results
+          key: studies-${{ hashFiles('tools/corpus.py', 'tools/containment.py') }}
+      - run: rustup update stable --no-self-update && rustup default stable
+      - run: uv sync --locked
+      # valgebra's `main`, built from source, past the range `pyproject.toml` pins, which admits
+      # released versions alone: so no `uv pip check` runs, and every `uv run` takes --no-sync,
+      # since a sync would put the locked release back.
+      - run: uv pip install "valgebra @ git+https://github.com/ppigazzini/valgebra@main"
+      - run: uv run --no-sync pytest
+      - run: uv run --no-sync python tools/suite.py --check docs/studies/json-schema-test-suite.json
+      - run: uv run --no-sync python tools/suite.py --draft 2019-09 --check docs/studies/json-schema-test-suite-draft2019-09.json
+      - run: uv run --no-sync python tools/suite.py --draft 7 --check docs/studies/json-schema-test-suite-draft7.json
+      - run: uv run --no-sync python tools/suite.py --draft 6 --check docs/studies/json-schema-test-suite-draft6.json
+      - run: uv run --no-sync python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
+      - run: uv run --no-sync python tools/suite.py --draft format --check docs/studies/json-schema-test-suite-format.json
+      - run: uv run --no-sync python tools/corpus.py --check docs/studies/jsonschemabench.json
+      - run: uv run --no-sync python tools/containment.py --check docs/studies/containment.json

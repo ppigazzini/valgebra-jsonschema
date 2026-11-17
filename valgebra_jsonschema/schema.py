@@ -8,9 +8,10 @@ nested -- and on that universe the translation is exact for the keywords it acce
 Each assertion keyword constrains one kind of instance and passes every other kind, so
 ``{"minimum": 3}`` admits ``"a"``. A keyword therefore compiles to a *guarded* set,
 ``complement(kind) | refined``, and a schema object to the meet of its keywords and the
-universe. That is the keyword-wise semantics of Attouche et al. (POPL 2024) read as set
-algebra, and it is what lets valgebra decide inclusion, equivalence and emptiness between
-two compiled schemas.
+universe. That is the keyword-wise semantics of modern JSON Schema read as set algebra, a
+typed assertion trivially satisfied by an instance not of its type and a schema object its
+keywords applied in turn (Attouche et al. 2024, §4.2, §4.5), and it is what lets valgebra
+decide inclusion, equivalence and emptiness between two compiled schemas.
 
 Two places where JSON Schema's model is not Python's are handled rather than inherited:
 
@@ -844,8 +845,9 @@ class Compiler:
         two schema objects of one document claim, and an anchor two of one resource set,
         name neither, and a reference to one is refused: section 9.1.2 asks for an error
         where two schemas claim one URI, section 8.2.2 leaves two anchors of one name
-        undefined, and the semantics of Attouche et al. (POPL 2024, section 3) reads a URI as
-        naming one schema. Of two documents claiming one URI, the first read names it.
+        undefined, and the semantics of modern JSON Schema moves every resource into one
+        ``$defs`` entry named by its URI, so a URI names one schema (Attouche et al. 2024,
+        §3.1). Of two documents claiming one URI, the first read names it.
 
         A supplied document is a resource at the URI it is supplied by, read in its own
         dialect through `upgrade`; one this compiler does not read is refused only where a

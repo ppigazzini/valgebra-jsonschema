@@ -123,6 +123,26 @@ Docstrings follow the numpy convention. A module docstring states what the modul
 responsible for and what it must not do. A function docstring states the contract, not the
 implementation.
 
+## Citing a paper
+
+**Cite a work by its key and the result by its place**: the surnames of its one or two
+authors, or its first author's with `et al.`, the year, then the place in the work, as in
+`(Attouche et al. 2024, §4.2)`. A place is `§` and a section number, or `Def.`, `Thm.`,
+`Lem.`, `Prop.`, `Cor.`, `Ex.`, `Alg.` or `Fig.` and the number the copy cited prints, several
+separated by commas. A specification is cited by its section where it is read, as `draft
+2020-12, section 8.2` or `RFC 3339`; a key is for a paper.
+
+**Every item implementing a published result cites it**, in its docstring, a module or a
+function alike, at the clause the result supports and before its punctuation, and
+[09-theory.md](09-theory.md) names the item under a claim: an `IMPLEMENTED-BY:` line for the
+items, a `HELD-BY:` line for the tests that fail when the claim is false. The page's table of
+works is the one place a cited work's identifier is written.
+
+`tests/test_theory_ledger.py` holds the package and the page to each other: a citation with no
+place, a key the table does not list or a row nothing cites, an `IMPLEMENTED-BY:` entry naming
+no item or one citing none of its claim's works, a citing item no claim names, and a `HELD-BY:`
+name that is no test all fail.
+
 ## Commit messages
 
 A commit states what the change does and what it measures. Same standard as everything

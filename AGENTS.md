@@ -38,6 +38,8 @@ the study with `--json` in the same commit and says why the count moved.
 ## Conventions
 
 - `docs/dev/10-writing.md` is the standard for pages, comments and commit messages.
+- `docs/dev/09-theory.md` names the code resting on each published result, and an item
+  implementing one cites it by key and place, as `docs/dev/10-writing.md` says.
 - `docs/` is the user guide `mkdocs.yml` builds and the workflow `Docs` publishes, with
   `llms.txt`, at <https://ppigazzini.github.io/valgebra-jsonschema/>; a page added is a line of
   its `nav` and of its `llmstxt` sections, the second the page's `description:`. `docs/dev/`

@@ -38,20 +38,20 @@ jobs:
           key: studies-${{ hashFiles('tools/corpus.py', 'tools/containment.py') }}
       - run: uv lock --check
       - run: uv sync --locked
-      - run: uv run ruff check
-      - run: uv run ruff format --check
-      - run: uv run ty check
-      - run: uv run python tools/check_markdown.py
-      - run: uv run pytest
+      - run: uv run --no-sync ruff check
+      - run: uv run --no-sync ruff format --check
+      - run: uv run --no-sync ty check
+      - run: uv run --no-sync python tools/check_markdown.py
+      - run: uv run --no-sync pytest
       # Every published count is one this code still produces.
-      - run: uv run python tools/suite.py --check docs/studies/json-schema-test-suite.json
-      - run: uv run python tools/suite.py --draft 2019-09 --check docs/studies/json-schema-test-suite-draft2019-09.json
-      - run: uv run python tools/suite.py --draft 7 --check docs/studies/json-schema-test-suite-draft7.json
-      - run: uv run python tools/suite.py --draft 6 --check docs/studies/json-schema-test-suite-draft6.json
-      - run: uv run python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
-      - run: uv run python tools/suite.py --draft format --check docs/studies/json-schema-test-suite-format.json
-      - run: uv run python tools/corpus.py --check docs/studies/jsonschemabench.json
-      - run: uv run python tools/containment.py --check docs/studies/containment.json
+      - run: uv run --no-sync python tools/suite.py --check docs/studies/json-schema-test-suite.json
+      - run: uv run --no-sync python tools/suite.py --draft 2019-09 --check docs/studies/json-schema-test-suite-draft2019-09.json
+      - run: uv run --no-sync python tools/suite.py --draft 7 --check docs/studies/json-schema-test-suite-draft7.json
+      - run: uv run --no-sync python tools/suite.py --draft 6 --check docs/studies/json-schema-test-suite-draft6.json
+      - run: uv run --no-sync python tools/suite.py --draft 4 --check docs/studies/json-schema-test-suite-draft4.json
+      - run: uv run --no-sync python tools/suite.py --draft format --check docs/studies/json-schema-test-suite-format.json
+      - run: uv run --no-sync python tools/corpus.py --check docs/studies/jsonschemabench.json
+      - run: uv run --no-sync python tools/containment.py --check docs/studies/containment.json
 
   floor:
     name: the suite on the oldest interpreter
@@ -64,7 +64,7 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.3
         with: { version: "0.13.8", python-version: "3.11", enable-cache: true }
       - run: uv sync --locked
-      - run: uv run pytest
+      - run: uv run --no-sync pytest
 
   actions-lock:
     name: the actions lockfile

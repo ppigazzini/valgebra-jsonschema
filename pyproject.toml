@@ -69,6 +69,8 @@ packages = ["valgebra_jsonschema"]
 # this file, which every sdist carries. The tools fetch what they study, so they stay out.
 [tool.hatch.build.targets.sdist]
 include = ["valgebra_jsonschema", "tests", "docs", "CHANGELOG.md"]
+# The test holding `AGENTS.md` to the workflow stays out with the two files it reads.
+exclude = ["tests/test_build_surfaces.py"]
 
 [tool.uv]
 default-groups = ["dev"]

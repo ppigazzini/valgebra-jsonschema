@@ -1,8 +1,8 @@
-name: release
+name: Release
 
 # Build the wheel and the sdist, run the suite on each as installed, and publish both to a
 # package index. Publishing happens only on a manual dispatch from `main` that selects an
-# index and confirms the version, on a commit `test.yml` passed; no tag push publishes. Uploads use trusted publishing, an
+# index and confirms the version, on a commit `ci.yml` passed; no tag push publishes. Uploads use trusted publishing, an
 # OIDC token and no stored secret, and carry PEP 740 attestations. A dispatch with the target
 # left at `none` builds and tests without publishing, as a dry run.
 on:
@@ -146,22 +146,22 @@ jobs:
       url: ${{ inputs.publish_target == 'pypi' && 'https://pypi.org/p/valgebra-jsonschema' || 'https://test.pypi.org/p/valgebra-jsonschema' }}
     permissions:
       id-token: write # the OIDC token trusted publishing exchanges; it signs the attestations
-      actions: read # the runs of `test.yml` on the commit
+      actions: read # the runs of `ci.yml` on the commit
       contents: read
     steps:
       - name: Refuse a commit the push lanes have not passed
-        # The commit is one `test.yml` passed on `main`: a push run of it on this very commit
+        # The commit is one `ci.yml` passed on `main`: a push run of it on this very commit
         # concluded in success. A failed, canceled or unfinished run, none at all, or an API
         # that does not answer refuses.
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          passed="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/test.yml/runs?head_sha=$GITHUB_SHA&branch=main&event=push&status=success&per_page=1" --jq .total_count)"
+          passed="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&branch=main&event=push&status=success&per_page=1" --jq .total_count)"
           if [ "$passed" -lt 1 ]; then
-            echo "::error::test.yml has no successful push run on $GITHUB_SHA"; exit 1
+            echo "::error::ci.yml has no successful push run on $GITHUB_SHA"; exit 1
           fi
-          echo "test.yml passed on $GITHUB_SHA"
+          echo "ci.yml passed on $GITHUB_SHA"
       - uses: actions/download-artifact@v8.0.2
         with:
           name: dist

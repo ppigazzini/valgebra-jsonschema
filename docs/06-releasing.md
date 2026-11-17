@@ -41,7 +41,7 @@ Six conditions stand between a dispatch and an upload, each a job, a step or a j
 - **`confirm_version` equals the built version**, and an empty input aborts.
 - **The ref is `main`**, and each environment admits `main` alone
   ([below](#what-the-repository-and-the-indexes-hold)).
-- **`test.yml` passed on the commit.** A push run of it on `main`, at this very commit,
+- **`ci.yml` passed on the commit.** A push run of it on `main`, at this very commit,
   concluded in success; a failed, canceled or unfinished run, none at all, or an API that does
   not answer refuses.
 - **The version is absent from the index.** Only a definitive 404 for it proceeds: a 200 is a
@@ -81,7 +81,7 @@ and repository, `release.yml` and the environment.
    the gate of [`AGENTS.md`](../AGENTS.md) green, before the bump.
 2. **Bump, in one commit.** `version` in `pyproject.toml`, `uv lock`, and the changelog: the
    `Unreleased` entries roll into a section for the version, dated the day of the commit, with its
-   compare and tag links. It lands on `main`, and the push runs `test.yml` on the tree about to
+   compare and tag links. It lands on `main`, and the push runs `ci.yml` on the tree about to
    be published; the dispatches wait until it passes.
 3. **Dispatch to TestPyPI**, with the version confirmed:
 

@@ -1,6 +1,6 @@
 [project]
 name = "valgebra-jsonschema"
-version = "0.0.1"
+version = "0.0.2"
 description = "JSON Schema read into valgebra's sets: membership as the specification states it, and inclusion decided between two schemas."
 readme = "README.md"
 license = "MIT OR Apache-2.0"
@@ -27,7 +27,7 @@ dependencies = [
     "typing-extensions>=4.16.0",
     # The decision procedure every answer here rests on. Pre-alpha, so pinned below 0.1,
     # and a 0.0.x minor is a breaking release: the floor moves with each release.
-    "valgebra>=0.0.28,<0.0.29",
+    "valgebra>=0.0.29,<0.0.30",
 ]
 
 [project.urls]

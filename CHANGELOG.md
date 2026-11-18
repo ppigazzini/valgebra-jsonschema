@@ -6,6 +6,28 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-11-18
+
+A release of the user guide, with no change to the compiler: every schema compiles to the set
+0.0.1 compiled it to, and every published count is the one 0.0.1 recorded.
+
+### Added
+
+- The user guide is published at <https://ppigazzini.github.io/valgebra-jsonschema/>, with
+  `llms.txt` and `llms-full.txt` for a reader that is not a browser, and the API reference read
+  from the package's docstrings.
+- A recipes page does five tasks end to end: a model's tool call checked against the schema it
+  was shown, a schema change checked before release, a schema split across documents, files
+  checked against a schema, and what a schema asserts, keyword by keyword.
+
+### Changed
+
+- The package's `Documentation` link and the README's links go to the published guide. Each
+  page's address is its topic, `/mcp/` and `/compiler/`, and an address the site has served
+  before answers with a page that sends the reader on.
+- The package requires valgebra 0.0.29 and below 0.0.30, whose release changes no answer of
+  0.0.28.
+
 ## [0.0.1] - 2026-11-17
 
 ### Added
@@ -72,5 +94,6 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   records. Of the containment test suite's 10890 questions, 7048 are proven, 3560 refuted,
   246 undecided and 36 refused.
 
-[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/ppigazzini/valgebra-jsonschema/releases/tag/v0.0.1

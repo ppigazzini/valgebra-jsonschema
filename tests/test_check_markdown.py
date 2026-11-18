@@ -30,6 +30,13 @@ def test_the_llms_manifest_is_held_to_the_nav_and_the_descriptions(tmp_path: Pat
     assert check_markdown.manifest_problems(missing, tmp_path) == [
         "mkdocs.yml: b.md is in the nav but not the llms.txt manifest"
     ]
+    swapped = config.replace(
+        "          - a.md: The first page.\n          - b.md: The second page.\n",
+        "          - b.md: The second page.\n          - a.md: The first page.\n",
+    )
+    assert check_markdown.manifest_problems(swapped, tmp_path) == [
+        "mkdocs.yml: the llms.txt manifest lists the pages in another order"
+    ]
     moved = config.replace("- b.md: The second page.", "- b.md: Another page.")
     assert "the llms.txt line for b.md is not its description" in " ".join(
         check_markdown.manifest_problems(moved, tmp_path)

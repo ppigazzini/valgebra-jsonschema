@@ -1,5 +1,5 @@
 ---
-description: What valgebra-jsonschema is, how it reads JSON Schema into valgebra's sets, and the index to this guide.
+description: What valgebra-jsonschema is, how it reads JSON Schema into valgebra's sets, and where to start.
 ---
 
 # valgebra-jsonschema
@@ -30,18 +30,11 @@ assert strings.relation_to(tags) == "not_subset"
 pip install valgebra-jsonschema          # Python 3.11 or later
 ```
 
-| page | what it holds |
-|---|---|
-| [mcp.md](mcp.md) | reading an MCP tool, its dialects, and what its schema may hold |
-| [recipes.md](recipes.md) | tasks done end to end: a model's tool call, a schema change before release, a schema across documents, files against a schema, what a schema asserts |
-| [changelog.md](changelog.md) | every released version and what it changed |
-| [compiler.md](compiler.md) | how each JSON Schema keyword becomes a set, what is opaque, what is refused |
-| [conformance.md](conformance.md) | the contract, its oracles, the keyword inventory and the ledger of differences |
-| [results.md](results.md) | every measured count, with the command that prints it |
-| [api.md](api.md) | the public names, read from the package's docstrings |
+Start with [reading an MCP tool](mcp.md) or [the recipes](recipes.md);
+[how each keyword compiles](compiler.md) is what a schema means here.
 
 The site serves [`llms.txt`](https://ppigazzini.github.io/valgebra-jsonschema/llms.txt), a
-manifest of these pages, and
+manifest of its pages, and
 [`llms-full.txt`](https://ppigazzini.github.io/valgebra-jsonschema/llms-full.txt), their full
 text, for a reader that is not a browser. The developer pages under `docs/dev/` are not
 published: how a version reaches PyPI, `docs/dev/releasing.md`, and the standard for every

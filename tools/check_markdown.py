@@ -160,17 +160,19 @@ DESCRIPTION = re.compile(r"^description: (.+)$", re.MULTILINE)
 
 
 def manifest_problems(config: str, pages: Path) -> list[str]:
-    """Hold the llms.txt manifest of ``config`` to its nav, both ways, and to each description.
+    """Hold the llms.txt manifest of ``config`` to its nav, in its order, and to each description.
 
     `mkdocs.yml` names every user page twice: in `nav`, which builds the site, and in the
     `llmstxt` sections, which build `/llms.txt` for a reader that is not a browser. A page added
     to one alone is missing from the half no person opens; a summary is a copy of the page's
-    `description:`, and a copy that moves apart describes a page the site no longer has.
+    `description:`, and a copy that moves apart describes a page the site no longer has. The
+    manifest lists the pages in the nav's order, so the two lists are one list written twice.
     """
     head, marker, tail = config.partition("  - llmstxt:")
     if not marker:
         return ["mkdocs.yml: no llmstxt plugin"]
-    nav = set(re.findall(r"^ +- [^:\n]+: ([A-Za-z0-9-]+\.md)$", head, re.MULTILINE))
+    order = re.findall(r"^ +- [^:\n]+: ([A-Za-z0-9-]+\.md)$", head, re.MULTILINE)
+    nav = set(order)
     lines = dict(re.findall(r"^ +- ([A-Za-z0-9-]+\.md): (.+)$", tail, re.MULTILINE))
     if not nav or not lines:
         return ["mkdocs.yml: the nav or the llms.txt manifest reads as empty"]
@@ -182,6 +184,8 @@ def manifest_problems(config: str, pages: Path) -> list[str]:
         )
         for page in sorted(named)
     ]
+    if not problems and order != list(lines):
+        problems.append("mkdocs.yml: the llms.txt manifest lists the pages in another order")
     for page, summary in sorted(lines.items()):
         source = pages / page
         described = (

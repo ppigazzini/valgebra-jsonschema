@@ -88,10 +88,21 @@ def test_a_proof_against_a_label_is_in_a_category_the_page_names():
     assert proven <= PROVEN_AGAINST_A_WRONG_LABEL
 
 
-@pytest.mark.parametrize("page", ["README.md", "docs/index.md", "docs/mcp.md", "docs/recipes.md"])
-def test_the_examples_run_as_written(page):
-    text = (ROOT / page).read_text(encoding="utf-8")
-    blocks = re.findall(r"^```python\n(.*?)^```$", text, re.MULTILINE | re.DOTALL)
-    assert blocks, f"{page} holds no example"
-    for block in blocks:
-        exec(compile(block, page, "exec"), {})  # noqa: S102 - the page's own examples
+#: Every `python` block of the README, the changelog and each page under `docs/`, found rather
+#: than listed, so a page added anywhere has its examples run with no edit here.
+EXAMPLES = [
+    (page.relative_to(ROOT).as_posix(), block)
+    for page in [ROOT / "README.md", ROOT / "CHANGELOG.md", *sorted((ROOT / "docs").rglob("*.md"))]
+    for block in re.findall(
+        r"^```python\n(.*?)^```$", page.read_text(encoding="utf-8"), re.MULTILINE | re.DOTALL
+    )
+]
+
+
+def test_the_examples_are_found():
+    assert len({page for page, _ in EXAMPLES}) >= 3, EXAMPLES
+
+
+@pytest.mark.parametrize(("page", "block"), EXAMPLES, ids=[page for page, _ in EXAMPLES])
+def test_the_examples_run_as_written(page, block):
+    exec(compile(block, page, "exec"), {})  # noqa: S102 - the page's own examples

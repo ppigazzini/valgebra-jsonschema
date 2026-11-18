@@ -69,6 +69,13 @@ percentage. The counts are the record, and they compare exactly.
 
 Structure by what the reader is doing, not by how the code is organized.
 
+The nav of `mkdocs.yml` is the one list of the site's pages and their order. A page's file is
+named for its topic, never numbered, and no other page keeps a table of the pages: the sidebar
+and `llms.txt` are the index. The manifest's sections repeat the nav in its order, which
+`tools/check_markdown.py` holds, and `tests/test_docs.py` runs every `python` block it finds
+under `docs/`, so a page added to the nav needs no other edit. A page that moves leaves an
+entry under `redirects` in `mkdocs.yml`, so every address the site has served still answers.
+
 State the limit of what a page covers. A page that silently omits a case reads as though
 the case does not exist.
 

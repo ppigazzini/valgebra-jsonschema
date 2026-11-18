@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-SETUP = ("uv lock --check", "uv sync --locked")
+SETUP = ("uv lock --check", "uv sync --locked", "uv sync --locked --group docs")
 
 
 def _gate() -> list[str]:
@@ -31,5 +31,5 @@ def test_the_gate_is_the_test_job() -> None:
 
 
 def test_every_run_carries_no_sync() -> None:
-    commands = _gate() + _job("test") + _job("floor")
+    commands = _gate() + _job("test") + _job("floor") + _job("docs")
     assert all(command.startswith("uv run --no-sync ") for command in commands), commands

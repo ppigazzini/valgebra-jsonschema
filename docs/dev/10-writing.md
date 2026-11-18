@@ -76,7 +76,9 @@ Link with relative paths, except in `README.md`. The README is also the package'
 PyPI, which resolves no relative link, so it links into this tree by the absolute address of
 `main`, `https://github.com/ppigazzini/valgebra-jsonschema/blob/main/` and the path.
 `tools/check_markdown.py` fails the build on a dead link of either kind and on a relative link
-in the README.
+in the README. The site build checks the published pages again: `mkdocs.yml` raises each of
+the builder's link and nav checks to a warning, which `--strict` fails on. It reports a link
+from a published page into `docs/dev/` only as information, so that rule is the lint's.
 
 ### Markdown that GitHub renders
 

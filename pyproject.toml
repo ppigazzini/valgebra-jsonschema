@@ -32,7 +32,7 @@ dependencies = [
 
 [project.urls]
 Repository = "https://github.com/ppigazzini/valgebra-jsonschema"
-Documentation = "https://github.com/ppigazzini/valgebra-jsonschema/tree/main/docs"
+Documentation = "https://ppigazzini.github.io/valgebra-jsonschema/"
 Changelog = "https://github.com/ppigazzini/valgebra-jsonschema/blob/main/CHANGELOG.md"
 Issues = "https://github.com/ppigazzini/valgebra-jsonschema/issues"
 

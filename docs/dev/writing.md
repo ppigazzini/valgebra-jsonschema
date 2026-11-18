@@ -81,11 +81,14 @@ the case does not exist.
 
 A link's text says what the page holds, as "reading an MCP tool" does for the MCP page, and
 never the page's file name, which `tools/check_markdown.py` refuses as link text. Link with
-relative paths, except in `README.md`. The README is also the package's page on PyPI, which
-resolves no relative link, so it links into this tree by the absolute address of
-`main`, `https://github.com/ppigazzini/valgebra-jsonschema/blob/main/` and the path.
-`tools/check_markdown.py` fails the build on a dead link of either kind and on a relative link
-in the README. The site build checks the published pages again: `mkdocs.yml` raises each of
+relative paths, except in `README.md` and `CHANGELOG.md`. The README is also the package's
+page on PyPI, which resolves no relative link, and the site includes the changelog from
+outside `docs/`, so both link a published page by its address on the site,
+`https://ppigazzini.github.io/valgebra-jsonschema/` and the page's name, and any other file by
+the address of `main`, `https://github.com/ppigazzini/valgebra-jsonschema/blob/main/` and the
+path. A GitHub address breaks when its file moves, and a site address leaves a redirect.
+`tools/check_markdown.py` fails the build on a dead link of either kind, on an anchor no
+heading of the page renders to, and on a relative link in the README. The site build checks the published pages again: `mkdocs.yml` raises each of
 the builder's link and nav checks to a warning, which `--strict` fails on. It reports a link
 from a published page into `docs/dev/` only as information, so that rule is the lint's.
 

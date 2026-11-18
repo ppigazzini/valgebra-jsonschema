@@ -17,7 +17,8 @@ The site rules valgebra's lint holds: a published page under `docs/` linking int
 which `mkdocs.yml` excludes, fails, since the link answers 404 on the site; and the `llmstxt`
 sections of `mkdocs.yml` are held to its `nav` both ways and in its order, each line to its
 page's `description:`. A link's text says what the page holds: text that is a page's file
-name, `[mcp.md](mcp.md)`, fails anywhere in the tree.
+name, `[mcp.md](mcp.md)`, fails anywhere in the tree. A link to the site names a page it
+publishes, and an anchor that page's headings render to.
 
 Exit status is 1 if anything is found, so it works as a pre-commit hook.
 
@@ -47,10 +48,16 @@ RULES: tuple[tuple[str, str], ...] = (
 FENCE = re.compile(r"^\s*(```|~~~)")
 LINK = re.compile(r"\[[^\]]*\]\(([^)#\s]+)(?:#[^)\s]*)?\)")
 ROOT = Path(__file__).resolve().parent.parent
-# The README is also the package's page on PyPI, which resolves no relative link: it links
-# into this tree by the address of `main`, and that address names a path the tree must hold.
+# The README is also the package's page on PyPI, which resolves no relative link: it links a
+# published page by its address on the site, and any other file by the address of `main`. Each
+# address names a page the site publishes, or a path the tree holds.
 README = ROOT / "README.md"
 TREE = re.compile(r"https://github\.com/ppigazzini/valgebra-jsonschema/(?:blob|tree)/main/(.+)")
+SITE = "https://ppigazzini.github.io/valgebra-jsonschema/"
+SITE_LINK = re.compile(re.escape(SITE) + r"([^)#\s]*)(?:#([^)\s]*))?\)")
+#: What the site's build writes, which no page in the tree stands for.
+SITE_GENERATED = frozenset({"llms.txt", "llms-full.txt"})
+HEADING = re.compile(r"^#{1,6} (.+?) *#*$")
 # The untracked working area, and a report in it. A report is named in prose, with no path to
 # match, so its name is held directly.
 INTERNAL = re.compile(r"__DEV|REPORT-[0-9]+")
@@ -129,6 +136,38 @@ def link_text_problems(line: str) -> list[str]:
         f"link text names a file; say what the page holds -> [{name}]"
         for name in FILE_NAMED.findall(line)
     ]
+
+
+def _slug(heading: str) -> str:
+    """Give the anchor MkDocs renders a heading to, as Python-Markdown's `toc` slugifies it."""
+    text = re.sub(r"[^\w\s-]", "", heading).strip().lower()
+    return re.sub(r"[-\s]+", "-", text)
+
+
+def _anchors(page: Path) -> set[str]:
+    """Return the anchors of the headings of ``page``, outside its code blocks."""
+    anchors, in_fence = set(), False
+    for line in page.read_text(encoding="utf-8").splitlines():
+        if FENCE.match(line):
+            in_fence = not in_fence
+        elif not in_fence and (match := HEADING.match(line)):
+            anchors.add(_slug(match[1]))
+    return anchors
+
+
+def site_link_problems(line: str) -> list[str]:
+    """Return one message per link to the site naming no page it publishes, or no anchor of it."""
+    problems: list[str] = []
+    for address, anchor in SITE_LINK.findall(line):
+        name = address.rstrip("/")
+        if name in SITE_GENERATED:
+            continue
+        page = ROOT / "docs" / f"{name or 'index'}.md"
+        if not page.is_file() or not _on_the_site(page):
+            problems.append(f"dead link -> {SITE}{address}")
+        elif anchor and anchor not in _anchors(page):
+            problems.append(f"dead anchor -> {SITE}{address}#{anchor}")
+    return problems
 
 
 def link_problems(path: Path, line: str) -> list[str]:
@@ -219,6 +258,7 @@ def check(path: Path) -> list[str]:
             continue
 
         problems.extend(f"{path}:{n}: {why}" for why in link_problems(path, raw))
+        problems.extend(f"{path}:{n}: {why}" for why in site_link_problems(raw))
 
         if in_fence:
             continue

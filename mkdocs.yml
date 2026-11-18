@@ -95,8 +95,8 @@ plugins:
   # renders.
   - llmstxt:
       markdown_description: >-
-        JSON Schema read into valgebra's sets. compile_schema reads drafts 2020-12, 07, 06 and
-        04, and 2019-09 through upgrade, into sets over the values json.loads returns, and
+        JSON Schema read into valgebra's sets. compile_schema reads draft 2020-12, and drafts
+        2019-09, 07, 06 and 04 through upgrade, into sets over the values json.loads returns, and
         refuses a keyword it does not read by name; valgebra then decides whether a value
         belongs, as the specification states it, and whether one schema's values all lie in
         another's. read_tool reads an MCP tool listing into its two contracts.

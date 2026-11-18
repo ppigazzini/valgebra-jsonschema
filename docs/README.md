@@ -7,10 +7,11 @@ description: What valgebra-jsonschema is, how it reads JSON Schema into valgebra
 **JSON Schema read into valgebra's sets.**
 
 A schema answers two questions: whether a value belongs, as the specification states it, and
-whether everything one schema admits another admits too. `compile_schema` reads drafts 2020-12,
-07, 06 and 04, and 2019-09 through `upgrade`, into [valgebra](https://ppigazzini.github.io/valgebra/)'s sets over the
-values `json.loads` returns, and raises `Unsupported` naming a keyword it does not read; valgebra
-then decides membership and inclusion.
+whether everything one schema admits another admits too. `compile_schema` reads draft 2020-12,
+and drafts 2019-09, 07, 06 and 04 through `upgrade`, into
+[valgebra](https://ppigazzini.github.io/valgebra/)'s sets over the values `json.loads` returns,
+and raises `Unsupported` naming a keyword it does not read; valgebra then decides membership and
+inclusion.
 
 ```bash
 pip install valgebra-jsonschema          # Python 3.11 or later

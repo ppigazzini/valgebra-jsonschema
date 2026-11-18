@@ -62,7 +62,7 @@ assert not call('{"city": "Turin", "unit": "celsius", "days": 3.0}')["isError"]
 
 `"days": 3.0` meets `"type": "integer"`: JSON Schema reads a number by its value, and `3.0` is
 the integer 3, where valgebra's own `int` refuses it
-([valgebra's recipe for a tool call](https://ppigazzini.github.io/valgebra/19-recipes/#a-models-tool-call)
+([valgebra's recipe for a tool call](https://ppigazzini.github.io/valgebra/get-started/recipes/#a-models-tool-call)
 writes the schema a second time, as a `TypedDict`). An argument the tool does not take is
 refused by `additionalProperties: false`; a schema without it admits any other key with any
 value.
@@ -139,7 +139,7 @@ relation does not refute the request. The exit status keeps the two apart, so a 
 0 alone passes no change it could not decide; a test asserting a compatibility compares with
 `"subset"`, never with `!= "not_subset"`. A proof is about the schemas, not about data stored
 under the old one, which
-[valgebra's recipe for stored data](https://ppigazzini.github.io/valgebra/19-recipes/#stored-data-against-a-new-schema)
+[valgebra's recipe for stored data](https://ppigazzini.github.io/valgebra/get-started/recipes/#stored-data-against-a-new-schema)
 reads row by row.
 
 ## A schema split across documents

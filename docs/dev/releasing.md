@@ -81,7 +81,7 @@ and repository, `release.yml` and the environment.
    [the gate](../../AGENTS.md#tooling) green, before the bump. The `Upstream` workflow runs
    the suite and the studies on valgebra's `main` each Monday, so a change that moves a count
    shows before valgebra's cut. This package is the second of
-   [the release train](https://github.com/ppigazzini/valgebra-planning/blob/main/docs/dev/05-releasing.md#the-release-train).
+   [the release train](https://github.com/ppigazzini/valgebra-planning/blob/main/docs/dev/releasing.md#the-release-train).
 2. **Bump, in one commit.** `version` in `pyproject.toml`, `uv lock`, and the changelog: the
    `Unreleased` entries roll into a section for the version, dated the day of the commit, with its
    compare and tag links. It lands on `main`, and the push runs `ci.yml` on the tree about to

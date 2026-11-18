@@ -88,7 +88,7 @@ def test_a_proof_against_a_label_is_in_a_category_the_page_names():
     assert proven <= PROVEN_AGAINST_A_WRONG_LABEL
 
 
-@pytest.mark.parametrize("page", ["README.md", "docs/05-mcp.md"])
+@pytest.mark.parametrize("page", ["README.md", "docs/05-mcp.md", "docs/19-recipes.md"])
 def test_the_examples_run_as_written(page):
     text = (ROOT / page).read_text(encoding="utf-8")
     blocks = re.findall(r"^```python\n(.*?)^```$", text, re.MULTILINE | re.DOTALL)

@@ -36,6 +36,7 @@ nav:
   - Home: README.md
   - Getting started:
       - Reading an MCP tool: 05-mcp.md
+      - Recipes: 19-recipes.md
   - Release notes: 12-changelog.md
   - Explanation:
       - The compiler: 02-compiler.md
@@ -104,6 +105,7 @@ plugins:
         Getting started:
           - README.md: What valgebra-jsonschema is, how it reads JSON Schema into valgebra's sets, and the index to this guide.
           - 05-mcp.md: Read an MCP tool listing into its two contracts, its dialects, and what its schemas may hold.
+          - 19-recipes.md: Tasks done end to end with a JSON Schema in hand -- a model's tool call, a schema change checked before release, a schema split across documents, files checked against a schema, and what a schema asserts.
         Release notes:
           - 12-changelog.md: Every released version, what it changed, and what counts as a break.
         Explanation:

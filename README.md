@@ -62,6 +62,11 @@ that spells its values out, with `const`, `enum`, or an `anyOf` or `oneOf` of th
 by each value: `constants(schema)` lists them, and the schema lies inside another exactly
 where `is_valid` admits each, a keyword valgebra reads as a predicate included.
 
+[`docs/19-recipes.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/19-recipes.md)
+does five tasks end to end: a model's tool call checked against the schema it was shown, a
+schema change checked before release, a schema split across documents, files checked against a
+schema, and what a schema asserts, keyword by keyword.
+
 ## What it reads
 
 Drafts 2020-12, 2019-09, 07, 06 and 04, all but the first through `upgrade`, and a document

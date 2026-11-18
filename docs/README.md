@@ -19,6 +19,7 @@ pip install valgebra-jsonschema          # Python 3.11 or later
 | page | what it holds |
 |---|---|
 | [05-mcp.md](05-mcp.md) | reading an MCP tool, its dialects, and what its schema may hold |
+| [19-recipes.md](19-recipes.md) | tasks done end to end: a model's tool call, a schema change before release, a schema across documents, files against a schema, what a schema asserts |
 | [12-changelog.md](12-changelog.md) | every released version and what it changed |
 | [02-compiler.md](02-compiler.md) | how each JSON Schema keyword becomes a set, what is opaque, what is refused |
 | [03-conformance.md](03-conformance.md) | the contract, its oracles, the keyword inventory and the ledger of differences |

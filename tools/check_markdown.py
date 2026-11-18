@@ -15,8 +15,9 @@ area, and this file, which names it to refuse it, are exempt.
 
 The site rules valgebra's lint holds: a published page under `docs/` linking into `docs/dev/`,
 which `mkdocs.yml` excludes, fails, since the link answers 404 on the site; and the `llmstxt`
-sections of `mkdocs.yml` are held to its `nav` both ways, each line to its page's
-`description:`.
+sections of `mkdocs.yml` are held to its `nav` both ways and in its order, each line to its
+page's `description:`. A link's text says what the page holds: text that is a page's file
+name, `[mcp.md](mcp.md)`, fails anywhere in the tree.
 
 Exit status is 1 if anything is found, so it works as a pre-commit hook.
 
@@ -118,6 +119,18 @@ def internal_references(path: Path) -> list[str]:
     ]
 
 
+#: A link whose text is a file name or a path to a Markdown page, as `[mcp.md](mcp.md)`.
+FILE_NAMED = re.compile(r"\[`?([\w./-]+\.md)`?\]\(")
+
+
+def link_text_problems(line: str) -> list[str]:
+    """Return one message per link whose text is a page's file name rather than its topic."""
+    return [
+        f"link text names a file; say what the page holds -> [{name}]"
+        for name in FILE_NAMED.findall(line)
+    ]
+
+
 def link_problems(path: Path, line: str) -> list[str]:
     """Return one message per dead link on ``line``, and per relative one in the README."""
     problems: list[str] = []
@@ -132,8 +145,8 @@ def link_problems(path: Path, line: str) -> list[str]:
             problems.append(f"dead link -> {target}")
         elif _on_the_site(path) and _unpublished(path.parent / target):
             problems.append(
-                f"link leaves the site, where docs/dev/ is not published; name the page by its"
-                f" path -> {target}"
+                f"link leaves the site, where docs/dev/ is not published; link the page by its"
+                f" GitHub address -> {target}"
             )
     return problems
 
@@ -209,6 +222,7 @@ def check(path: Path) -> list[str]:
 
         if in_fence:
             continue
+        problems.extend(f"{path}:{n}: {why}" for why in link_text_problems(raw))
         line = strip_code_spans(raw)
         if line.count("$") % 2:
             problems.append(f"{path}:{n}: odd number of $ -- the whole line stops rendering")

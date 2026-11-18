@@ -10,7 +10,7 @@ deciding one; what belongs here is reading another language's schemas.
 
 - **Never add trailers to commit messages.** No `Co-Authored-By:`, no `Generated with` line,
   no tool attribution of any kind.
-- Message style: [`docs/dev/writing.md`](docs/dev/writing.md#commit-messages).
+- Message style: [the writing page's commit messages](docs/dev/writing.md#commit-messages).
 
 ## Tooling
 
@@ -41,19 +41,21 @@ a link and on the nav to a warning, so a dead link, a dead anchor or a page off 
 
 ## Conventions
 
-- `docs/dev/writing.md` is the standard for pages, comments and commit messages.
-- `docs/dev/theory.md` names the code resting on each published result, and an item
-  implementing one cites it by key and place, as `docs/dev/writing.md` says.
+- [The writing page](docs/dev/writing.md) is the standard for pages, comments and commit
+  messages.
+- [The theory page](docs/dev/theory.md) names the code resting on each published result, and
+  an item implementing one cites it by key and place, as the writing page says.
 - `docs/` is the user guide `mkdocs.yml` builds and the workflow `Docs` publishes, with
   `llms.txt`, at <https://ppigazzini.github.io/valgebra-jsonschema/>; a page added is a line of
   its `nav` and of its `llmstxt` sections, the second the page's `description:`. `docs/dev/`
   holds the developer pages, which are not published.
-- `docs/dev/releasing.md` is the order a version reaches PyPI in, and only a dispatch of
-  `.github/workflows/release.yml` uploads one.
+- [The releasing page](docs/dev/releasing.md) is the order a version reaches PyPI in, and only
+  a dispatch of `.github/workflows/release.yml` uploads one.
 - A proof is valgebra's or a concrete value's; nothing here turns "not proven" into "false" or
   "true". A relation valgebra cannot decide is `undecided`.
-- A keyword the compiler does not translate raises `Unsupported`. `docs/conformance.md` holds
-  the keyword inventory and the ledger of differences, and a difference outside it is a defect.
+- A keyword the compiler does not translate raises `Unsupported`.
+  [The conformance page](docs/conformance.md) holds the keyword inventory and the ledger of
+  differences, and a difference outside it is a defect.
 - Every leaf holds every spelling of one JSON value: `1` and `1.0` are one number, so an
   `integer` is an `int` or a `float` multiple of one, and a constant is a union of its spellings.
   valgebra's algebra does not enforce it, and its theory page states it as this package's

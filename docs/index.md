@@ -37,6 +37,7 @@ The site serves [`llms.txt`](https://ppigazzini.github.io/valgebra-jsonschema/ll
 manifest of its pages, and
 [`llms-full.txt`](https://ppigazzini.github.io/valgebra-jsonschema/llms-full.txt), their full
 text, for a reader that is not a browser. The developer pages under `docs/dev/` are not
-published: how a version reaches PyPI, `docs/dev/releasing.md`, and the standard for every
-text, `docs/dev/writing.md`. The study files each tool's `--check` reruns are under
+published:
+[how a version reaches PyPI](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/dev/releasing.md), and
+[the standard for every text](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/dev/writing.md). The study files each tool's `--check` reruns are under
 `docs/studies/`.

@@ -5,8 +5,8 @@ description: How each JSON Schema keyword becomes a set, what is opaque, and wha
 # The compiler
 
 `valgebra_jsonschema/schema.py` compiles JSON Schema draft 2020-12, and drafts 2019-09, 07, 06
-and 04 through `upgrade`, into valgebra sets. [`conformance.md`](conformance.md) holds the keyword inventory
-and the ledger of differences. The universe is
+and 04 through `upgrade`, into valgebra sets. [The conformance page](conformance.md) holds the keyword
+inventory and the ledger of differences. The universe is
 what `json.loads` returns for a JSON text — `None`, `bool`, `int`, a `float` that is not NaN,
 `str`, `list`, and `dict` with `str` keys, nested. JSON has no NaN (RFC 8259 §6), and
 `json.loads` builds one only from the token `NaN`, so no schema admits it; an infinity is
@@ -76,8 +76,8 @@ reads it as an assertion over strings, and passes every other kind as any assert
 | `date-time`, `time`, `email`, `hostname`, `ipv6` | a predicate, exact on membership and opaque to a relation |
 
 Any other format is refused, since the assertion left out would admit what the schema refuses.
-[`results.md`](results.md#format-on-request) has the official suite's counts, and
-[`conformance.md`](conformance.md#differences-ledger) the one difference.
+The results page has [the official suite's counts](results.md#format-on-request), and the
+conformance ledger [the one difference](conformance.md#differences-ledger).
 
 ## Older drafts
 

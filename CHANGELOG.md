@@ -64,7 +64,7 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 - The package requires valgebra 0.0.28 and below 0.0.29, since a `0.0.x` minor of valgebra
   is a breaking release here: each is taken by a release of this package, with its suite run on
   it.
-- Measured on this release, each figure in [`docs/results.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/results.md): the
+- Measured on this release, each figure in [the results page](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/results.md): the
   official JSON-Schema-Test-Suite passes the 1393 draft 2020-12 cases it runs and the 1256 of
   2019-09, each skipping the five that name a custom meta-schema, and every case of drafts 07,
   06 and 04, 929, 841 and 618. 9486 of JSONSchemaBench's 9558 schemas compile, and membership

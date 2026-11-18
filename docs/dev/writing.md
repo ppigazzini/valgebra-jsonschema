@@ -79,8 +79,10 @@ entry under `redirects` in `mkdocs.yml`, so every address the site has served st
 State the limit of what a page covers. A page that silently omits a case reads as though
 the case does not exist.
 
-Link with relative paths, except in `README.md`. The README is also the package's page on
-PyPI, which resolves no relative link, so it links into this tree by the absolute address of
+A link's text says what the page holds, as "reading an MCP tool" does for the MCP page, and
+never the page's file name, which `tools/check_markdown.py` refuses as link text. Link with
+relative paths, except in `README.md`. The README is also the package's page on PyPI, which
+resolves no relative link, so it links into this tree by the absolute address of
 `main`, `https://github.com/ppigazzini/valgebra-jsonschema/blob/main/` and the path.
 `tools/check_markdown.py` fails the build on a dead link of either kind and on a relative link
 in the README. The site build checks the published pages again: `mkdocs.yml` raises each of
@@ -143,7 +145,7 @@ separated by commas. A specification is cited by its section where it is read, a
 
 **Every item implementing a published result cites it**, in its docstring, a module or a
 function alike, at the clause the result supports and before its punctuation, and
-[theory.md](theory.md) names the item under a claim: an `IMPLEMENTED-BY:` line for the
+[the theory page](theory.md) names the item under a claim: an `IMPLEMENTED-BY:` line for the
 items, a `HELD-BY:` line for the tests that fail when the claim is false. The page's table of
 works is the one place a cited work's identifier is written.
 

@@ -4,12 +4,12 @@ The published results the compiler rests on, and which code each one holds up. A
 is a claim that a named item of `valgebra_jsonschema` exists because of a numbered result, not
 a reading list. What a keyword means is the specification's, cited by its section where the
 code reads it and held by the official test suite, as
-[conformance.md](../conformance.md) records; what a set denotes and how valgebra decides
+[the conformance page](../conformance.md) records; what a set denotes and how valgebra decides
 it is valgebra's theory page. This page holds what lies between: the formal semantics the
 translation reads the specification through.
 
 A citation is a key and a place, `(Attouche et al. 2024, §4.2)`, as
-[writing.md](writing.md#citing-a-paper) says, and the place is the number the copy in the
+[the rule for citing a paper](writing.md#citing-a-paper) says, and the place is the number the copy in the
 table below prints.
 
 Each claim ends in a tag. **LOAD-BEARING**: code here implements the result. **DEVIATION**: the

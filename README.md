@@ -62,8 +62,7 @@ that spells its values out, with `const`, `enum`, or an `anyOf` or `oneOf` of th
 by each value: `constants(schema)` lists them, and the schema lies inside another exactly
 where `is_valid` admits each, a keyword valgebra reads as a predicate included.
 
-[`docs/recipes.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/recipes.md)
-does five tasks end to end: a model's tool call checked against the schema it was shown, a
+[The recipes](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/recipes.md) do five tasks end to end: a model's tool call checked against the schema it was shown, a
 schema change checked before release, a schema split across documents, files checked against a
 schema, and what a schema asserts, keyword by keyword.
 
@@ -71,16 +70,15 @@ schema, and what a schema asserts, keyword by keyword.
 
 Drafts 2020-12, 2019-09, 07, 06 and 04, all but the first through `upgrade`, and a document
 naming any other dialect fails saying so, as the Model Context Protocol asks
-([`docs/mcp.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/mcp.md)).
+([reading an MCP tool](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/mcp.md)).
 Patterns follow ECMA-262, as the specification requires, and numbers compare by value: `1` and
 `1.0` are one number, and `true` is none. `format` is an annotation, as 2020-12 makes it, and
 `assert_format=True` reads nine of them as assertions. A `$ref` resolves against the base URI it
 sits under, within the document or to one passed in `documents={uri: document}`; nothing is
 fetched.
-[`docs/compiler.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/compiler.md)
-says how each keyword becomes a set, and
-[`docs/conformance.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/conformance.md)
-holds the inventory and the ledger of differences.
+[The compiler page](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/compiler.md) says how each keyword becomes a set, and
+[the conformance page](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/conformance.md) holds the inventory and the ledger of
+differences.
 
 ## Measured
 
@@ -99,8 +97,7 @@ uv run python tools/containment.py --check docs/studies/containment.json
   `jsonschema` package's on 13 of 404720 values, each a reading the ledger records.
 - **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 7048 proven,
   6 against a label, each a wrong label; each of the 342 refutations against a label is a wrong label, which
-  [`docs/results.md`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/results.md)
-  names.
+  [the results page](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/docs/results.md) names.
 
 ## Install
 

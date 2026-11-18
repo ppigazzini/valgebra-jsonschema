@@ -6,8 +6,8 @@ description: Tasks done end to end with a JSON Schema in hand -- a model's tool 
 
 Each recipe is one task done end to end with a JSON Schema already in hand, and each says what
 it cannot do. Each block runs as written. What a keyword compiles to is
-[compiler.md](compiler.md)'s, and where a reading differs from another validator's is
-[conformance.md](conformance.md#differences-ledger)'s.
+[the compiler page](compiler.md)'s, and where a reading differs from another validator's is
+[the ledger of differences](conformance.md#differences-ledger)'s.
 
 ## A model's tool call, against the schema it was shown
 
@@ -70,7 +70,7 @@ value.
 **It checks, and does not convert.** `"days": "3"` is a string, and the model is told so rather
 than the value read as a number. `format` asserts nothing unless asked:
 `read_tool(spec, assert_format=True)` reads nine formats as assertions and refuses a schema
-naming any other ([mcp.md](mcp.md#what-a-tools-schema-may-hold)).
+naming any other ([what a tool's schema may hold](mcp.md#what-a-tools-schema-may-hold)).
 
 ## A schema change, checked before release
 
@@ -190,9 +190,9 @@ in the compiled document's dialect.
 **A document on the network is the caller's to fetch.** A schema naming one by an `https` URI
 compiles only once the caller has fetched the document and passed it, so which hosts to trust is
 the caller's decision; a tool's schema reads the protocol's rule against dereferencing a network
-reference the same way ([mcp.md](mcp.md#what-a-tools-schema-may-hold)). A URI two schema
+reference the same way ([what a tool's schema may hold](mcp.md#what-a-tools-schema-may-hold)). A URI two schema
 objects of one document claim is refused where a reference names it
-([conformance.md](conformance.md#the-inventory)).
+([the inventory](conformance.md#the-inventory)).
 
 ## Files checked against a schema
 

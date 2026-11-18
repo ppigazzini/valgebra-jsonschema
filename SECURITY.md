@@ -16,7 +16,7 @@ read from does, and that a `subset` answer is a proof. Please report, privately:
 - **A value admitted that the schema refuses.** `is_valid` returns `True`, or `validate` does not
   raise, on a schema compiled without `Unsupported`, for a value the specification says the schema
   refuses, outside the differences
-  [`docs/conformance.md`](docs/conformance.md#differences-ledger) records.
+  [the conformance ledger](docs/conformance.md#differences-ledger) records.
 - **A wrong inclusion proof.** `relation_to` answers `"subset"` where a value of the first schema is
   outside the second.
 - **A read beyond the document.** Compiling reads nothing but the document: a `$ref` outside it is

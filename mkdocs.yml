@@ -33,17 +33,17 @@ theme:
         name: Switch to light mode
 
 nav:
-  - Home: README.md
+  - Home: index.md
   - Getting started:
-      - Reading an MCP tool: 05-mcp.md
-      - Recipes: 19-recipes.md
-  - Release notes: 12-changelog.md
+      - Reading an MCP tool: mcp.md
+      - Recipes: recipes.md
+  - Release notes: changelog.md
   - Explanation:
-      - The compiler: 02-compiler.md
-      - Conformance: 03-conformance.md
-      - Results: 04-results.md
+      - The compiler: compiler.md
+      - Conformance: conformance.md
+      - Results: results.md
   - Reference:
-      - API reference: 16-api.md
+      - API reference: api.md
 
 # The developer set lives beside the user docs and is not published: how a release reaches
 # PyPI and the standard for every text, which describe the tree for a contributor and an agent
@@ -84,6 +84,17 @@ markdown_extensions:
 
 plugins:
   - search
+  # A page the site has served at another address answers there still: a page that sends the
+  # reader on to where it lives now, with the anchor the link named where the browser runs
+  # scripts. An entry stays as long as the site does, since links to the old address do.
+  - redirects:
+      redirect_maps:
+        02-compiler.md: compiler.md
+        03-conformance.md: conformance.md
+        04-results.md: results.md
+        05-mcp.md: mcp.md
+        12-changelog.md: changelog.md
+        16-api.md: api.md
   - mkdocstrings:
       handlers:
         python:
@@ -117,14 +128,14 @@ plugins:
       full_output: llms-full.txt
       sections:
         Getting started:
-          - README.md: What valgebra-jsonschema is, how it reads JSON Schema into valgebra's sets, and the index to this guide.
-          - 05-mcp.md: Read an MCP tool listing into its two contracts, its dialects, and what its schemas may hold.
-          - 19-recipes.md: Tasks done end to end with a JSON Schema in hand -- a model's tool call, a schema change checked before release, a schema split across documents, files checked against a schema, and what a schema asserts.
+          - index.md: What valgebra-jsonschema is, how it reads JSON Schema into valgebra's sets, and the index to this guide.
+          - mcp.md: Read an MCP tool listing into its two contracts, its dialects, and what its schemas may hold.
+          - recipes.md: Tasks done end to end with a JSON Schema in hand -- a model's tool call, a schema change checked before release, a schema split across documents, files checked against a schema, and what a schema asserts.
         Release notes:
-          - 12-changelog.md: Every released version, what it changed, and what counts as a break.
+          - changelog.md: Every released version, what it changed, and what counts as a break.
         Explanation:
-          - 02-compiler.md: How each JSON Schema keyword becomes a set, what is opaque, and what is refused.
-          - 03-conformance.md: What the compiler promises against JSON Schema, how it is checked, and where a difference may live.
-          - 04-results.md: Every measured count, with the command that prints it.
+          - compiler.md: How each JSON Schema keyword becomes a set, what is opaque, and what is refused.
+          - conformance.md: What the compiler promises against JSON Schema, how it is checked, and where a difference may live.
+          - results.md: Every measured count, with the command that prints it.
         Reference:
-          - 16-api.md: The public names, read from the package's docstrings.
+          - api.md: The public names, read from the package's docstrings.

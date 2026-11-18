@@ -136,7 +136,7 @@ separated by commas. A specification is cited by its section where it is read, a
 
 **Every item implementing a published result cites it**, in its docstring, a module or a
 function alike, at the clause the result supports and before its punctuation, and
-[09-theory.md](09-theory.md) names the item under a claim: an `IMPLEMENTED-BY:` line for the
+[theory.md](theory.md) names the item under a claim: an `IMPLEMENTED-BY:` line for the
 items, a `HELD-BY:` line for the tests that fail when the claim is false. The page's table of
 works is the one place a cited work's identifier is written.
 

@@ -117,7 +117,7 @@ def test_the_inventory_names_no_keyword_outside_the_vocabularies():
 
 def _inventory():
     """Read the page's table: each class, and the keywords its row names."""
-    page = (Path(__file__).parent.parent / "docs" / "03-conformance.md").read_text(encoding="utf-8")
+    page = (Path(__file__).parent.parent / "docs" / "conformance.md").read_text(encoding="utf-8")
     table = page[page.index("| class | keywords |") :]
     rows = {}
     for line in table.splitlines()[2:]:

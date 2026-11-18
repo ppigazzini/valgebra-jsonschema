@@ -10,11 +10,11 @@ import check_markdown
 
 
 def test_a_published_page_does_not_link_into_the_developer_set() -> None:
-    page = check_markdown.ROOT / "docs" / "05-mcp.md"
-    assert check_markdown.link_problems(page, "see [the release](dev/06-releasing.md)")
-    assert not check_markdown.link_problems(page, "see [the compiler](02-compiler.md)")
+    page = check_markdown.ROOT / "docs" / "mcp.md"
+    assert check_markdown.link_problems(page, "see [the release](dev/releasing.md)")
+    assert not check_markdown.link_problems(page, "see [the compiler](compiler.md)")
     developer = check_markdown.ROOT / "docs" / "dev" / "README.md"
-    assert not check_markdown.link_problems(developer, "see [the release](06-releasing.md)")
+    assert not check_markdown.link_problems(developer, "see [the release](releasing.md)")
 
 
 def test_the_llms_manifest_is_held_to_the_nav_and_the_descriptions(tmp_path: Path) -> None:

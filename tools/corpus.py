@@ -12,7 +12,7 @@ Each schema is compiled and counted as compiled, refused (by reason) or crashed.
 compiled schema, values drawn from it and a list of generic values are
 checked against it and against the `jsonschema` package's validator for its draft; a
 value the two read differently is a disagreement. Two readings differ by design and are
-in the ledger of ``docs/03-conformance.md``: patterns follow ECMA-262 where the package
+in the ledger of ``docs/conformance.md``: patterns follow ECMA-262 where the package
 uses Python's ``re``, and draft-04's ``integer`` is read as draft 2020-12's.
 """
 

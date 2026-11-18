@@ -50,7 +50,7 @@ The protocol states a schema's dialect, and each reads here as:
 | absent | draft 2020-12, as the protocol states |
 | draft 2020-12 | draft 2020-12 |
 | draft 2019-09 | rewritten by `upgrade`: an array `items`, and `$recursiveRef` |
-| draft-07, draft-06, draft-04 | rewritten by `upgrade`, as [`02-compiler.md`](02-compiler.md#older-drafts) says |
+| draft-07, draft-06, draft-04 | rewritten by `upgrade`, as [`compiler.md`](compiler.md#older-drafts) says |
 | anything else | `UnsupportedDialect`, whose message says the dialect is not supported |
 
 `UnsupportedDialect` is an `Unsupported`, so a caller refusing a schema it cannot read catches
@@ -59,11 +59,11 @@ dialect with no `$schema` is read as 2020-12: name its dialect with `{"$schema":
 
 ## What a tool's schema may hold
 
-- **Any 2020-12 keyword.** [`03-conformance.md`](03-conformance.md#the-inventory) lists what each
+- **Any 2020-12 keyword.** [`conformance.md`](conformance.md#the-inventory) lists what each
   does here. A keyword that is refused raises `Unsupported` naming it, and is never skipped.
 - **`format` is an annotation**, as 2020-12 makes it, so it admits every value.
   `read_tool(spec, assert_format=True)` reads nine formats as assertions, and refuses any other
-  ([`02-compiler.md`](02-compiler.md#format-on-request)).
+  ([`compiler.md`](compiler.md#format-on-request)).
 - **No reference is fetched.** A `$ref` outside the document is refused, which is how the protocol's
   rule against dereferencing a network reference reads here.
 - **Bounds hold what a document may cost.** A document past `MAX_NESTING` is refused before it is

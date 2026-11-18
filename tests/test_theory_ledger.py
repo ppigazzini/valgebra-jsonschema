@@ -1,9 +1,9 @@
 """The theory page, its table of works and the package, held to each other.
 
-`docs/dev/09-theory.md` says which published result each item of the package rests on, so a
+`docs/dev/theory.md` says which published result each item of the package rests on, so a
 reader can check a step against a page of a paper rather than a recollection. That holds only
 while every citation names its place, every claim names the items resting on it, and every
-item citing a work is named under a claim citing that work. `docs/dev/10-writing.md` states the
+item citing a work is named under a claim citing that work. `docs/dev/writing.md` states the
 rule; this holds it, over the comments and docstrings of `valgebra_jsonschema` and the page.
 
 What no test can see is an item that implements a result and cites nothing: a reader decides
@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGE = ROOT / "valgebra_jsonschema"
-THEORY = ROOT / "docs" / "dev" / "09-theory.md"
+THEORY = ROOT / "docs" / "dev" / "theory.md"
 
 #: A surname, as `Attouche` or `D'Antoni`.
 NAME = r"[A-Z][\w'\u2019-]*[a-z]"

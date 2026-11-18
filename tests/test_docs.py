@@ -29,11 +29,11 @@ def test_the_pages_quote_the_draft_2020_12_totals():
     t = _suite("json-schema-test-suite.json")
     run = t["passed"] + t["failed"]
     assert f"{t['passed']} of the {run} cases it runs" in _page("README.md")
-    assert f"{t['passed']} of the {run} cases run pass" in _page("docs/04-results.md")
+    assert f"{t['passed']} of the {run} cases run pass" in _page("docs/results.md")
     assert (
         f"{run} cases run, {t['passed']} passed, {t['failed']} failed; {t['skipped']} skipped"
-    ) in _page("docs/02-compiler.md")
-    assert f"{t['opaque']} of the run cases" in _page("docs/02-compiler.md")
+    ) in _page("docs/compiler.md")
+    assert f"{t['opaque']} of the run cases" in _page("docs/compiler.md")
 
 
 @pytest.mark.parametrize("draft", ["2019-09", "7", "6", "4"])
@@ -42,17 +42,17 @@ def test_the_pages_quote_the_older_drafts_totals(draft):
     run = t["passed"] + t["failed"]
     name = "draft 2019-09" if draft == "2019-09" else f"draft-0{draft}"
     assert f"{name}, {t['passed']} of {run}" in _page("README.md")
-    assert f"{t['passed']} of the {run} cases run pass" in _page("docs/04-results.md")
+    assert f"{t['passed']} of the {run} cases run pass" in _page("docs/results.md")
     assert (
         f"{run} cases run, {t['passed']} passed, {t['failed']} failed; {t['skipped']} skipped"
-    ) in _page("docs/02-compiler.md")
+    ) in _page("docs/compiler.md")
 
 
 def test_the_pages_quote_the_corpus_totals():
     rows = _study("jsonschemabench.json")["subsets"]
     total = {k: sum(r[k] for r in rows) for k in ("schemas", "compiled", "values", "disagreed")}
     assert sum(r["crashed"] + r["timed_out"] for r in rows) == 0
-    readme, page = _page("README.md"), _page("docs/04-results.md")
+    readme, page = _page("README.md"), _page("docs/results.md")
     assert f"{total['schemas']} schemas" in readme
     assert f"{total['compiled']} compile, none crashes" in readme
     assert f"{total['disagreed']} of {total['values']} values" in readme
@@ -70,7 +70,7 @@ def test_the_pages_quote_the_containment_totals():
     rows = _study("containment.json")["rows"]
     keys = ("questions", "refused", "proven", "refuted", "undecided")
     keys += ("proven_against", "refuted_against")
-    page, readme = _page("docs/04-results.md"), _page("README.md")
+    page, readme = _page("docs/results.md"), _page("README.md")
     for draft in ("2020-12", "7", "6", "4"):
         total = [sum(r[k] for r in rows if r["draft"] == draft) for k in keys]
         assert f"| {draft} | " + " | ".join(map(str, total)) + " |" in page
@@ -88,9 +88,7 @@ def test_a_proof_against_a_label_is_in_a_category_the_page_names():
     assert proven <= PROVEN_AGAINST_A_WRONG_LABEL
 
 
-@pytest.mark.parametrize(
-    "page", ["README.md", "docs/README.md", "docs/05-mcp.md", "docs/19-recipes.md"]
-)
+@pytest.mark.parametrize("page", ["README.md", "docs/index.md", "docs/mcp.md", "docs/recipes.md"])
 def test_the_examples_run_as_written(page):
     text = (ROOT / page).read_text(encoding="utf-8")
     blocks = re.findall(r"^```python\n(.*?)^```$", text, re.MULTILINE | re.DOTALL)

@@ -24,7 +24,7 @@ draft-07, 929 of the 929 cases run pass, 0 skipped; draft-06, 841 of the 841 cas
 draft-04, 618 of the 618 cases run pass, 0 skipped. A case's remote documents
 are the suite's `remotes/`, vendored, and the drafts' meta-schemas from the
 `jsonschema-specifications` package, passed as `documents`. See
-[`02-compiler.md`](02-compiler.md#measured).
+[`compiler.md`](compiler.md#measured).
 
 ## `format`, on request
 
@@ -134,4 +134,4 @@ the four the suite study runs.
   draft. In draft-04, 302 more pairs put `const`, which draft-06 added, in a draft-04
   schema: the draft reads it as an annotation, so the first schema admits every value.
 - A question is refused where the compiler refuses a schema of its pair, as the inventory
-  of [`03-conformance.md`](03-conformance.md) lists; an undecided one is kept and counted.
+  of [`conformance.md`](conformance.md) lists; an undecided one is kept and counted.

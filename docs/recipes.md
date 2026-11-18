@@ -6,8 +6,8 @@ description: Tasks done end to end with a JSON Schema in hand -- a model's tool 
 
 Each recipe is one task done end to end with a JSON Schema already in hand, and each says what
 it cannot do. Each block runs as written. What a keyword compiles to is
-[02-compiler.md](02-compiler.md)'s, and where a reading differs from another validator's is
-[03-conformance.md](03-conformance.md#differences-ledger)'s.
+[compiler.md](compiler.md)'s, and where a reading differs from another validator's is
+[conformance.md](conformance.md#differences-ledger)'s.
 
 ## A model's tool call, against the schema it was shown
 
@@ -70,7 +70,7 @@ value.
 **It checks, and does not convert.** `"days": "3"` is a string, and the model is told so rather
 than the value read as a number. `format` asserts nothing unless asked:
 `read_tool(spec, assert_format=True)` reads nine formats as assertions and refuses a schema
-naming any other ([05-mcp.md](05-mcp.md#what-a-tools-schema-may-hold)).
+naming any other ([mcp.md](mcp.md#what-a-tools-schema-may-hold)).
 
 ## A schema change, checked before release
 
@@ -133,7 +133,7 @@ assert check({"type": "array"}, {"type": "array", "uniqueItems": True}, "request
 value already, so every new response is one an old client reads.
 
 **Undecided is not compatible.** `uniqueItems` is an
-[opaque keyword](02-compiler.md#opaque-keywords), exact on membership, and a relation that
+[opaque keyword](compiler.md#opaque-keywords), exact on membership, and a relation that
 looks inside one answers `undecided`: `[1, 1]` is an array outside the second schema, and the
 relation does not refute the request. The exit status keeps the two apart, so a gate passing on
 0 alone passes no change it could not decide; a test asserting a compatibility compares with
@@ -190,9 +190,9 @@ in the compiled document's dialect.
 **A document on the network is the caller's to fetch.** A schema naming one by an `https` URI
 compiles only once the caller has fetched the document and passed it, so which hosts to trust is
 the caller's decision; a tool's schema reads the protocol's rule against dereferencing a network
-reference the same way ([05-mcp.md](05-mcp.md#what-a-tools-schema-may-hold)). A URI two schema
+reference the same way ([mcp.md](mcp.md#what-a-tools-schema-may-hold)). A URI two schema
 objects of one document claim is refused where a reference names it
-([03-conformance.md](03-conformance.md#the-inventory)).
+([conformance.md](conformance.md#the-inventory)).
 
 ## Files checked against a schema
 

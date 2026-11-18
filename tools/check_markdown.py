@@ -1,4 +1,4 @@
-r"""Check Markdown against the rendering rules of `docs/dev/10-writing.md`, and for dead links.
+r"""Check Markdown against the rendering rules of `docs/dev/writing.md`, and for dead links.
 
 GitHub's inline math renderer is strict and its failures are silent: the page
 renders, wrongly. `$^{238}$U` becomes a dangling superscript, `\\!`

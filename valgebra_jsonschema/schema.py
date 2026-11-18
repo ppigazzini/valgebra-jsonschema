@@ -854,7 +854,7 @@ class Compiler:
         reference names it. The document compiled names its own URI, as it does before the
         index is built, and a supplied document at that URI is not read: section 9.1.1 makes
         the root's ``$id`` its canonical URI, and `jsonschema` resolves the same way.
-        ``docs/03-conformance.md`` records why no error is raised for a URI two documents
+        ``docs/conformance.md`` records why no error is raised for a URI two documents
         claim.
         """
         self._resources[self._root_base] = (root, "")

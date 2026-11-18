@@ -14,7 +14,7 @@ runs too, on regular expressions and large numbers.
 Each labeled direction is asked with `relation_to` and counted as proven, refuted or
 undecided, and against the label where a proof or a refutation contradicts it. A proof
 against a label would be a wrong proof; a refutation against one, a wrong refutation or a
-wrong label, and `docs/04-results.md` names each.
+wrong label, and `docs/results.md` names each.
 """
 
 from __future__ import annotations

@@ -89,7 +89,7 @@ def _is_hostname(text: str) -> bool:
     """Return whether ``text`` is an RFC 1123 hostname.
 
     An ``xn--`` label is read as the label it spells: its Punycode and the IDNA rules on what it
-    decodes to are not read, as `docs/03-conformance.md` records.
+    decodes to are not read, as `docs/conformance.md` records.
     """
     if not text or len(text) > _MAX_HOSTNAME:
         return False

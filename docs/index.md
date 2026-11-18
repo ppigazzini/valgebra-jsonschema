@@ -32,18 +32,18 @@ pip install valgebra-jsonschema          # Python 3.11 or later
 
 | page | what it holds |
 |---|---|
-| [05-mcp.md](05-mcp.md) | reading an MCP tool, its dialects, and what its schema may hold |
-| [19-recipes.md](19-recipes.md) | tasks done end to end: a model's tool call, a schema change before release, a schema across documents, files against a schema, what a schema asserts |
-| [12-changelog.md](12-changelog.md) | every released version and what it changed |
-| [02-compiler.md](02-compiler.md) | how each JSON Schema keyword becomes a set, what is opaque, what is refused |
-| [03-conformance.md](03-conformance.md) | the contract, its oracles, the keyword inventory and the ledger of differences |
-| [04-results.md](04-results.md) | every measured count, with the command that prints it |
-| [16-api.md](16-api.md) | the public names, read from the package's docstrings |
+| [mcp.md](mcp.md) | reading an MCP tool, its dialects, and what its schema may hold |
+| [recipes.md](recipes.md) | tasks done end to end: a model's tool call, a schema change before release, a schema across documents, files against a schema, what a schema asserts |
+| [changelog.md](changelog.md) | every released version and what it changed |
+| [compiler.md](compiler.md) | how each JSON Schema keyword becomes a set, what is opaque, what is refused |
+| [conformance.md](conformance.md) | the contract, its oracles, the keyword inventory and the ledger of differences |
+| [results.md](results.md) | every measured count, with the command that prints it |
+| [api.md](api.md) | the public names, read from the package's docstrings |
 
 The site serves [`llms.txt`](https://ppigazzini.github.io/valgebra-jsonschema/llms.txt), a
 manifest of these pages, and
 [`llms-full.txt`](https://ppigazzini.github.io/valgebra-jsonschema/llms-full.txt), their full
 text, for a reader that is not a browser. The developer pages under `docs/dev/` are not
-published: how a version reaches PyPI, `docs/dev/06-releasing.md`, and the standard for every
-text, `docs/dev/10-writing.md`. The study files each tool's `--check` reruns are under
+published: how a version reaches PyPI, `docs/dev/releasing.md`, and the standard for every
+text, `docs/dev/writing.md`. The study files each tool's `--check` reruns are under
 `docs/studies/`.

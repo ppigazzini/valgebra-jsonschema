@@ -78,19 +78,38 @@ jobs:
       - run: uvx twine==7.0.0 check --strict dist/*
 
   smoke:
-    name: smoke ${{ matrix.artifact }} on ${{ matrix.python }}
+    name: smoke ${{ matrix.artifact }} on ${{ matrix.python }}, ${{ matrix.os }}, ${{ matrix.resolution }}
     needs: [build]
-    runs-on: ubuntu-26.04
-    timeout-minutes: 15
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     # Each artifact is installed as a user installs it, its dependencies resolved from PyPI,
-    # on the floor and on the newest release, and the suite the sdist carries runs on it. A
-    # version cannot be replaced on an index once uploaded, only yanked, so a broken artifact
-    # fails here.
+    # and the suite the sdist carries runs on it. A version cannot be replaced on an index once
+    # uploaded, only yanked, so a broken artifact fails here.
     strategy:
       fail-fast: false
       matrix:
-        artifact: [wheel, sdist]
-        python: ["3.11", "3.15"]
+        # The wheel on every CPython the classifiers name, on x86_64 Linux, Apple silicon macOS
+        # and x64 Windows: an install of this package pulls the valgebra wheel of its interpreter
+        # and platform, and each of those is a build of its own. valgebra's release smokes its
+        # other wheels, macOS x86_64 among them, on each of their platforms.
+        os: [ubuntu-26.04, macos-26, windows-2025-vs2026]
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+        artifact: [wheel]
+        resolution: [highest]
+        include:
+          # The sdist on the floor and the newest release: what it adds to the wheel is its
+          # file list, which neither the interpreter nor the platform moves.
+          - { os: ubuntu-26.04, python: "3.11", artifact: sdist, resolution: highest }
+          - { os: ubuntu-26.04, python: "3.15", artifact: sdist, resolution: highest }
+          # Each dependency at the floor `pyproject.toml` names, where every other leg installs
+          # the newest release each admits.
+          - { os: ubuntu-26.04, python: "3.11", artifact: wheel, resolution: lowest-direct }
+          - { os: ubuntu-26.04, python: "3.15", artifact: wheel, resolution: lowest-direct }
+    # Windows runs the same script under Git's bash, where a virtual environment keeps its
+    # executables in `Scripts` rather than `bin`.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/download-artifact@v8.0.2
         with:
@@ -106,28 +125,41 @@ jobs:
           # Nothing is checked out yet for the cache to key on.
           enable-cache: false
       - name: Install the artifact and import it
+        # The floors are the dependencies `pyproject.toml` names, read from the sdist and
+        # resolved to the lowest release each admits, so the installed versions are the ones a
+        # user on the floor holds.
         env:
           ARTIFACT: ${{ matrix.artifact }}
-        run: |
-          set -euo pipefail
-          uv venv
-          case "$ARTIFACT" in
-            wheel) uv pip install dist/*.whl ;;
-            sdist) uv pip install dist/*.tar.gz ;;
-          esac
-          uv pip check
-          .venv/bin/python -W error -c 'import importlib.metadata as md, valgebra_jsonschema as m; assert "site-packages" in m.__file__, m.__file__; s = m.compile_schema({"type": "integer"}); assert s.is_valid(1) and s.is_valid(1.0) and not s.is_valid(True); print("smoke ok", md.version("valgebra-jsonschema"))'
-      - name: Run the suite the sdist carries on the installed artifact
-        # The sdist's own suite, so a file the suite reads and the sdist leaves out fails here.
-        # It runs through the environment's `pytest` script, which puts no directory of the
-        # unpacked tree on the path, from a working directory that holds no package: the suite
-        # imports the installed artifact.
+          RESOLUTION: ${{ matrix.resolution }}
         run: |
           set -euo pipefail
           mkdir suite
           tar -xzf dist/*.tar.gz -C suite --strip-components 1
+          uv venv
+          case "$ARTIFACT" in
+            wheel) file="$(ls dist/*.whl)" ;;
+            sdist) file="$(ls dist/*.tar.gz)" ;;
+          esac
+          case "$RESOLUTION" in
+            highest) uv pip install "$file" ;;
+            lowest-direct) uv pip install --resolution lowest-direct -r suite/pyproject.toml "$file" ;;
+          esac
+          uv pip check
+          uv pip list
+          bin=.venv/bin; [ -d .venv/Scripts ] && bin=.venv/Scripts
+          "$bin/python" -W error -c 'import importlib.metadata as md, valgebra_jsonschema as m; assert "site-packages" in m.__file__, m.__file__; s = m.compile_schema({"type": "integer"}); assert s.is_valid(1) and s.is_valid(1.0) and not s.is_valid(True); print("smoke ok", md.version("valgebra-jsonschema"), "on valgebra", md.version("valgebra"))'
+      - name: Run the suite the sdist carries on the installed artifact
+        # The sdist's own suite, so a file the suite reads and the sdist leaves out fails here.
+        # It runs through the environment's `pytest` script, which puts no directory of the
+        # unpacked tree on the path, from a working directory that holds no package: the suite
+        # imports the installed artifact. The group `test` pins no package the artifact
+        # depends on above its floor, so the floor legs keep their floors.
+        run: |
+          set -euo pipefail
           uv pip install -r suite.txt
-          .venv/bin/pytest -p no:cacheprovider suite/tests
+          uv pip check
+          bin=.venv/bin; [ -d .venv/Scripts ] && bin=.venv/Scripts
+          "$bin/pytest" -p no:cacheprovider suite/tests
 
   publish:
     name: publish to ${{ inputs.publish_target }}

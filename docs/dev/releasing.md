@@ -32,12 +32,17 @@ Six conditions stand between a dispatch and an upload, each a job, a step or a j
 `release.yml`:
 
 - **The metadata reads as the index reads it.** `twine check --strict` passes on both artifacts.
-- **The smoke passes.** The wheel and the sdist are each installed in a fresh environment on
-  CPython 3.11 and 3.15, their dependencies resolved from PyPI as a user's are; each imports with
-  every warning an error, from `site-packages`, and the suite the sdist carries runs on it with
-  the group `test` at the lock's versions, so a file the suite reads and the sdist leaves out
-  fails there. A version cannot be replaced on an index once uploaded, only yanked, so a broken
-  artifact has to fail before the upload.
+- **The smoke passes.** Each artifact is installed in a fresh environment, its dependencies
+  resolved from PyPI as a user's are. The wheel installs on every CPython the classifiers name,
+  3.11 through 3.15, on x86_64 Linux, Apple silicon macOS and x64 Windows: an install pulls the
+  valgebra wheel of its interpreter and platform, and each of those is a build of its own. The
+  sdist installs on 3.11 and 3.15 on Linux, and the wheel installs on 3.11 and 3.15 once more
+  with each dependency at the floor `pyproject.toml` names (`--resolution lowest-direct`), where
+  every other leg installs the newest release each admits. Each imports with every warning an
+  error, from `site-packages`, and the suite the sdist carries runs on it with the group `test`
+  at the lock's versions, so a file the suite reads and the sdist leaves out fails there. A
+  version cannot be replaced on an index once uploaded, only yanked, so a broken artifact has to
+  fail before the upload.
 - **`confirm_version` equals the built version**, and an empty input aborts.
 - **The ref is `main`**, and each environment admits `main` alone
   ([below](#what-the-repository-and-the-indexes-hold)).
@@ -153,12 +158,14 @@ curl -sS https://test.pypi.org/simple/valgebra-jsonschema/ \
 
 ## What this does not cover
 
-- **CPython 3.12, 3.13 and 3.14.** They are classifiers in `pyproject.toml`; the smoke and the
-  push lanes run 3.11 and 3.15, and no job runs the releases between.
+- **The push lanes past Linux, 3.11 and 3.15.** CPython 3.12 to 3.14, macOS and Windows are
+  read by the smoke alone, when a release is dispatched.
 - **Free-threaded CPython and PyPy.** No job runs them and no classifier claims them.
-- **The floors.** The smoke resolves each dependency to its newest release, and no job installs
-  the floors `pyproject.toml` names. Each floor is the lock's version, which a lock update can
-  move past.
+- **valgebra's other wheels.** Linux on aarch64 and musl, macOS on x86_64 and Windows on arm64
+  run no leg here: valgebra's own release smoke installs each of those wheels on its platform and
+  runs valgebra's suite on it.
+- **The floors between releases.** The smoke's floor legs install them when a release is
+  dispatched; the push lanes run the lock's versions, which a lock update can move past them.
 - **A published version that is wrong.** It cannot be replaced, only yanked, and the workflow
   refuses a version the index serves. The remedy is the next version, which is why step 4 comes
   before step 5.

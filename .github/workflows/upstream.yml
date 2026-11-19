@@ -2,7 +2,8 @@ name: Upstream
 
 # Each Monday, and on a dispatch, the suite and every published count run on valgebra's `main`,
 # the code valgebra's next cut ships. Nothing waits on the run: a red one says a valgebra change
-# moves this package before that cut ships it, where the re-pin after the cut would meet it.
+# moves this package before that cut ships it, where a user would meet it, since this package
+# names valgebra's floor and no ceiling.
 on:
   schedule:
     - cron: "23 4 * * 1"

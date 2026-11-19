@@ -6,6 +6,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The package requires valgebra 0.0.30 or later, with no upper bound: a valgebra release
+  installs beside this package the day it is published, with no release of this package.
+
 ## [0.0.2] - 2026-11-18
 
 A release of the user guide, with no change to the compiler: every schema compiles to the set

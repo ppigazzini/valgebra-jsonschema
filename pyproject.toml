@@ -25,9 +25,10 @@ dependencies = [
     "annotated-types>=0.8.0",
     # `TypedDict(closed=True)` on the floor, for the study files.
     "typing-extensions>=4.16.0",
-    # The decision procedure every answer here rests on. Pre-alpha, so pinned below 0.1,
-    # and a 0.0.x minor is a breaking release: the floor moves with each release.
-    "valgebra>=0.0.29,<0.0.30",
+    # The decision procedure every answer here rests on, from the release the studies were read
+    # on. No ceiling: a ceiling cannot be lifted from a published version, so a valgebra release
+    # installs beside this package the day it is published, and asks no release here.
+    "valgebra>=0.0.30",
 ]
 
 [project.urls]

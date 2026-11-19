@@ -81,12 +81,14 @@ and repository, `release.yml` and the environment.
 
 ## The order
 
-1. **Move to the newest valgebra first.** A `0.0.x` minor of valgebra is a breaking release here,
-   so its floor in `pyproject.toml`, the lock and every study move in a commit of their own, with
+1. **Move valgebra's floor where the release needs it.** `pyproject.toml` names valgebra's floor
+   and no ceiling, so a valgebra release installs beside this package the day it is published
+   and asks no release here. A release that needs what a valgebra release adds moves the floor
+   to it, with the lock and every study, in a commit of its own with
    [the gate](../../AGENTS.md#tooling) green, before the bump. The `Upstream` workflow runs
    the suite and the studies on valgebra's `main` each Monday, so a change that moves a count
    shows before valgebra's cut. This package is the second of
-   [the release train](https://github.com/ppigazzini/valgebra-planning/blob/main/docs/dev/releasing.md#the-release-train).
+   [the release order](https://github.com/ppigazzini/valgebra-planning/blob/main/docs/dev/releasing.md#the-release-order).
 2. **Bump, in one commit.** `version` in `pyproject.toml`, `uv lock`, and the changelog: the
    `Unreleased` entries roll into a section for the version, dated the day of the commit, with its
    compare and tag links. It lands on `main`, and the push runs `ci.yml` on the tree about to

@@ -6,6 +6,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-11-19
+
+A release of the dependency range: the compiler is 0.0.2's, and every published count is the one
+0.0.2 recorded, read again on valgebra 0.0.30.
+
 ### Changed
 
 - The package requires valgebra 0.0.30 or later, with no upper bound: a valgebra release
@@ -99,6 +104,7 @@ A release of the user guide, with no change to the compiler: every schema compil
   records. Of the containment test suite's 10890 questions, 7048 are proven, 3560 refuted,
   246 undecided and 36 refused.
 
-[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/ppigazzini/valgebra-jsonschema/releases/tag/v0.0.1

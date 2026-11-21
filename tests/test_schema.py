@@ -578,6 +578,31 @@ class TestContainmentLabels:
         assert compiled.is_valid([])
         assert compiled.relation_to(nothing) == "not_subset"
 
+    def test_the_meet_labeled_empty_holds_what_a_not_the_dynamic_scope_reaches_refuses(self):
+        # The generator meets the suite's relative dynamic reference with a renamed copy whose
+        # `not` wraps the copy's `extended`, which the copy's own `$dynamicAnchor` reaches
+        # again: `{"bar": {"baz": {}}}` fails `extended1`, its `baz` failing the copy's root.
+        def copy(n):
+            extended = {"$id": f"extended{n}", "$dynamicAnchor": f"meta{n}", "type": "object"}
+            extended["properties"] = {"bar": {"$ref": f"bar{n}"}}
+            bar = {"$id": f"bar{n}", "type": "object"}
+            bar["properties"] = {"baz": {"$dynamicRef": f"extended{n}#meta{n}"}}
+            return {
+                "$id": f"https://test{n}.json-schema.org/relative-dynamic-reference/root",
+                "$dynamicAnchor": f"meta{n}",
+                "type": "object",
+                "properties": {"foo": {"const": "pass"}},
+                "$defs": {"extended": extended, "bar": bar},
+            }
+
+        root, renamed = copy(""), copy(1)
+        root["$ref"] = "extended"
+        renamed["not"] = {"$ref": "extended1"}
+        compiled = compile_schema({"allOf": [root, renamed]})
+        assert compiled.is_valid({"bar": {"baz": {}}})
+        assert not compiled.is_valid({"bar": {}})
+        assert compiled.relation_to(nothing) == "not_subset"
+
     def test_the_tree_labeled_outside_a_tree_under_not_is_inside_it(self):
         # The `not` around the properties holds of a tree whose nodes hold subtrees that are
         # not trees: each child's own nodes satisfy the properties, so the child fails it.
@@ -1089,6 +1114,28 @@ def test_property_names_spelled_out_are_the_keys_of_a_closed_record():
     compiler = Compiler(named)
     compiler.compile(named)
     assert not compiler.opaque
+
+
+def test_a_count_of_properties_decides_the_keys_of_the_record_it_counts():
+    # A `minProperties` counting every key a record can hold requires each, and a
+    # `maxProperties` counting the required ones admits no other. A count of fewer keys than
+    # the record holds proves no one of them: `{"j": 1}` refutes the fourth, left undecided.
+    def relation(subject, supertype):
+        subject, supertype = {"type": "object", **subject}, {"type": "object", **supertype}
+        return compile_schema(subject).relation_to(compile_schema(supertype))
+
+    names = {"propertyNames": {"enum": ["k", "j"]}}
+    only_k = {"properties": {"k": {}}, "additionalProperties": False}
+    closed = {"properties": {"k": {}, "j": {}}, "additionalProperties": False}
+    assert relation({**names, "minProperties": 2}, {"required": ["k", "j"]}) == "subset"
+    assert relation({**closed, "minProperties": 2}, {"required": ["k", "j"]}) == "subset"
+    one = {"propertyNames": {"const": "k"}, "minProperties": 1}
+    assert relation(one, {"required": ["k"]}) == "subset"
+    assert relation({**names, "minProperties": 1}, {"required": ["k"]}) == "undecided"
+    assert relation({"required": ["k"], "maxProperties": 1}, only_k) == "subset"
+    absent_j = {"not": {"required": ["j"]}}
+    assert relation({"required": ["k"], "maxProperties": 1}, absent_j) == "subset"
+    assert relation({"required": ["k"], "maxProperties": 2}, only_k) == "not_subset"
 
 
 _TAG = {"enum": ["a", "b"]}

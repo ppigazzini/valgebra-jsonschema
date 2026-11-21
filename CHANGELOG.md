@@ -39,6 +39,15 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   both read `undecided`. Membership is unchanged; the suite's `propertyNames` cases going
   through an opaque predicate fall from 7 to 0 in drafts 2020-12, 2019-09, 07 and 06.
 
+- The package requires valgebra 0.0.31 or later, which counts a record's keys under
+  `minProperties` and `maxProperties`: `{"propertyNames": {"enum": ["k", "j"]}, "minProperties":
+  2}` is `subset` of the object requiring `k` and `j`, and `{"required": ["k"], "maxProperties":
+  1}` of the closed record of `k`, where both read `undecided`. The suite and corpus studies
+  read no difference. The containment study decides 65 questions more, a proof and 64
+  refutations, 36 of them against the suite's labels: 35 in draft 4 stand on a `const`, which
+  draft 4 does not have, and one in draft 2020-12's `unsatisfiable/dynamicRef.json` on
+  `{"bar": {"baz": {}}}`, which the meet it labels empty holds.
+
 ## [0.0.3] - 2026-11-19
 
 A release of the dependency range: the compiler is 0.0.2's, and every published count is the one

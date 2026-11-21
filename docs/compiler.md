@@ -121,6 +121,13 @@ them, so `{"propertyNames": {"enum": ["k", "j"]}}` over objects is `subset` of
 `{"properties": {"k": {}, "j": {}}, "additionalProperties": false}` and the converse too. A name is a
 string (draft 2020-12, section 10.3.2.4), so a value that is not one names no key.
 
+`minProperties` and `maxProperties` count a record's keys. A `minProperties` counting every key the
+record can hold requires each, so `{"propertyNames": {"enum": ["k", "j"]}, "minProperties": 2}` over
+objects is `subset` of the object requiring `k` and `j`; a `maxProperties` counting the required keys
+admits no other, so `{"required": ["k"], "maxProperties": 1}` is `subset` of the closed record of `k`.
+A count of fewer keys than the record holds proves no one of them: with `"minProperties": 1` the first
+is `undecided` below the object requiring `k`, which `{"j": 1}` refutes.
+
 ## What a member holds below
 
 `Compiler.below(path)` returns the values a member of the root holds at `path`, a sequence of

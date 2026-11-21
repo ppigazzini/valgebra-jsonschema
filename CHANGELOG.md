@@ -6,6 +6,15 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- A `propertyNames` spelling its names out, an `enum`, a `const`, or an `anyOf` or `oneOf` of
+  them, compiles to the closed record of those keys, each optional, rather than to an opaque
+  predicate: `{"propertyNames": {"enum": ["k", "j"]}}` is `subset` of the object whose
+  `properties` are `k` and `j` with `additionalProperties: false`, and the converse too, where
+  both read `undecided`. Membership is unchanged; the suite's `propertyNames` cases going
+  through an opaque predicate fall from 7 to 0 in drafts 2020-12, 2019-09, 07 and 06.
+
 ## [0.0.3] - 2026-11-19
 
 A release of the dependency range: the compiler is 0.0.2's, and every published count is the one

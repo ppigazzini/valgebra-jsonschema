@@ -115,7 +115,11 @@ is `subset` of an object of strings and the converse is `not_subset`. A key take
 pattern it matches, a conjunction, and valgebra reads two clauses over one key as a disjunction, so the
 keys are split where the patterns part, into up to sixteen cells, and no two clauses share a key.
 `propertyNames: true` names every key, as `{}` does, and `propertyNames: false` names none, so the one
-object it admits is the empty one.
+object it admits is the empty one. A `propertyNames` spelling its names out, an `enum`, a `const`, or an
+`anyOf` or `oneOf` of them, is the closed record of those keys, each optional: keys as `properties` writes
+them, so `{"propertyNames": {"enum": ["k", "j"]}}` over objects is `subset` of
+`{"properties": {"k": {}, "j": {}}, "additionalProperties": false}` and the converse too. A name is a
+string (draft 2020-12, section 10.3.2.4), so a value that is not one names no key.
 
 ## Opaque keywords
 
@@ -130,7 +134,7 @@ compiled from their subschema, and each compilation holds its own.
 | keyword | why |
 |---|---|
 | `patternProperties`, past four patterns or in a schema past valgebra's limit | a clause per cell of keys, and the cells number two to the patterns |
-| `propertyNames`, but `true`, `false` and one reading only `pattern`, `minLength`, `maxLength`, `type` | a key is narrowed by words, and no other schema names them |
+| `propertyNames`, but `true`, `false`, one spelling its names out, and one reading only `pattern`, `minLength`, `maxLength`, `type` | a key is narrowed by words or listed, and no other schema names them |
 | `uniqueItems` | needs equality across elements |
 | `minContains`, `maxContains` | need counting |
 | `multipleOf` with a fractional step | `0.0075 % 0.0001` is not zero in binary floating point |
@@ -155,7 +159,7 @@ uv run python tools/suite.py --check docs/studies/json-schema-test-suite.json
 The official JSON-Schema-Test-Suite at commit `89e83a740146`, vendored with its MIT
 license. Draft 2020-12, with the four optional files on regular expressions and large
 numbers: 1393 cases run, 1393 passed, 0 failed; 5 skipped, each naming a custom meta-schema as
-its dialect; 103 of the run cases go through an opaque predicate. A case's remote documents are the suite's
+its dialect; 96 of the run cases go through an opaque predicate. A case's remote documents are the suite's
 `remotes/`, vendored with it, and the drafts' meta-schemas from the `jsonschema-specifications`
 package, passed as `documents`. Draft-07, through `upgrade`:
 

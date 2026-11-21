@@ -1070,6 +1070,26 @@ def test_property_names_true_names_every_key_and_false_none():
     assert keyless.is_equivalent(compile_schema({"maxProperties": 0}))
 
 
+def test_property_names_spelled_out_are_the_keys_of_a_closed_record():
+    # Names spelled out are a key set, related to `properties` key by key; a non-string names
+    # no key, and a name ending in `?` is that key whole.
+    both = {"type": "object", "properties": {"k": {}, "j": {}}, "additionalProperties": False}
+    closed = compile_schema(both)
+    named = {"type": "object", "propertyNames": {"enum": ["k", "j", 1]}}
+    assert compile_schema(named).relation_to(closed) == "subset"
+    assert closed.relation_to(compile_schema(named)) == "subset"
+    one = compile_schema({"type": "object", "propertyNames": {"const": "k"}})
+    assert (one.relation_to(closed), closed.relation_to(one)) == ("subset", "not_subset")
+    assert compile_schema({"propertyNames": {"enum": [1]}}) == compile_schema(
+        {"propertyNames": False}
+    )
+    asked = compile_schema({"propertyNames": {"enum": ["a?"]}})
+    assert [asked.is_valid(v) for v in ({"a?": 1}, {"a": 1}, {}, 1)] == [True, False, True, True]
+    compiler = Compiler(named)
+    compiler.compile(named)
+    assert not compiler.opaque
+
+
 def test_a_one_of_whose_branches_are_disjoint_is_their_union():
     branches = [{"type": "string"}, {"type": "null"}]
     assert compile_schema({"oneOf": branches}) == compile_schema({"anyOf": branches})

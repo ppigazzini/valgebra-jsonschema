@@ -45,6 +45,8 @@ def _schema(rng, depth=2):
         lambda: {"minItems": rng.randrange(3)},
         lambda: {"maxProperties": rng.randrange(3)},
         lambda: {"required": rng.sample(["a", "b", "c"], rng.randrange(1, 3))},
+        lambda: {"propertyNames": {"enum": rng.sample(["a", "b", "c", "d", 1], 2)}},
+        lambda: {"propertyNames": {"const": rng.choice(["a", "b", 1])}},
     ]
     if depth == 0:
         return rng.choice(leaf)()

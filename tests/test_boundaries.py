@@ -143,7 +143,7 @@ def test_the_page_lists_each_class_as_the_code_does():
     "schema",
     [
         {"patternProperties": {letter: {"type": "integer"} for letter in "abcde"}},
-        {"propertyNames": {"enum": ["a"]}},
+        {"propertyNames": {"not": {"const": "a"}}},
         {"uniqueItems": True},
         {"contains": {"type": "integer"}, "minContains": 2},
         {"contains": {"type": "integer"}, "maxContains": 2},
@@ -162,6 +162,8 @@ def test_what_the_page_calls_opaque_is_opaque(schema):
         {"multipleOf": 2},
         {"patternProperties": {letter: {"type": "integer"} for letter in "abcd"}},
         {"propertyNames": {"maxLength": 1}},
+        {"propertyNames": {"enum": ["a", "b"]}},
+        {"propertyNames": {"const": "a"}},
         {"propertyNames": True},
         {"propertyNames": False},
         {"type": "integer", "minimum": 1},

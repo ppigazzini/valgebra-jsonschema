@@ -1914,12 +1914,27 @@ _NAMES = frozenset({"pattern", "minLength", "maxLength", "type", "title", "descr
 
 
 def _property_names(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
+    """Compile ``propertyNames``: every key of an object is a name its schema admits.
+
+    A name is a string (draft 2020-12, section 10.3.2.4). A schema spelling its values out,
+    `constants`, names finitely many keys, so an object of them is the closed record of those
+    keys, each optional: keys as `properties` and `required` write them, which a relation
+    reads key by key. A map keyed by the names' strings instead would hold a key that is a
+    subclass of `str`, which no JSON text decodes to, and lose the relation to a record over
+    it. Words are a clause over the strings they admit; any other schema is a predicate.
+    """
     schema = s["propertyNames"]
     if schema is False:
         # No string is a name, so the one object every name passes is the empty one.
         return c.guard("object", Validator({}))
     if schema is True:
         schema = {}
+    names = constants(schema)
+    if c.by_clauses and names is not None:
+        keys = sorted({name for name in names if isinstance(name, str)})
+        return c.guard(
+            "object", Validator({_record_key(key, required=False): JSON for key in keys})
+        )
     words = isinstance(schema, dict) and set(schema) <= _NAMES
     if c.by_clauses and words and schema.get("type") in (None, "string"):
         parts: list[object] = [str]

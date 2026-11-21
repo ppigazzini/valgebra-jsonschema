@@ -23,6 +23,7 @@ table and the package to each other.
 
 | Key | Work | Read in | Identifier |
 |---|---|---|---|
+| Attouche et al. 2022 | L. Attouche, M.-A. Baazizi, D. Colazzo, G. Ghelli, C. Sartiani, S. Scherzinger. Witness generation for JSON Schema. PVLDB 15(13), 4002-4014, 2022 | the published article | [doi:10.14778/3565838.3565852](https://doi.org/10.14778/3565838.3565852) |
 | Attouche et al. 2024 | L. Attouche, M.-A. Baazizi, D. Colazzo, G. Ghelli, C. Sartiani, S. Scherzinger. Validation of modern JSON Schema: formalization and complexity. PACMPL 8(POPL), Article 49, 2024 | the published article | [doi:10.1145/3632891](https://doi.org/10.1145/3632891) |
 
 ## The keyword-wise semantics
@@ -53,3 +54,20 @@ draft 2020-12's own reading, which asks for an error where two schemas claim one
 IMPLEMENTED-BY: schema.py::Compiler._index
 
 HELD-BY: test_a_uri_two_schema_objects_of_one_document_claim_names_neither, test_a_reference_reached_through_a_pointer_resolves_in_its_own_resource
+
+## Witnesses
+
+**A conjunction is drawn merged, a member per required key.** A witness of a conjunction is not
+found by drawing one conjunct and hoping it meets the others: generation limits conjunctions to
+assertions of one kind and merges them first, an and-elimination (Attouche et al. 2022, §4). An
+object is built member by member until every requirement holds (Attouche et al. 2022, §6.3.1),
+and a required key's member is drawn under the conjunction of every constraint on that key
+(Attouche et al. 2022, §6.3.2). So the sampler merges an `allOf` with the schema around it, an
+`anyOf` or `oneOf` branch with its siblings and a reference's target with the keywords beside it,
+keyword by keyword, and draws a required key no `properties` names from `additionalProperties`.
+Membership in the compiled set judges every value drawn, so a merge that keeps too much costs a
+rejection and never a wrong witness. **[LOAD-BEARING: conjunctions-merged]**
+
+IMPLEMENTED-BY: sample.py, sample.py::Sampler._object
+
+HELD-BY: test_an_all_of_is_drawn_as_the_conjunction_of_its_members, test_a_branch_is_drawn_with_the_keywords_beside_it, test_a_reference_is_drawn_with_the_keywords_beside_it, test_a_required_key_no_property_names_takes_the_additional_schema, test_types_and_bounds_two_members_both_write_meet

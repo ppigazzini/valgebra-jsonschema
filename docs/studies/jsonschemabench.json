@@ -10,7 +10,7 @@
    "refused": 9,
    "crashed": 0,
    "timed_out": 0,
-   "values": 84201,
+   "values": 86280,
    "disagreed": 2
   },
   {
@@ -20,7 +20,7 @@
    "refused": 17,
    "crashed": 0,
    "timed_out": 0,
-   "values": 48112,
+   "values": 51523,
    "disagreed": 0
   },
   {
@@ -30,7 +30,7 @@
    "refused": 11,
    "crashed": 0,
    "timed_out": 0,
-   "values": 83613,
+   "values": 87753,
    "disagreed": 0
   },
   {
@@ -40,7 +40,7 @@
    "refused": 0,
    "crashed": 0,
    "timed_out": 0,
-   "values": 17098,
+   "values": 17806,
    "disagreed": 10
   },
   {
@@ -50,7 +50,7 @@
    "refused": 0,
    "crashed": 0,
    "timed_out": 0,
-   "values": 5704,
+   "values": 6493,
    "disagreed": 0
   },
   {
@@ -60,7 +60,7 @@
    "refused": 18,
    "crashed": 0,
    "timed_out": 0,
-   "values": 79793,
+   "values": 80303,
    "disagreed": 0
   },
   {
@@ -70,7 +70,7 @@
    "refused": 14,
    "crashed": 0,
    "timed_out": 0,
-   "values": 18674,
+   "values": 19646,
    "disagreed": 1
   },
   {
@@ -80,7 +80,7 @@
    "refused": 0,
    "crashed": 0,
    "timed_out": 0,
-   "values": 44505,
+   "values": 44504,
    "disagreed": 0
   },
   {
@@ -90,7 +90,7 @@
    "refused": 3,
    "crashed": 0,
    "timed_out": 0,
-   "values": 17745,
+   "values": 18538,
    "disagreed": 0
   },
   {
@@ -100,7 +100,7 @@
    "refused": 0,
    "crashed": 0,
    "timed_out": 0,
-   "values": 5275,
+   "values": 5364,
    "disagreed": 0
   }
  ],

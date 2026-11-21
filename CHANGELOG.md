@@ -6,6 +6,17 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `Sampler` draws a conjunction merged keyword by keyword: an `allOf` with the schema around it,
+  an `anyOf` or `oneOf` branch with its siblings, and a reference's target with the keywords
+  beside it, `properties` met key by key, `required` united, `type` keeping the kinds both name
+  and each bound the tighter. A member's `properties` replaced the outer schema's, so a record an
+  `allOf` narrows drew no member. A required key `properties` does not name is drawn from
+  `additionalProperties`, a pattern holding a group, an alternation or `.` is drawn inside it,
+  and a schema naming no `type` draws the container kind its keywords read beside the scalars.
+  On fishtest's six output schemas, 215 of 240 draws are members, against 88.
+
 ### Changed
 
 - A `propertyNames` spelling its names out, an `enum`, a `const`, or an `anyOf` or `oneOf` of

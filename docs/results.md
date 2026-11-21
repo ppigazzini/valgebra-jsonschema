@@ -51,17 +51,17 @@ draft.
 
 | subset | schemas | compiled | refused | crashed | timed out | values | disagreed |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Github_easy | 1943 | 1934 | 9 | 0 | 0 | 84201 | 2 |
-| Github_hard | 1240 | 1223 | 17 | 0 | 0 | 48112 | 0 |
-| Github_medium | 1976 | 1965 | 11 | 0 | 0 | 83613 | 0 |
-| Github_trivial | 444 | 444 | 0 | 0 | 0 | 17098 | 10 |
-| Github_ultra | 164 | 164 | 0 | 0 | 0 | 5704 | 0 |
-| Glaiveai2K | 1707 | 1689 | 18 | 0 | 0 | 79793 | 0 |
-| JsonSchemaStore | 492 | 478 | 14 | 0 | 0 | 18674 | 1 |
-| Kubernetes | 1064 | 1064 | 0 | 0 | 0 | 44505 | 0 |
-| Snowplow | 403 | 400 | 3 | 0 | 0 | 17745 | 0 |
-| WashingtonPost | 125 | 125 | 0 | 0 | 0 | 5275 | 0 |
-| all | 9558 | 9486 | 72 | 0 | 0 | 404720 | 13 |
+| Github_easy | 1943 | 1934 | 9 | 0 | 0 | 86280 | 2 |
+| Github_hard | 1240 | 1223 | 17 | 0 | 0 | 51523 | 0 |
+| Github_medium | 1976 | 1965 | 11 | 0 | 0 | 87753 | 0 |
+| Github_trivial | 444 | 444 | 0 | 0 | 0 | 17806 | 10 |
+| Github_ultra | 164 | 164 | 0 | 0 | 0 | 6493 | 0 |
+| Glaiveai2K | 1707 | 1689 | 18 | 0 | 0 | 80303 | 0 |
+| JsonSchemaStore | 492 | 478 | 14 | 0 | 0 | 19646 | 1 |
+| Kubernetes | 1064 | 1064 | 0 | 0 | 0 | 44504 | 0 |
+| Snowplow | 403 | 400 | 3 | 0 | 0 | 18538 | 0 |
+| WashingtonPost | 125 | 125 | 0 | 0 | 0 | 5364 | 0 |
+| all | 9558 | 9486 | 72 | 0 | 0 | 418210 | 13 |
 
 - 9486 of the 9558 schemas compile, none crashes, none times out. Of the 72 refused, 58
   use `dependencies` or `additionalItems` in a schema declaring no older draft, 1 a
@@ -69,7 +69,7 @@ draft.
   lookahead past the pattern's start and 1 a backreference, and 7 a `$ref` to nothing in the document; the rest
   are listed by `tools/corpus.py`. A schema may name a draft's meta-schema, which both the
   compiler and the `jsonschema` package read from the `jsonschema-specifications` package.
-- Membership differs from the package's on 13 of the 404720 values, each a reading the
+- Membership differs from the package's on 13 of the 418210 values, each a reading the
   ledger records: 11 are an integral float, `1e300` or `-0.0`, under a draft-04
   `integer`, and 2 are `"\n"` under a pattern ending in `$`, which Python's `re` matches
   before a final newline.

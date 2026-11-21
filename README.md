@@ -95,7 +95,7 @@ uv run python tools/containment.py --check docs/studies/containment.json
   cases naming a custom meta-schema as their dialect.
 - **Real-world schemas** (JSONSchemaBench, 9558 schemas from GitHub, the JSON Schema Store,
   Kubernetes and function-calling data): 9486 compile, none crashes; membership differs from the
-  `jsonschema` package's on 13 of 404720 values, each a reading the ledger records.
+  `jsonschema` package's on 13 of 418210 values, each a reading the ledger records.
 - **Inclusions** (the JSON Schema containment test suite, 10890 labeled questions): 7048 proven,
   6 against a label, each a wrong label; each of the 342 refutations against a label is a wrong label, which
   [the results page](https://ppigazzini.github.io/valgebra-jsonschema/results/) names.

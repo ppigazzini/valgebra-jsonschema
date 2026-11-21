@@ -44,7 +44,7 @@ import itertools
 import math
 import re
 from collections import Counter
-from collections.abc import Callable, Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Annotated, Any, TypeAlias
@@ -1087,6 +1087,136 @@ class Compiler:
         """Return the schema a reference names from the document's root, or raise `Unsupported`."""
         return self._locate(reference, self._root_base)[0]
 
+    def below(self, path: Sequence[str | _Item]) -> Validator[Any]:
+        """Return the values a member of the root holds at ``path``, wherever it holds one.
+
+        Each step is a key of an object, or `ITEM`, any element of an array. A schema object
+        holds where each of its keywords does (Attouche et al. 2024, §4.5), so the values at a
+        step are the meet of what each keyword says of them: an object's field matched by
+        ``properties`` or a pattern satisfies that subschema (Attouche et al. 2024, §4.4), and
+        one neither matches satisfies ``additionalProperties``; an array's element satisfies
+        ``items`` or the ``prefixItems`` entry at its place. ``allOf`` meets its members'
+        readings and ``anyOf`` and ``oneOf`` unite their branches' (Attouche et al. 2024,
+        §4.3); a ``$ref`` reads its target, resolved against the base URI it sits under
+        (Attouche et al. 2024, §4.6). ``if`` with ``else`` unites the two branches; a ``type``
+        naming no object, or array, and a ``propertyNames`` refusing the key, leave no value;
+        ``enum`` and ``const`` read their listed values' own.
+
+        The set is an upper bound: a keyword it does not read here, as ``not``, a lone ``if``,
+        ``$dynamicRef`` or ``unevaluatedProperties``, narrows nothing, and the set holds every
+        value a member holds at ``path``. Raises `Unsupported` where a subschema it reads is
+        refused, as `compile` does.
+        """
+        self._root_checked()
+        reading: _Reading = ("node", self.root, "")
+        for step in path:
+            reading = self._step(reading, step, frozenset())
+        return self._read(reading)
+
+    def _root_checked(self) -> None:
+        """Refuse a root `compile` refuses before reading any keyword of it."""
+        if (draft := older(self.root)) is not None:
+            name = "2019-09" if draft == DRAFT2019 else f"0{draft}"
+            msg = f"a draft-{name} document is read through `upgrade` first"
+            raise Unsupported(msg)
+        if isinstance(self.root, dict) and self.root.get("$schema", DRAFT) != DRAFT:
+            msg = f"$schema {self.root['$schema']!r}: this dialect is not supported"
+            raise UnsupportedDialect(msg)
+
+    def _step(self, reading: _Reading, step: str | _Item, seen: frozenset[_Target]) -> _Reading:
+        """Return the reading of the values one ``step`` below the values ``reading`` reads."""
+        kind = reading[0]
+        if kind in ("all", "any"):
+            return (kind, tuple(self._step(r, step, seen) for r in reading[1]))
+        if kind == "values":
+            return ("values", tuple(_children(reading[1], step)))
+        if kind != "node":
+            return reading
+        _, node, around = reading
+        if node is True or not isinstance(node, dict):
+            return _ANY if node is not False else _NONE
+        target = (id(node), around)
+        if target in seen:
+            return _ANY
+        seen |= {target}
+        base = _within(around, node)
+        parts: list[_Reading] = [*self._kind_readings(node, step), *self._applied(node, base, step)]
+        for keyword in ("allOf", "anyOf", "oneOf"):
+            if isinstance(node.get(keyword), list):
+                read = tuple(self._step(("node", m, base), step, seen) for m in node[keyword])
+                parts.append(("all" if keyword == "allOf" else "any", read))
+        if "if" in node and "else" in node:
+            then = self._step(("node", node.get("then", True), base), step, seen)
+            taken = ("all", (self._step(("node", node["if"], base), step, seen), then))
+            parts.append(("any", (taken, self._step(("node", node["else"], base), step, seen))))
+        if isinstance(node.get("$ref"), str):
+            parts.append(self._step(("node", *self._locate(node["$ref"], base)), step, seen))
+        dependent = node.get("dependentSchemas")
+        if isinstance(step, str) and isinstance(dependent, dict) and step in dependent:
+            parts.append(self._step(("node", dependent[step], base), step, seen))
+        return ("all", tuple(parts))
+
+    def _kind_readings(self, node: dict[str, Any], step: str | _Item) -> list[_Reading]:
+        """Return the readings a step's kind, and a listed value, give: none, or no value."""
+        named = node.get("type")
+        kinds = set(named) if isinstance(named, list) else {named} if named else None
+        wanted = "array" if step is ITEM else "object"
+        parts: list[_Reading] = []
+        if kinds is not None and wanted not in kinds:
+            parts.append(_NONE)
+        if "const" in node:
+            parts.append(("values", tuple(_children([node["const"]], step))))
+        if isinstance(node.get("enum"), list):
+            parts.append(("values", tuple(_children(node["enum"], step))))
+        return parts
+
+    def _applied(self, node: dict[str, Any], base: str, step: str | _Item) -> list[_Reading]:
+        """Return the readings of the subschemas a step's own applicators give it."""
+        if step is ITEM:
+            prefix = node.get("prefixItems")
+            places = [*prefix] if isinstance(prefix, list) else []
+            if "items" not in node:
+                return [] if not places else [_ANY]
+            return [("any", tuple(("node", sub, base) for sub in [*places, node["items"]]))]
+        if not isinstance(step, str):
+            return []
+        named = node.get("properties")
+        parts: list[_Reading] = []
+        if isinstance(named, dict) and step in named:
+            parts.append(("node", named[step], base))
+        patterns = node.get("patternProperties")
+        matched = [
+            sub
+            for pattern, sub in (patterns.items() if isinstance(patterns, dict) else [])
+            if _search(pattern).is_valid(step)
+        ]
+        parts.extend(("node", sub, base) for sub in matched)
+        if (
+            "additionalProperties" in node
+            and not matched
+            and not (isinstance(named, dict) and step in named)
+        ):
+            parts.append(("node", node["additionalProperties"], base))
+        if "propertyNames" in node and not self._compile_at(node["propertyNames"], base).is_valid(
+            step
+        ):
+            parts.append(_NONE)
+        return parts
+
+    def _read(self, reading: _Reading) -> Validator[Any]:
+        """Return the set a reading names."""
+        kind = reading[0]
+        if kind == "node":
+            return self._compile_at(reading[1], reading[2])
+        if kind == "values":
+            return union(*map(_constant, reading[1])) if reading[1] else nothing
+        if kind == "none":
+            return nothing
+        if kind == "any":
+            return union(*map(self._read, reading[1])) if reading[1] else nothing
+        parts = [self._read(r) for r in reading[1] if r != _ANY] if kind == "all" else []
+        return intersection(JSON, *parts) if parts else JSON
+
     def _resource(self, uri: str, reference: str) -> tuple[object, str]:
         """Return the resource ``uri`` names, and the base URI around it."""
         if uri == self._root_base and not self._indexed:
@@ -1151,6 +1281,34 @@ class Compiler:
 
 #: A schema to compile, by its node and the base URI around it.
 _Target: TypeAlias = tuple[int, str]
+
+
+class _Item:
+    """An element of an array, as a step of `Compiler.below`'s path."""
+
+    def __repr__(self) -> str:
+        return "ITEM"
+
+
+#: Any element of an array, as a step of `Compiler.below`'s path.
+ITEM = _Item()
+
+#: What `Compiler.below` reads at a step, before it compiles: a schema under the base URI
+#: around it, the meet or the union of readings, the values listed values hold there, or
+#: every value or none.
+_Reading: TypeAlias = tuple[Any, ...]
+_ANY: _Reading = ("all", ())
+_NONE: _Reading = ("none",)
+
+
+def _children(values: Iterable[object], step: str | _Item) -> Iterator[object]:
+    """Yield what listed values hold one step below: a key's value, or each element."""
+    for value in values:
+        if step is ITEM and isinstance(value, list):
+            yield from value
+        elif isinstance(step, str) and isinstance(value, dict) and step in value:
+            yield value[step]
+
 
 #: The dynamic anchors in scope, each name with the target of the schema object the
 #: outermost resource entered binds it to, sorted by name (draft 2020-12, section 7.1).

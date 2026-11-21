@@ -7,7 +7,7 @@ import jsonschema
 import pytest
 from valgebra import intersection
 
-from valgebra_jsonschema.schema import compile_schema
+from valgebra_jsonschema.schema import ITEM, Compiler, compile_schema
 
 SCALARS = [None, True, False, 0, 1, -1, 1.0, 2.5, -7, 10**6, "", "a", "ab", "abc", "Z9"]
 
@@ -90,3 +90,33 @@ def test_every_inclusion_and_emptiness_valgebra_proves_holds_on_every_drawn_valu
             assert not [v for v in values if a.is_valid(v) and not b.is_valid(v)]
         if intersection(a, b).is_empty():
             assert not [v for v in values if a.is_valid(v) and b.is_valid(v)]
+
+
+def _held(value, depth=2):
+    """Yield each path below ``value`` to ``depth`` steps, with the value there."""
+    if depth == 0:
+        return
+    if isinstance(value, dict):
+        steps = value.items()
+    elif isinstance(value, list):
+        steps = [(ITEM, item) for item in value]
+    else:
+        return
+    for step, below in steps:
+        yield (step,), below
+        for path, deeper in _held(below, depth - 1):
+            yield (step, *path), deeper
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_every_value_a_member_holds_below_lies_in_what_below_reads(seed):
+    # An upper bound: no keyword's reading may leave out a value a member holds there.
+    rng = random.Random(f"below:{seed}")
+    for _ in range(30):
+        schema = _schema(rng)
+        compiled, compiler, read = compile_schema(schema), Compiler(schema), {}
+        for member in (v for v in (_value(rng) for _ in range(60)) if compiled.is_valid(v)):
+            for path, held in _held(member):
+                if path not in read:
+                    read[path] = compiler.below(path)
+                assert read[path].is_valid(held), (schema, member, path)

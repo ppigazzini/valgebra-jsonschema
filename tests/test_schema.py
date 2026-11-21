@@ -12,6 +12,7 @@ from valgebra_jsonschema import schema as schema_module
 from valgebra_jsonschema.schema import (
     ANNOTATIONS,
     ARRAY,
+    ITEM,
     JSON,
     OBJECT,
     REFUSED,
@@ -1088,6 +1089,125 @@ def test_property_names_spelled_out_are_the_keys_of_a_closed_record():
     compiler = Compiler(named)
     compiler.compile(named)
     assert not compiler.opaque
+
+
+_TAG = {"enum": ["a", "b"]}
+
+
+@pytest.mark.parametrize(
+    ("schema", "path", "read"),
+    [
+        (
+            {"type": "object", "allOf": [{"properties": {"f": {"enum": ["a", "zz"]}}}]},
+            ("f",),
+            {"enum": ["a", "zz"]},
+        ),
+        (
+            {
+                "properties": {"rs": {"type": "array"}},
+                "allOf": [{"properties": {"rs": {"items": _TAG}}}],
+            },
+            ("rs", ITEM),
+            _TAG,
+        ),
+        (
+            {
+                "$defs": {"L": {"type": "array", "items": _TAG}},
+                "properties": {"rs": {"$ref": "#/$defs/L", "minItems": 1}},
+            },
+            ("rs", ITEM),
+            _TAG,
+        ),
+        (
+            {
+                "$id": "https://example.com/root",
+                "$defs": {"T": {"properties": {"k": {"type": "string"}}}},
+                "properties": {
+                    "a": {
+                        "$id": "https://example.com/inner",
+                        "$defs": {"T": {"properties": {"k": {"type": "integer"}}}},
+                        "$ref": "#/$defs/T",
+                    }
+                },
+            },
+            ("a", "k"),
+            {"type": "integer"},
+        ),
+        (
+            {"anyOf": [{"properties": {"f": {"const": 1}}}, {"properties": {"f": {"const": 2}}}]},
+            ("f",),
+            {"enum": [1, 2]},
+        ),
+        ({"type": "string"}, ("f",), False),
+        ({"propertyNames": {"enum": ["g"]}}, ("f",), False),
+        ({"enum": [{"f": 1}, {"f": "x"}, {"g": 2}, 3]}, ("f",), {"enum": [1, "x"]}),
+        (
+            {"patternProperties": {"^x-": {"type": "string"}}, "additionalProperties": False},
+            ("x-a",),
+            {"type": "string"},
+        ),
+        (
+            {"properties": {"a": {}}, "additionalProperties": {"type": "integer"}},
+            ("b",),
+            {"type": "integer"},
+        ),
+        (
+            {"prefixItems": [{"const": 0}], "items": {"type": "string"}},
+            (ITEM,),
+            {"anyOf": [{"const": 0}, {"type": "string"}]},
+        ),
+        (
+            {
+                "if": {"properties": {"k": {"const": 1}}},
+                "then": {"properties": {"f": {"type": "string"}}},
+                "else": {"properties": {"f": {"type": "integer"}}},
+            },
+            ("f",),
+            {"type": ["string", "integer"]},
+        ),
+        (
+            {
+                "$defs": {
+                    "t": {
+                        "type": "object",
+                        "properties": {
+                            "kids": {"type": "array", "items": {"$ref": "#/$defs/t"}},
+                            "v": {"type": "integer"},
+                        },
+                    }
+                },
+                "$ref": "#/$defs/t",
+            },
+            ("kids", ITEM, "v"),
+            {"type": "integer"},
+        ),
+    ],
+    ids=[
+        "a field an allOf declares",
+        "items an allOf declares",
+        "items a reference with a sibling declares",
+        "a field inside a resource of its own",
+        "a field each branch declares",
+        "a kind holding no object",
+        "a name propertyNames refuses",
+        "a field listed objects hold",
+        "a key a pattern matches",
+        "a key no property names",
+        "a prefix and the items after it",
+        "a field each side of an if declares",
+        "a field two levels down a recursive tree",
+    ],
+)
+def test_below_reads_what_each_keyword_says_of_a_field_or_an_item(schema, path, read):
+    assert Compiler(schema).below(path).is_equivalent(compile_schema(read))
+
+
+def test_below_reads_no_keyword_it_cannot_narrow_by_as_narrowing():
+    # `not` and a lone `if` constrain the field, but no subschema holds what they leave.
+    for schema in ({"not": {"properties": {"f": {"type": "string"}}}}, {"if": True, "then": {}}):
+        assert Compiler(schema).below(("f",)).is_equivalent(compile_schema(True))
+    with pytest.raises(Unsupported):
+        Compiler({"$schema": "http://json-schema.org/draft-07/schema#"}).below(("f",))
 
 
 def test_a_one_of_whose_branches_are_disjoint_is_their_union():

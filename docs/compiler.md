@@ -121,6 +121,29 @@ them, so `{"propertyNames": {"enum": ["k", "j"]}}` over objects is `subset` of
 `{"properties": {"k": {}, "j": {}}, "additionalProperties": false}` and the converse too. A name is a
 string (draft 2020-12, section 10.3.2.4), so a value that is not one names no key.
 
+## What a member holds below
+
+`Compiler.below(path)` returns the values a member of the root holds at `path`, a sequence of
+keys and `ITEM`, any element of an array: the meet of what each keyword says of them, through
+`properties`, `patternProperties`, `additionalProperties`, `prefixItems`, `items`, `allOf`,
+`anyOf`, `oneOf`, `if` with `else`, listed values and a `$ref` resolved against the base URI it
+sits under. It is an upper bound: `not`, a lone `if`, `$dynamicRef` and `unevaluatedProperties`
+narrow nothing, so every value a member holds at the path lies inside, and the set may hold one
+no member does. Whether the bound is tight is a relation valgebra decides against the whole
+schema.
+
+```python
+from valgebra_jsonschema import ITEM, Compiler, compile_schema
+
+page = {
+    "$defs": {"run": {"properties": {"tags": {"type": "array", "items": {"enum": ["a", "b"]}}}}},
+    "type": "object",
+    "properties": {"runs": {"type": "array", "items": {"$ref": "#/$defs/run"}}},
+}
+tags = Compiler(page).below(("runs", ITEM, "tags", ITEM))
+assert tags.is_equivalent(compile_schema({"enum": ["a", "b"]}))
+```
+
 ## Opaque keywords
 
 These have no counterpart in valgebra's set language, so they compile to

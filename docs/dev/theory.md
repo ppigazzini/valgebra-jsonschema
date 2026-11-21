@@ -55,6 +55,24 @@ IMPLEMENTED-BY: schema.py::Compiler._index
 
 HELD-BY: test_a_uri_two_schema_objects_of_one_document_claim_names_neither, test_a_reference_reached_through_a_pointer_resolves_in_its_own_resource
 
+## Below a schema
+
+**A member's field lies in the meet of what each keyword says of it.** A schema object holds
+where each of its keywords does (Attouche et al. 2024, §4.5), so the values a member holds at a
+key are the meet of what each keyword says of them. A field `properties` or a pattern matches
+satisfies that subschema (Attouche et al. 2024, §4.4), and one neither matches satisfies
+`additionalProperties` (Attouche et al. 2024, §4.5); `allOf` meets and `anyOf` unites (Attouche
+et al. 2024, §4.3); a `$ref` is its target, resolved against the base URI it sits under
+(Attouche et al. 2024, §4.6). An array's element is read the same way through `items` and
+`prefixItems`. The reading is an upper bound, not the least set holding every value there: a
+keyword no subschema reads off, `not`, a lone `if`, `$dynamicRef` or `unevaluatedProperties`,
+narrows nothing, so the set may hold a value no member holds, and never leaves out one a member
+does. **[LOAD-BEARING: field-reading]**
+
+IMPLEMENTED-BY: schema.py::Compiler.below
+
+HELD-BY: test_below_reads_what_each_keyword_says_of_a_field_or_an_item, test_below_reads_no_keyword_it_cannot_narrow_by_as_narrowing, test_every_value_a_member_holds_below_lies_in_what_below_reads
+
 ## Witnesses
 
 **A conjunction is drawn merged, a member per required key.** A witness of a conjunction is not

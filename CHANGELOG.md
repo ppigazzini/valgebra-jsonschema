@@ -6,6 +6,14 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `Compiler.below(path)` returns the values a member of the root holds at a path of keys and
+  `ITEM`, any element of an array, read through every keyword that narrows them and a `$ref`
+  resolved against the base URI it sits under: an upper bound, holding every value a member holds
+  there. A consumer reading one field's schema itself, as through `properties` alone or a `$ref`
+  from the document's root, reads less, or another resource's schema.
+
 ### Fixed
 
 - `Sampler` draws a conjunction merged keyword by keyword: an `allOf` with the schema around it,

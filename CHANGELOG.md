@@ -27,6 +27,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Changed
 
+- The documentation site is built by Zensical, Material for MkDocs' maintained successor, from
+  `mkdocs.yml` as written under `zensical build --strict`: its own search, the redirects from
+  each page's former address, `llms.txt` and `llms-full.txt`, the Mermaid diagrams and the API
+  reference through the mkdocstrings Python handler. No page moves.
+
 - A `propertyNames` spelling its names out, an `enum`, a `const`, or an `anyOf` or `oneOf` of
   them, compiles to the closed record of those keys, each optional, rather than to an opaque
   predicate: `{"propertyNames": {"enum": ["k", "j"]}}` is `subset` of the object whose

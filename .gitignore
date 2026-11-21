@@ -6,7 +6,7 @@ __pycache__/
 *.py[cod]
 build/
 dist/
-# What `mkdocs build` writes; the workflow `Docs` builds and publishes it.
+# What `zensical build` writes; the workflow `Docs` builds and publishes it.
 site/
 *.egg-info
 .pytest_cache/

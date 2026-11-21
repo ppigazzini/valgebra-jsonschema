@@ -6,7 +6,20 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-11-21
+
+A release of three readings, on valgebra 0.0.31: what a member holds at a path inside a schema, a
+`propertyNames` spelling its names out as the record of those keys, and a conjunction drawn
+merged. Every case of the suite gets the verdict it got, and the corpus disagrees with the
+`jsonschema` package on the same 13 values; the containment study decides 65 questions more, 29
+as the suite labels them and 36 against labels the `jsonschema` package's validator for the
+draft shows wrong.
+
 ### Added
+
+- A page follows a schema from its document to its two answers, membership and inclusion, with a
+  diagram for each step: what the compiler reads, what valgebra decides, and where a keyword
+  read as a predicate leaves a relation `undecided`.
 
 - `Compiler.below(path)` returns the values a member of the root holds at a path of keys and
   `ITEM`, any element of an array, read through every keyword that narrows them and a `$ref`
@@ -146,7 +159,8 @@ A release of the user guide, with no change to the compiler: every schema compil
   records. Of the containment test suite's 10890 questions, 7048 are proven, 3560 refuted,
   246 undecided and 36 refused.
 
-[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/ppigazzini/valgebra-jsonschema/releases/tag/v0.0.1

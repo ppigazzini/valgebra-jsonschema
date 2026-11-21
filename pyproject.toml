@@ -45,14 +45,14 @@ test = [
     # schemas, and `tools/suite.py --reference` runs it on the optional suite files.
     "jsonschema>=4.26.0",
     # What the Python SDK and FastMCP emit: `tests/test_mcp.py` reads its schemas as written.
-    "pydantic>=2.14.3",
+    "pydantic>=2.14.4",
     "pytest>=9.2.0",
 ]
 dev = [
     { include-group = "test" },
     "pre-commit>=4.7.0",
-    "ruff>=0.17.5",
-    "ty>=0.0.106",
+    "ruff>=0.17.6",
+    "ty>=0.0.107",
 ]
 # The backend `[build-system]` names, at the lock's version and hashes: the release workflow
 # builds the published artifacts with it alone, so a backend release reaches them only through

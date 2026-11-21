@@ -75,8 +75,9 @@ draft.
   before a final newline.
 - The 12 schemas past valgebra's node limit compile with each `oneOf` read as its union met
   with a count of the branches that hold, and each reference to a definition that does not
-  reach itself checked through the definition's own set: `cityjson` and `cloudformation`
-  in under 2 s each, the rest in under half a second.
+  reach itself checked through the definition's own set, each within the time the study
+  allows a schema, `TIMEOUT` in `tools/corpus.py`: the `timed out` column is 0 in every
+  subset.
 
 ## Inclusions against the containment test suite
 

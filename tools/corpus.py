@@ -75,7 +75,7 @@ ROOT = Path(__file__).parent.parent
 CORPUS_NAME = "guidance-ai/jsonschemabench"
 COMMIT = "9a94995b9279ae3af3aed4b2629172790b968d14"
 CACHE = ROOT / "results" / f"jsonschemabench-{COMMIT[:12]}"
-#: Seconds one schema may take; none of the corpus needs more than one.
+#: Seconds one schema may take; a schema past them is counted as timed out.
 TIMEOUT = 60
 #: The meta-schemas of the drafts, which the `jsonschema` package resolves a reference to
 #: by default: supplied to the compiler too, so the two read one set of documents.

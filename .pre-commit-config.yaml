@@ -8,6 +8,9 @@ repos:
       - id: check-merge-conflict
       - id: check-toml
       - id: check-yaml
+        # mkdocs.yml names the Mermaid fence's formatter by a Python tag, which a safe load
+        # refuses; the hook checks the syntax, and the site build loads the file.
+        args: [--unsafe]
       - id: end-of-file-fixer
       - id: trailing-whitespace
       - id: mixed-line-ending

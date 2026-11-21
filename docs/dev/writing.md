@@ -105,6 +105,11 @@ The renderer is strict and the failures are silent. `tools/check_markdown.py` ca
 - When wrapping prose, never start a continuation line with `+ `, `- ` or `* `.
 - No images, anywhere. A committed plot stops tracking the code that produced it and cannot
   be grepped against a study row.
+- A diagram is a `mermaid` block instead: text the page carries, which the site and GitHub
+  draw alike and grep reads. It shows which part reads or decides what, never a number, and
+  each node names a function, a keyword or a set the text beside it states. No colors of its
+  own: the site draws it in its palette, light or dark. Parse it with Mermaid 11, the version
+  the site loads, before it lands; a block that does not parse is drawn as an error box.
 
 ## Code comments
 

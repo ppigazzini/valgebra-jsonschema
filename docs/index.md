@@ -30,6 +30,11 @@ assert strings.relation_to(tags) == "not_subset"
 pip install valgebra-jsonschema          # Python 3.11 or later
 ```
 
+Membership has the specification's verdict for every keyword the compiler accepts. An
+inclusion is `subset`, `not_subset` or `undecided`, and `undecided`, where valgebra cannot tell,
+is never read as either. [How it works](how-it-works.md) follows a schema from its document to
+both answers, with a diagram for each step.
+
 Start with [reading an MCP tool](mcp.md) or [the recipes](recipes.md);
 [how each keyword compiles](compiler.md) is what a schema means here.
 

@@ -76,7 +76,8 @@ Patterns follow ECMA-262, as the specification requires, and numbers compare by 
 `assert_format=True` reads nine of them as assertions. A `$ref` resolves against the base URI it
 sits under, within the document or to one passed in `documents={uri: document}`; nothing is
 fetched.
-[The compiler page](https://ppigazzini.github.io/valgebra-jsonschema/compiler/) says how each keyword becomes a set, and
+[How it works](https://ppigazzini.github.io/valgebra-jsonschema/how-it-works/) follows a schema from its document to both answers, a diagram for each step;
+[the compiler page](https://ppigazzini.github.io/valgebra-jsonschema/compiler/) says how each keyword becomes a set, and
 [the conformance page](https://ppigazzini.github.io/valgebra-jsonschema/conformance/) holds the inventory and the ledger of
 differences.
 

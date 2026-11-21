@@ -39,6 +39,7 @@ nav:
       - Recipes: recipes.md
   - Release notes: changelog.md
   - Explanation:
+      - How it works: how-it-works.md
       - The compiler: compiler.md
       - Conformance: conformance.md
       - Results: results.md
@@ -70,7 +71,15 @@ validation:
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  # A diagram is a `mermaid` block, text the page carries: Material loads Mermaid on a page
+  # holding one and draws it in the site's palette, light or dark, and GitHub draws the same
+  # block. The formatter is named by a Python tag, which is why the YAML hook parses this file
+  # with --unsafe.
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
@@ -134,6 +143,7 @@ plugins:
         Release notes:
           - changelog.md: Every released version, what it changed, and what counts as a break.
         Explanation:
+          - how-it-works.md: What a schema becomes here, the two questions it answers, and where valgebra-jsonschema sits between JSON Schema, valgebra and a caller.
           - compiler.md: How each JSON Schema keyword becomes a set, what is opaque, and what is refused.
           - conformance.md: What the compiler promises against JSON Schema, how it is checked, and where a difference may live.
           - results.md: Every measured count, with the command that prints it.

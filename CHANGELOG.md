@@ -13,6 +13,13 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   unanchored and its classes written out; `Compiler.patterns` holds the texts. A part a
   lookahead is read as, and a text two patterns translate to, are named as valgebra gave them.
 
+### Changed
+
+- valgebra is required from 0.0.32, which asks a meet holding a union as its clauses once every
+  other reading declines: a result whose `oneOf` pairs two keys is `subset` of an input whose
+  `if` reads the pair, read over the result's keys. The suite, corpus and containment studies
+  read no difference on it.
+
 ## [0.0.4] - 2026-11-21
 
 A release of three readings, on valgebra 0.0.31: what a member holds at a path inside a schema, a

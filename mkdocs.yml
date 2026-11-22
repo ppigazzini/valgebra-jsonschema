@@ -139,7 +139,7 @@ plugins:
         Getting started:
           - index.md: What valgebra-jsonschema is, how it reads JSON Schema into valgebra's sets, and where to start.
           - mcp.md: Read an MCP tool listing into its two contracts, its dialects, and what its schemas may hold.
-          - recipes.md: Tasks done end to end with a JSON Schema in hand -- a model's tool call, a schema change checked before release, a schema split across documents, files checked against a schema, and what a schema asserts.
+          - recipes.md: Tasks done end to end with a JSON Schema in hand -- a model's tool call, a schema change checked before release, a result read closed, a schema split across documents, files checked against a schema, and what a schema asserts.
         Release notes:
           - changelog.md: Every released version, what it changed, and what counts as a break.
         Explanation:

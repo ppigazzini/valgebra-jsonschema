@@ -1,5 +1,5 @@
 ---
-description: Tasks done end to end with a JSON Schema in hand -- a model's tool call, a schema change checked before release, a schema split across documents, files checked against a schema, and what a schema asserts.
+description: Tasks done end to end with a JSON Schema in hand -- a model's tool call, a schema change checked before release, a result read closed, a schema split across documents, files checked against a schema, and what a schema asserts.
 ---
 
 # Recipes
@@ -178,6 +178,57 @@ The renaming is a permutation of the key strings, so a key the input names under
 given the old one, and no two keys of a member become one. A keyword naming keys a renaming
 cannot follow is refused: `patternProperties`, a `propertyNames` other than a list of names, and
 a reference anywhere but into the definitions.
+
+## A result read closed, as an assumption
+
+A published result is open: a key it does not name may hold any value, so a detection meets a
+distance argument through a `unit` and a `value` it never names. A server that sends no key its
+schema does not name is described by the schema read closed, and `closed` reads it so: the root
+with `unevaluatedProperties: false`, which counts a key a `$ref` or an `allOf` declares as named,
+where `additionalProperties: false` sees its sibling `properties` alone and here empties the
+result:
+
+```python
+from valgebra import intersection, nothing
+
+from valgebra_jsonschema import closed, compile_schema
+
+DETECTION = {
+    "$defs": {
+        "Found": {
+            "type": "object",
+            "properties": {"object_id": {"type": "string"}},
+            "required": ["object_id"],
+        }
+    },
+    "allOf": [{"$ref": "#/$defs/Found"}],
+    "properties": {"confidence": {"type": "number", "minimum": 0, "maximum": 1}},
+    "required": ["confidence"],
+}
+DISTANCE = {
+    "type": "object",
+    "properties": {
+        "unit": {"type": "string", "const": "m"},
+        "value": {"type": "number", "minimum": 0.2, "maximum": 0.6},
+    },
+    "required": ["unit", "value"],
+}
+argument = compile_schema(DISTANCE)
+assert intersection(compile_schema(DETECTION), argument).relation_to(nothing) == "not_subset"
+reading = compile_schema(closed(DETECTION))
+assert intersection(reading, argument).relation_to(nothing) == "subset"
+assert reading.is_valid({"object_id": "obj_1", "confidence": 0.9})
+assert not reading.is_valid({"object_id": "obj_1", "confidence": 0.9, "unit": "m"})
+sibling = compile_schema({**DETECTION, "additionalProperties": False})
+assert sibling.relation_to(nothing) == "subset"
+```
+
+The closed reading is narrower than the published one, never wider, so a proof over it is a
+proof under the assumption that the server sends no other key, and a result carrying one breaks
+the assumption rather than the schema. Only the root is closed: a record under a property stays
+as written. An older draft's document is upgraded first, and the compiler refuses the closing
+where it refuses `unevaluatedProperties` beside the root's other keywords, an `anyOf` of more
+than four branches among them.
 
 ## A schema split across documents
 

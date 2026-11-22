@@ -6,6 +6,19 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `closed(schema)` reads a schema closed at its root: its members holding no key that no
+  keyword of the root evaluates, the root with `unevaluatedProperties: false` (draft 2020-12,
+  section 11.3). A key a `$ref` or an `allOf` declares counts as evaluated, where
+  `additionalProperties: false` sees its sibling `properties` alone and empties a result whose
+  keys a definition declares. The reading is narrower than the schema, never wider, so it states
+  an assumption about a server that sends no other key; a record under a property stays as
+  written, an older draft's document is upgraded first, and the compiler refuses the closing
+  where it refuses `unevaluatedProperties` beside the root's other keywords. Over 300 drawn
+  schemas, the closing is below each and holds what `jsonschema` reads it to hold, and narrows
+  205.
+
 ## [0.0.5] - 2026-11-22
 
 A release of one reading and one wording, on valgebra 0.0.32: a schema read over another

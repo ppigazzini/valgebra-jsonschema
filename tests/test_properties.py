@@ -7,7 +7,8 @@ import jsonschema
 import pytest
 from valgebra import intersection
 
-from valgebra_jsonschema.schema import ITEM, Compiler, compile_schema
+from valgebra_jsonschema import closed
+from valgebra_jsonschema.schema import ITEM, Compiler, Unsupported, compile_schema
 
 SCALARS = [None, True, False, 0, 1, -1, 1.0, 2.5, -7, 10**6, "", "a", "ab", "abc", "Z9"]
 
@@ -120,3 +121,22 @@ def test_every_value_a_member_holds_below_lies_in_what_below_reads(seed):
                 if path not in read:
                     read[path] = compiler.below(path)
                 assert read[path].is_valid(held), (schema, member, path)
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_a_closed_schema_is_below_its_schema_and_held_as_jsonschema_holds_it(seed):
+    """`closed(s)` is below `s`, and its members are those `jsonschema` reads it to hold."""
+    rng = random.Random(f"closed:{seed}")
+    for _ in range(30):
+        schema = _schema(rng)
+        try:
+            reading = compile_schema(closed(schema))
+        except Unsupported:
+            continue
+        written = compile_schema(schema)
+        assert reading.relation_to(written) == "subset", schema
+        reference = jsonschema.Draft202012Validator(closed(schema))
+        for _ in range(25):
+            value = _value(rng)
+            assert reading.is_valid(value) == reference.is_valid(value), (schema, value)
+            assert not reading.is_valid(value) or written.is_valid(value), (schema, value)

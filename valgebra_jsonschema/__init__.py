@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from valgebra_jsonschema.closing import closed
 from valgebra_jsonschema.mcp import Tool, read_tool
 from valgebra_jsonschema.rename import renamed
 from valgebra_jsonschema.schema import (
@@ -53,6 +54,7 @@ __all__ = [
     "Unsupported",
     "UnsupportedDialect",
     "branches",
+    "closed",
     "compile_schema",
     "compile_with_fallbacks",
     "constants",

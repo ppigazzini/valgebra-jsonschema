@@ -6,6 +6,13 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-11-22
+
+A release of one reading and one wording, on valgebra 0.0.32: a schema read over another
+record's keys, so a step's result is asked against a later step's input in one inclusion, and a
+failure naming each pattern in the schema's own text. Every case of the suite gets the verdict
+it got, and the corpus and containment studies read no difference on 0.0.32.
+
 ### Added
 
 - `renamed(schema, names)` reads a schema over another record's keys: its members, each key `k`
@@ -181,7 +188,8 @@ A release of the user guide, with no change to the compiler: every schema compil
   records. Of the containment test suite's 10890 questions, 7048 are proven, 3560 refuted,
   246 undecided and 36 refused.
 
-[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.1...v0.0.2

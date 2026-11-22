@@ -6,6 +6,13 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `Compiler.reworded(failure)` names each pattern a failure names in the schema's text,
+  `a string matching '^[a-f0-9]{24}$'` where valgebra names the text it was given, the pattern
+  unanchored and its classes written out; `Compiler.patterns` holds the texts. A part a
+  lookahead is read as, and a text two patterns translate to, are named as valgebra gave them.
+
 ## [0.0.4] - 2026-11-21
 
 A release of three readings, on valgebra 0.0.31: what a member holds at a path inside a schema, a

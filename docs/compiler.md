@@ -151,6 +151,37 @@ tags = Compiler(page).below(("runs", ITEM, "tags", ITEM))
 assert tags.is_equivalent(compile_schema({"enum": ["a", "b"]}))
 ```
 
+## A failure in the schema's text
+
+valgebra matches a `pattern` in its own dialect: the compiler writes it unanchored, as
+ECMA-262's `test` searches, and each class atom as a code point, so a failure names that text,
+`a string matching '(?s:.*)(?:^[\\x{61}-\\x{66}]{2}$)(?s:.*)'` for `^[a-f]{2}$`.
+`Compiler.reworded` returns a failure with each pattern this compiler wrote named in the schema's
+text, in `expected` and in `message`; `Compiler.patterns` holds the texts.
+
+```python
+from valgebra import ValidationError
+from valgebra_jsonschema import Compiler
+
+schema = {"type": "string", "pattern": "^[a-f0-9]{24}$"}
+compiler = Compiler(schema)
+ids = compiler.compile(schema)
+assert not ids.is_valid("nope")
+try:
+    ids.validate("nope")
+except ValidationError as error:
+    named = compiler.reworded(error.errors[0])
+    assert named["expected"] == "a string matching '^[a-f0-9]{24}$'"
+```
+
+A failure names a pattern this way wherever a `pattern`, a `propertyNames` pattern or a key of a
+closed `patternProperties` fails. A lookahead is read as parts, none of which is the pattern, and
+a failure names the part as valgebra gave it; so does a text two patterns translate to, as
+`^\d$` and `^[0-9]$` do. `compile_schema` keeps its compiler, and `compile_with_fallbacks`
+returns the one it read the schema with. valgebra holds no display text: a marker's fields are
+its identity, so a text stored beside a `Regex` would make one pattern two markers that compare
+and hash apart.
+
 ## Opaque keywords
 
 These have no counterpart in valgebra's set language, so they compile to

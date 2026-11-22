@@ -418,6 +418,9 @@ class Compiler:
         #: Keywords outside draft 2020-12's vocabularies, which it says to treat as
         #: annotations: they assert nothing, and each one met is recorded here.
         self.ignored: set[str] = set()
+        #: The schema's texts of each pattern compiled whole, by the text valgebra was given
+        #: for it, which a failure names; `reworded` names the failure by the schema's text.
+        self.patterns: dict[str, set[str]] = {}
         #: Each target by its node and the base URI around it, which every reference
         #: inside it resolves against.
         self._done: dict[_Key, Validator[Any]] = {}
@@ -489,6 +492,34 @@ class Compiler:
         if complemented is kind or whole == anything:
             return whole
         return guard(complemented, refined)
+
+    def reworded(self, failure: Mapping[str, object]) -> dict[str, object]:
+        r"""Return a failure valgebra reports, each pattern it names in the schema's text.
+
+        valgebra matches a ``pattern`` in its own dialect, unanchored and its classes written
+        out, and names the text it was given: ``a string matching
+        '(?s:.*)(?:^[\x{61}-\x{66}]{2}$)(?s:.*)'``. Where this compiler wrote that text for
+        one schema text alone (`patterns`), the failure's ``expected`` names the schema's,
+        ``a string matching '^[a-f]{2}$'``, and so does its ``message``, where the expected
+        set's span occurs once. A text two patterns translate to, as ``\d`` and ``[0-9]``
+        do, and a part a lookaround is read as are named as valgebra gave them, and so is
+        every other key. A literal of the schema spelling such a label is renamed with it.
+        """
+        out = dict(failure)
+        expected = out.get("expected")
+        if not isinstance(expected, str):
+            return out
+        named = expected
+        for body, texts in self.patterns.items():
+            if len(texts) == 1:
+                (text,) = texts
+                named = named.replace(f"a string matching {body!r}", f"a string matching {text!r}")
+        out["expected"] = named
+        message = out.get("message")
+        span = f"expected {expected}, got "
+        if isinstance(message, str) and message.count(span) == 1:
+            out["message"] = message.replace(span, f"expected {named}, got ")
+        return out
 
     def compile(self, schema: object) -> Validator[Any]:
         """Return the set of JSON values ``schema`` admits."""
@@ -1502,7 +1533,7 @@ def _max_length(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
 
 
 def _pattern(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
-    return c.guard("string", _search(s["pattern"]))
+    return c.guard("string", _search(s["pattern"], c.patterns))
 
 
 def _min_items(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
@@ -1877,7 +1908,7 @@ def _class_atom(pattern: str, i: int) -> tuple[_Atom, int]:
     return ord(pattern[i]), i + 1
 
 
-def _search(pattern: str) -> Validator[Any]:
+def _search(pattern: str, written: dict[str, set[str]] | None = None) -> Validator[Any]:
     """Return the strings ``pattern`` finds a match in, as ECMA-262's ``test`` does.
 
     valgebra's engine holds no lookaround, and two shapes of one are read as the sets they
@@ -1887,9 +1918,13 @@ def _search(pattern: str) -> Validator[Any]:
     alone. ``^((?!A).)*$`` holds the strings with no line terminator in which ``A`` occurs
     nowhere, so long as ``A`` matches no empty string and asserts no position, where it
     could match at the end, which the loop never tests. Any other lookaround is refused.
+
+    A pattern with no lookaround is one text valgebra matches whole, recorded in ``written``
+    under the schema's text; the parts a lookaround is read as are not the pattern, and a
+    failure names the part.
     """
     if "(?=" not in pattern and "(?!" not in pattern:
-        return _regex(pattern, f"(?s:.*)(?:{ecma(pattern)})(?s:.*)")
+        return _one_text(pattern, written)
     if (bodies := _tempered(pattern)) is not None:
         return intersection(
             _regex(pattern, f"{_DOT}*"),
@@ -1906,7 +1941,15 @@ def _search(pattern: str) -> Validator[Any]:
                 for positive, a in looks
             ),
         )
-    return _regex(pattern, f"(?s:.*)(?:{ecma(pattern)})(?s:.*)")
+    return _one_text(pattern, written)
+
+
+def _one_text(pattern: str, written: dict[str, set[str]] | None) -> Validator[Any]:
+    """Return the strings ``pattern`` finds a match in, its text recorded in ``written``."""
+    body = f"(?s:.*)(?:{ecma(pattern)})(?s:.*)"
+    if written is not None:
+        written.setdefault(body, set()).add(pattern)
+    return _regex(pattern, body)
 
 
 def _regex(pattern: str, body: str) -> Validator[Any]:
@@ -2007,7 +2050,7 @@ def _object_by_cells(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     part: one clause over the keys exactly these patterns match, keyed by their meet with
     the others' complements, and no two clauses share a key.
     """
-    patterns = [(_search(p), c.compile(v)) for p, v in s["patternProperties"].items()]
+    patterns = [(_search(p, c.patterns), c.compile(v)) for p, v in s["patternProperties"].items()]
     props: dict[str, Any] = s.get("properties", {})
     required = set(s.get("required", []))
     extra = c.compile(s.get("additionalProperties", True))
@@ -2047,7 +2090,7 @@ def _object_by_pattern(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
         return _object_by_cells(c, s)
     c.opaque.add("patternProperties")
     props = {k: c.closed(v) for k, v in s.get("properties", {}).items()}
-    patterns = [(_search(p), c.closed(v)) for p, v in s["patternProperties"].items()]
+    patterns = [(_search(p, c.patterns), c.closed(v)) for p, v in s["patternProperties"].items()]
     extra = c.closed(s.get("additionalProperties", True))
     required = list(s.get("required", []))
 
@@ -2097,7 +2140,7 @@ def _property_names(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     if c.by_clauses and words and schema.get("type") in (None, "string"):
         parts: list[object] = [str]
         if "pattern" in schema:
-            parts.append(_search(schema["pattern"]))
+            parts.append(_search(schema["pattern"], c.patterns))
         low, high = schema.get("minLength"), schema.get("maxLength")
         if low is not None:
             parts.append(Annotated[str, MinLen(_count(schema, "minLength"))])

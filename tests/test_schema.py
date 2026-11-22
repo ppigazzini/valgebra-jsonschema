@@ -6,7 +6,7 @@ from typing import Annotated, Any
 
 import pytest
 from annotated_types import MinLen
-from valgebra import Validator, complement, intersection, nothing
+from valgebra import ValidationError, Validator, complement, intersection, nothing
 
 from valgebra_jsonschema import schema as schema_module
 from valgebra_jsonschema.schema import (
@@ -1443,52 +1443,53 @@ class TestLookaheads:
         assert words.relation_to(unmarked) == "not_subset"
 
 
+#: A pattern, a text, and whether ECMA-262 finds a match of the one in the other.
+_ECMA_READINGS = [
+    (r"^\d$", "١", False),
+    (r"^\d$", "7", True),
+    (r"^\w$", "é", False),
+    (r"^\s$", "﻿", True),
+    (r"^\s$", "\u0085", False),
+    (r"^.$", " ", False),
+    (r"^[\d]$", "١", False),
+    (r"^[^\d]$", "١", True),
+    (r"^\cJ$", "\n", True),
+    (r"^abc$", "abc\n", False),
+    (r"a\b", "aé", True),
+    (r"a\B", "aé", False),
+    (r"\bfoo\b", "afoo", False),
+    (r"^[\b]$", "\x08", True),
+    (r"^[\s\S]$", "\n", True),
+    (r"^[a\D]$", "x", True),
+    (r"^[a\D]$", "7", False),
+    (r"^[^]$", "\n", True),
+    (r"^[]$", "", False),
+    (r"^[a&&b]$", "&", True),
+    (r"^[a~~b]$", "~", True),
+    (r"^[a[]$", "[", True),
+    (r"^a\0b$", "a\x00b", True),
+    # A range from `-`, and a `^` after a negated shorthand: valgebra's class syntax
+    # reads both apart from ECMA-262, so every class atom is written as a code point.
+    (r"^[--a]$", ".", True),
+    (r"^[^--z]$", ".", False),
+    (r"^[\D^_]$", "0", False),
+    (r"^[\D^_]$", "^", True),
+    (r"^[^a\S]$", " ", True),
+    (r"^[^a\S]$", "x", False),
+    (r"^\uD83D\uDE00$", "\U0001f600", True),
+    (r"^\u{1F600}$", "\U0001f600", True),
+    (r"^\p{digit}+$", "\u0663", True),
+    (r"^\p{sc=Grek}$", "\u03b1", True),
+    # Annex B's literals, read as the character as every dialect reads them.
+    (r"^a\:b$", "a:b", True),
+    (r"^PUBMED:\{d}$", "PUBMED:{d}", True),
+    (r"^x]$", "x]", True),
+    (r"^a{b$", "a{b", True),
+]
+
+
 class TestEcmaDialect:
-    @pytest.mark.parametrize(
-        ("pattern", "text", "admitted"),
-        [
-            (r"^\d$", "١", False),
-            (r"^\d$", "7", True),
-            (r"^\w$", "é", False),
-            (r"^\s$", "﻿", True),
-            (r"^\s$", "\u0085", False),
-            (r"^.$", " ", False),
-            (r"^[\d]$", "١", False),
-            (r"^[^\d]$", "١", True),
-            (r"^\cJ$", "\n", True),
-            (r"^abc$", "abc\n", False),
-            (r"a\b", "aé", True),
-            (r"a\B", "aé", False),
-            (r"\bfoo\b", "afoo", False),
-            (r"^[\b]$", "\x08", True),
-            (r"^[\s\S]$", "\n", True),
-            (r"^[a\D]$", "x", True),
-            (r"^[a\D]$", "7", False),
-            (r"^[^]$", "\n", True),
-            (r"^[]$", "", False),
-            (r"^[a&&b]$", "&", True),
-            (r"^[a~~b]$", "~", True),
-            (r"^[a[]$", "[", True),
-            (r"^a\0b$", "a\x00b", True),
-            # A range from `-`, and a `^` after a negated shorthand: valgebra's class syntax
-            # reads both apart from ECMA-262, so every class atom is written as a code point.
-            (r"^[--a]$", ".", True),
-            (r"^[^--z]$", ".", False),
-            (r"^[\D^_]$", "0", False),
-            (r"^[\D^_]$", "^", True),
-            (r"^[^a\S]$", " ", True),
-            (r"^[^a\S]$", "x", False),
-            (r"^\uD83D\uDE00$", "\U0001f600", True),
-            (r"^\u{1F600}$", "\U0001f600", True),
-            (r"^\p{digit}+$", "\u0663", True),
-            (r"^\p{sc=Grek}$", "\u03b1", True),
-            # Annex B's literals, read as the character as every dialect reads them.
-            (r"^a\:b$", "a:b", True),
-            (r"^PUBMED:\{d}$", "PUBMED:{d}", True),
-            (r"^x]$", "x]", True),
-            (r"^a{b$", "a{b", True),
-        ],
-    )
+    @pytest.mark.parametrize(("pattern", "text", "admitted"), _ECMA_READINGS)
     def test_a_pattern_means_what_ecma_262_says(self, pattern, text, admitted):
         assert compile_schema({"pattern": pattern}).is_valid(text) is admitted
 
@@ -1523,6 +1524,103 @@ class TestEcmaDialect:
         # search wraps the pattern in.
         with pytest.raises(Unsupported, match="ECMA-262 refuses"):
             compile_schema({"pattern": pattern})
+
+
+def _failed(schema: object, value: object) -> tuple[Compiler, dict[str, object]]:
+    """Return a compiler of ``schema`` and the one failure valgebra reports of ``value``."""
+    compiler = Compiler(schema)
+    values = compiler.compile(schema)
+    with pytest.raises(ValidationError) as caught:
+        values.validate(value)
+    (failure,) = caught.value.errors
+    return compiler, failure
+
+
+class TestPatternWording:
+    def test_a_failed_pattern_is_named_in_the_schemas_text(self):
+        # The client holds the schema's text, which the `jsonschema` package words with.
+        compiler, failure = _failed({"type": "string", "pattern": "^[a-f0-9]{24}$"}, "nope")
+        named = compiler.reworded(failure)
+        assert named["expected"] == "a string matching '^[a-f0-9]{24}$'"
+        assert named["message"] == (
+            "expected a string matching '^[a-f0-9]{24}$', got 'nope' [string_pattern_mismatch]"
+        )
+        assert {k: named[k] for k in ("code", "path", "value")} == {
+            k: failure[k] for k in ("code", "path", "value")
+        }
+
+    @pytest.mark.parametrize(
+        ("schema", "value", "expected"),
+        [
+            (
+                {"properties": {"id": {"pattern": "^[a-f]{2}$"}}},
+                {"id": "zz"},
+                "one of: not str, str and a string matching '^[a-f]{2}$'",
+            ),
+            (
+                {"type": "object", "propertyNames": {"pattern": "^[a-f]+$"}},
+                {"zz": 1},
+                "a string matching '^[a-f]+$'",
+            ),
+            (
+                {"type": "object", "patternProperties": {"^s_": {}}, "additionalProperties": False},
+                {"x": 1},
+                "a string matching '^s_'",
+            ),
+            ({"type": "string", "pattern": "^it's$"}, "its", """a string matching "^it's$\""""),
+        ],
+    )
+    def test_each_keyword_writing_a_pattern_names_it(self, schema, value, expected):
+        compiler, failure = _failed(schema, value)
+        assert compiler.reworded(failure)["expected"] == expected
+
+    @pytest.mark.parametrize(
+        ("pattern", "text"), [(p, t) for p, t, admitted in _ECMA_READINGS if not admitted]
+    )
+    def test_a_pattern_ecma_262_reads_is_named_as_written(self, pattern, text):
+        compiler, failure = _failed({"type": "string", "pattern": pattern}, text)
+        assert compiler.reworded(failure)["expected"] == f"a string matching {pattern!r}"
+
+    @pytest.mark.parametrize(
+        ("schema", "value"),
+        [
+            # A part a lookahead is read as, which is not the pattern.
+            ({"type": "string", "pattern": "^(?!ab)[a-z]+$"}, "abc"),
+            ({"type": "string", "pattern": "^((?!x).)*$"}, "axb"),
+            # Two texts valgebra is given as one.
+            ({"type": "string", "anyOf": [{"pattern": r"^\d$"}, {"pattern": "^[0-9]$"}]}, "c"),
+        ],
+    )
+    def test_a_part_or_a_shared_text_is_named_as_valgebra_gave_it(self, schema, value):
+        compiler, failure = _failed(schema, value)
+        assert compiler.reworded(failure) == failure
+
+    def test_a_literal_holding_the_text_valgebra_was_given_keeps_it(self):
+        body = "(?s:.*)(?:^a$)(?s:.*)"
+        schema = {"type": "string", "anyOf": [{"pattern": "^a$"}, {"const": body}]}
+        compiler, failure = _failed(schema, "b")
+        named = compiler.reworded(failure)["expected"]
+        assert isinstance(named, str)
+        assert f"the literal {body!r}" in named
+        assert "a string matching '^a$'" in named
+
+    def test_the_value_is_never_renamed(self):
+        schema = {"type": "string", "pattern": "^a$"}
+        compiler, failure = _failed(schema, "b")
+        label = failure["expected"]
+        assert isinstance(label, str)
+        _, spelled = _failed(schema, label)
+        named = compiler.reworded(spelled)
+        message, given = named["message"], spelled["message"]
+        assert isinstance(message, str)
+        assert isinstance(given, str)
+        assert named["value"] == spelled["value"] == repr(label)
+        assert message.partition(", got ")[2] == given.partition(", got ")[2]
+        assert message.startswith("expected a string matching '^a$', got ")
+        # A value spelling the whole span leaves two, and the message as valgebra gave it.
+        _, twice = _failed(schema, f"expected {label}, got ")
+        assert compiler.reworded(twice)["message"] == twice["message"]
+        assert compiler.reworded(twice)["expected"] == "a string matching '^a$'"
 
 
 class TestDraft7:

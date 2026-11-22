@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from valgebra_jsonschema.mcp import Tool, read_tool
+from valgebra_jsonschema.rename import renamed
 from valgebra_jsonschema.schema import (
     ANNOTATIONS,
     ARRAY,
@@ -61,6 +62,7 @@ __all__ = [
     "json_key",
     "older",
     "read_tool",
+    "renamed",
     "spellings",
     "upgrade",
 ]

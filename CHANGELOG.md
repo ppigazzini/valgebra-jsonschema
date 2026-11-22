@@ -8,6 +8,14 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Added
 
+- `renamed(schema, names)` reads a schema over another record's keys: its members, each key `k`
+  written as `names[k]`, so a step's result is asked against a later step's input written over
+  other names in one inclusion. It renames what `properties`, `required`, `dependentRequired`,
+  `dependentSchemas`, `dependencies`, an object `const` or `enum` and a `propertyNames` list
+  name, through `allOf`, `anyOf`, `oneOf`, `not` and `if`, and leaves a property's value, an
+  item and a definition as written; a keyword naming keys by a pattern or a reference reaching
+  the renamed schema is refused. With valgebra 0.0.32 a result whose two keys agree reads
+  `subset` below an input whose `if` reads that agreement.
 - `Compiler.reworded(failure)` names each pattern a failure names in the schema's text,
   `a string matching '^[a-f0-9]{24}$'` where valgebra names the text it was given, the pattern
   unanchored and its classes written out; `Compiler.patterns` holds the texts. A part a

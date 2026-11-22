@@ -142,6 +142,43 @@ under the old one, which
 [valgebra's recipe for stored data](https://ppigazzini.github.io/valgebra/get-started/recipes/#stored-data-against-a-new-schema)
 reads row by row.
 
+## A result read as another step's input
+
+A step's result feeds a later step whose input schema names the same values under other keys:
+the result's `a` and `b` are the input's `x` and `y`. Whether every result is an input is one
+inclusion once the input is read over the result's keys, and `renamed` reads it so, renaming
+the keys each keyword names rather than the text. The result's two keys agree, and the input's
+`if` reads exactly that agreement, so neither field alone would answer it:
+
+```python
+from valgebra_jsonschema import compile_schema, renamed
+
+RESULT = {
+    "type": "object",
+    "required": ["a", "b"],
+    "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+    "oneOf": [
+        {"properties": {"a": {"const": 1}, "b": {"const": 1}}},
+        {"properties": {"a": {"const": 2}, "b": {"const": 2}}},
+    ],
+}
+INPUT = {
+    "type": "object",
+    "required": ["x", "y"],
+    "properties": {"x": {"type": "integer"}, "y": {"type": "integer"}},
+    "if": {"properties": {"x": {"const": 1}}},
+    "then": {"properties": {"y": {"const": 1}}},
+    "else": {"properties": {"y": {"const": 2}}},
+}
+over_result = renamed(INPUT, {"x": "a", "y": "b"})
+assert compile_schema(RESULT).relation_to(compile_schema(over_result)) == "subset"
+```
+
+The renaming is a permutation of the key strings, so a key the input names under a new name is
+given the old one, and no two keys of a member become one. A keyword naming keys a renaming
+cannot follow is refused: `patternProperties`, a `propertyNames` other than a list of names, and
+a reference anywhere but into the definitions.
+
 ## A schema split across documents
 
 A `$ref` may name another document by its URI. Nothing is fetched: each document a reference

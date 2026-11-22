@@ -207,7 +207,7 @@ compiled from their subschema, and each compilation holds its own.
 `documents` holds, a reference to a URI two schema objects of one document claim or to an anchor
 two of one resource set, a supplied document in a dialect not read where a reference names it,
 an embedded `$id` whose resource declares another `$schema`, a draft other than 2020-12,
-2019-09, 07, 06 and 04, a draft 2019-09 `$recursiveAnchor: true` on a schema object starting no
+2019-09, 07, 06 and 04 or a meta-schema read [as above](#registered-keywords), a draft 2019-09 `$recursiveAnchor: true` on a schema object starting no
 resource, and a property name holding a lone surrogate. A keyword outside the vocabularies is an
 annotation, as draft 2020-12 says, and `Compiler.ignored` records it.
 
@@ -244,6 +244,17 @@ assert compile_schema(FOUR).relation_to(reading) == "undecided"
 
 A keyword draft 2020-12 defines is not registered, and the attempt raises `ValueError` naming it.
 An unregistered keyword stays an annotation.
+
+A schema may name its own meta-schema in `$schema`, whose `$vocabulary` lists the vocabularies
+of its dialect, each required or optional. Passed among `documents`, that meta-schema is read:
+`compile_schema(schema, documents={uri: meta}, vocabularies={vocabulary: {name: Keyword}})` reads
+each vocabulary it names outside draft 2020-12's through the keywords registered for it. An
+implementation not recognizing a required vocabulary "MUST refuse to process any schemas that
+declare this meta-schema" (draft 2020-12, section 8.1.2), so `UnsupportedDialect` names one no
+caller registers, and an optional one's keywords stay annotations. A dialect leaving out core,
+applicator, unevaluated or validation is refused too: its keywords would be annotations there,
+which the compiler asserts. `dialect(schema, documents, vocabularies)` answers which keywords a
+schema's meta-schema registers.
 
 ## Measured
 

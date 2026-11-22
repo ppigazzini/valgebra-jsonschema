@@ -8,6 +8,15 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Added
 
+- A schema whose `$schema` names its own meta-schema, passed among `documents`, is read through
+  the meta-schema's `$vocabulary`: `compile_schema(..., vocabularies={uri: {name: Keyword}})`
+  reads each vocabulary outside draft 2020-12's through the keywords registered for it. A
+  required vocabulary no caller registers is refused with `UnsupportedDialect` naming it, as
+  draft 2020-12 has an implementation refuse it (section 8.1.2); an optional one's keywords stay
+  annotations; and a dialect leaving out core, applicator, unevaluated or validation is refused,
+  since the compiler would assert keywords it makes annotations. `dialect` answers which keywords
+  a schema's meta-schema registers. The suite reads no difference.
+
 - A caller may register a keyword outside the vocabularies: `compile_schema(schema,
   keywords={name: Keyword(kind, holds)})`, and `Compiler` and `compile_with_fallbacks` alike, read
   it as an assertion on its kind, `holds(instance, value)` answering for an instance, every other

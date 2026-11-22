@@ -2917,12 +2917,70 @@ def _check_nesting(document: object) -> None:
             stack.extend((child, depth + 1) for child in children)
 
 
+#: The vocabularies of draft 2020-12 this package reads, each by its URI.
+_VOCABULARIES = frozenset(
+    f"https://json-schema.org/draft/2020-12/vocab/{name}"
+    for name in (
+        "core",
+        "applicator",
+        "unevaluated",
+        "validation",
+        "meta-data",
+        "format-annotation",
+        "content",
+    )
+)
+#: The vocabularies whose keywords assert: a dialect leaving one out makes its keywords
+#: annotations, which the compiler would assert, so it is not read.
+_ASSERTING = frozenset(
+    f"https://json-schema.org/draft/2020-12/vocab/{name}"
+    for name in ("core", "applicator", "unevaluated", "validation")
+)
+
+
+def dialect(
+    schema: object,
+    documents: Mapping[str, object],
+    vocabularies: Mapping[str, Mapping[str, Keyword]],
+) -> dict[str, Keyword] | None:
+    """Return the keywords a schema's own meta-schema registers, or None for draft 2020-12's.
+
+    A ``$schema`` naming a meta-schema among ``documents`` is read where its ``$vocabulary``
+    declares every vocabulary of draft 2020-12 whose keywords assert, and each other one it
+    declares is registered in ``vocabularies``, by URI, with the keywords it defines, or is
+    optional. An implementation not recognizing a required vocabulary "MUST refuse to process
+    any schemas that declare this meta-schema" (draft 2020-12, section 8.1.2), and an optional
+    one's keywords are annotations, so `UnsupportedDialect` names the first refused.
+    """
+    uri = schema.get("$schema") if isinstance(schema, dict) else None
+    if not isinstance(uri, str) or uri == DRAFT or uri in OLDER:
+        return None
+    meta = documents.get(uri, documents.get(uri.rstrip("#")))
+    declared = meta.get("$vocabulary") if isinstance(meta, dict) else None
+    if not isinstance(declared, dict):
+        return None
+    if missing := sorted(_ASSERTING - set(declared)):
+        msg = f"$schema {uri!r} leaves out {missing[0]!r}, whose keywords this compiler asserts"
+        raise UnsupportedDialect(msg)
+    keywords: dict[str, Keyword] = {}
+    for vocabulary, required in declared.items():
+        if vocabulary in _VOCABULARIES:
+            continue
+        if vocabulary in vocabularies:
+            keywords.update(vocabularies[vocabulary])
+        elif required:
+            msg = f"$schema {uri!r} requires the vocabulary {vocabulary!r}, which is not registered"
+            raise UnsupportedDialect(msg)
+    return keywords
+
+
 def compile_schema(
     schema: object,
     *,
     assert_format: bool = False,
     documents: Mapping[str, object] | None = None,
     keywords: Mapping[str, Keyword] | None = None,
+    vocabularies: Mapping[str, Mapping[str, Keyword]] | None = None,
 ) -> Validator[Any]:
     """Compile a root schema document, upgrading a 2019-09, -07, -06 or -04 one first.
 
@@ -2932,8 +2990,15 @@ def compile_schema(
     `Unsupported`. ``documents`` maps a URI to the document a reference to it names; one
     declaring no ``$schema`` is read in the dialect of the document compiled. ``keywords``
     maps a name to a `Keyword` the caller registers, which asserts as a predicate where any
-    other keyword outside the vocabularies is an annotation.
+    other keyword outside the vocabularies is an annotation. A ``$schema`` naming a meta-schema
+    among ``documents`` is read as `dialect` reads it, ``vocabularies`` mapping a vocabulary's URI
+    to the keywords it defines.
     """
+    read = dialect(schema, documents or {}, vocabularies or {})
+    if read is not None and isinstance(schema, dict):
+        # The dialect is draft 2020-12's vocabularies and the registered ones, read as such.
+        schema = {**schema, "$schema": DRAFT}
+        keywords = {**read, **(keywords or {})}
     if documents and isinstance(schema, dict) and isinstance(schema.get("$schema"), str):
         documents = in_dialect(documents, schema["$schema"])
     if (draft := older(schema)) is not None:

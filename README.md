@@ -73,7 +73,9 @@ schema, and what a schema asserts, keyword by keyword.
 
 Drafts 2020-12, 2019-09, 07, 06 and 04, all but the first through `upgrade`, and a document
 naming any other dialect fails saying so, as the Model Context Protocol asks
-([reading an MCP tool](https://ppigazzini.github.io/valgebra-jsonschema/mcp/)).
+([reading an MCP tool](https://ppigazzini.github.io/valgebra-jsonschema/mcp/)), unless it
+names a meta-schema the caller supplies whose vocabularies this package reads or the caller
+registers ([registered keywords](https://ppigazzini.github.io/valgebra-jsonschema/compiler/#registered-keywords)).
 Patterns follow ECMA-262, as the specification requires, and numbers compare by value: `1` and
 `1.0` are one number, and `true` is none. `format` is an annotation, as 2020-12 makes it, and
 `assert_format=True` reads nine of them as assertions. A `$ref` resolves against the base URI it

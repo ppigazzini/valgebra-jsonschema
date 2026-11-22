@@ -80,7 +80,13 @@ the dynamic anchor with no name `upgrade` writes for `$recursiveAnchor: true` on
 root, the correspondence the draft 2020-12 release notes give.
 
 A keyword outside the vocabularies is an annotation, as draft 2020-12 says to treat it,
-and `Compiler.ignored` records it: `x-label` or OpenAPI's `nullable` assert nothing. Two
+and `Compiler.ignored` records it: `x-label` or OpenAPI's `nullable` assert nothing. A keyword
+a caller registers, `keywords={name: Keyword(kind, holds)}`, asserts instead, the explicit
+agreement section 6.5 asks before one is supported, and a document naming its own meta-schema,
+supplied among `documents`, is read through that meta-schema's `$vocabulary`: a vocabulary
+outside draft 2020-12's is read through the keywords registered for it, an unregistered required
+one is refused as section 8.1.2 asks, and an optional one's keywords stay annotations
+([registered keywords](compiler.md#registered-keywords)). Two
 draft-07 keywords that 2020-12 removed, `additionalItems` and `dependencies`, are refused
 in a 2020-12 schema rather than ignored: a schema carrying them was written to a draft
 where they assert, and ignoring them would admit values its author meant to refuse. In a

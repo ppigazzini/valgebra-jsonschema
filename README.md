@@ -62,8 +62,9 @@ that spells its values out, with `const`, `enum`, or an `anyOf` or `oneOf` of th
 by each value: `constants(schema)` lists them, and the schema lies inside another exactly
 where `is_valid` admits each, a keyword valgebra reads as a predicate included.
 
-[The recipes](https://ppigazzini.github.io/valgebra-jsonschema/recipes/) do five tasks end to end: a model's tool call checked against the schema it was shown, a
-schema change checked before release, a schema split across documents, files checked against a
+[The recipes](https://ppigazzini.github.io/valgebra-jsonschema/recipes/) do eight tasks end to end: a model's tool call checked against the schema it was shown, a
+schema change checked before release, a result read as another step's input, a result read
+closed, a number that is finite, a schema split across documents, files checked against a
 schema, and what a schema asserts, keyword by keyword.
 
 ## What it reads
@@ -75,7 +76,10 @@ Patterns follow ECMA-262, as the specification requires, and numbers compare by 
 `1.0` are one number, and `true` is none. `format` is an annotation, as 2020-12 makes it, and
 `assert_format=True` reads nine of them as assertions. A `$ref` resolves against the base URI it
 sits under, within the document or to one passed in `documents={uri: document}`; nothing is
-fetched.
+fetched. A schema pydantic's `model_json_schema()` emits, as the MCP Python SDK and FastMCP
+publish a tool's, compiles as written: its definitions under `$defs` and a recursion through
+them, a nullable field's `anyOf`, defaults and titles, and the suite holds its members equal to
+the ones pydantic validates.
 [How it works](https://ppigazzini.github.io/valgebra-jsonschema/how-it-works/) follows a schema from its document to both answers, a diagram for each step;
 [the compiler page](https://ppigazzini.github.io/valgebra-jsonschema/compiler/) says how each keyword becomes a set, and
 [the conformance page](https://ppigazzini.github.io/valgebra-jsonschema/conformance/) holds the inventory and the ledger of

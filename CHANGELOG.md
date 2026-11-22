@@ -11,6 +11,9 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 - The recipes hold "a number that is finite": `{"type": "number"}` admits `1e400`, which
   `json.loads` reads as infinity, and the float range as bounds is the decided "finite", a bounded
   number `subset` of it and a plain one `not_subset`.
+- The README names the schemas pydantic's `model_json_schema()` emits, as the MCP Python SDK and
+  FastMCP publish a tool's, as compiling as written, which the suite holds, and counts the
+  recipes, eight.
 
 - `closed(schema)` reads a schema closed at its root: its members holding no key that no
   keyword of the root evaluates, the root with `unevaluatedProperties: false` (draft 2020-12,

@@ -8,6 +8,10 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Added
 
+- The recipes hold "a number that is finite": `{"type": "number"}` admits `1e400`, which
+  `json.loads` reads as infinity, and the float range as bounds is the decided "finite", a bounded
+  number `subset` of it and a plain one `not_subset`.
+
 - `closed(schema)` reads a schema closed at its root: its members holding no key that no
   keyword of the root evaluates, the root with `unevaluatedProperties: false` (draft 2020-12,
   section 11.3). A key a `$ref` or an `allOf` declares counts as evaluated, where

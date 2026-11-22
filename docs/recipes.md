@@ -1,5 +1,5 @@
 ---
-description: Tasks done end to end with a JSON Schema in hand -- a model's tool call, a schema change checked before release, a result read closed, a schema split across documents, files checked against a schema, and what a schema asserts.
+description: Tasks done end to end with a JSON Schema in hand -- a model's tool call, a schema change checked before release, a result read closed, a number that is finite, a schema split across documents, files checked against a schema, and what a schema asserts.
 ---
 
 # Recipes
@@ -229,6 +229,37 @@ the assumption rather than the schema. Only the root is closed: a record under a
 as written. An older draft's document is upgraded first, and the compiler refuses the closing
 where it refuses `unevaluatedProperties` beside the root's other keywords, an `anyOf` of more
 than four branches among them.
+
+## A number that is finite
+
+JSON numbers have no infinity, but a number past the float range, as `1e400`, is one
+`json.loads` reads as `math.inf`, and `{"type": "number"}` admits it: a joint command, a price or
+a timeout taking any number takes that one too. "Finite" is a set JSON Schema states, the float
+range as bounds, so a relation through it is decided, where a predicate testing `math.isfinite`
+would be read for membership alone:
+
+```python
+import json
+import math
+
+from valgebra_jsonschema import compile_schema
+
+LARGEST = 1.7976931348623157e308
+FINITE = {"type": "number", "minimum": -LARGEST, "maximum": LARGEST}
+finite = compile_schema(FINITE)
+number = compile_schema({"type": "number"})
+
+assert number.is_valid(json.loads("1e400"))
+assert json.loads("1e400") == math.inf
+assert not finite.is_valid(json.loads("1e400"))
+assert finite.is_valid(1e308)
+assert number.relation_to(finite) == "not_subset"
+joint = compile_schema({"type": "number", "minimum": -2.6, "maximum": 2.6})
+assert joint.relation_to(finite) == "subset"
+```
+
+A bound inside the float range is finite already, so a schema bounded on both sides needs no more,
+and only a side no bound closes admits an infinity.
 
 ## A schema split across documents
 

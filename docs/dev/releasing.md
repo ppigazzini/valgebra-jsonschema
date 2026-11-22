@@ -87,7 +87,10 @@ and repository, `release.yml` and the environment.
    to it, with the lock and every study, in a commit of its own with
    [the gate](../../AGENTS.md#tooling) green, before the bump. The `Upstream` workflow runs
    the suite and the studies on valgebra's `main` each Monday, so a change that moves a count
-   shows before valgebra's cut. This package is the second of
+   shows before valgebra's cut. `constraints.txt` moves with the lock, exported again by the
+   command its header names, and `test_the_tested_set_is_the_lock_s` holds its pins to the
+   lock's: at a release's tag it is the set the release was tested with, which the README tells
+   a deployment to pin. This package is the second of
    [the release order](https://github.com/ppigazzini/valgebra-planning/blob/main/docs/dev/releasing.md#the-release-order).
 2. **Bump, in one commit.** `version` in `pyproject.toml`, `uv lock`, and the changelog: the
    `Unreleased` entries roll into a section for the version, dated the day of the commit, with its

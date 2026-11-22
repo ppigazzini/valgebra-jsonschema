@@ -1,5 +1,7 @@
 # valgebra-jsonschema
 
+MIT or Apache-2.0, at your option.
+
 JSON Schema read into [valgebra](https://github.com/ppigazzini/valgebra)'s sets, so a schema
 answers two questions: whether a value belongs, as the specification states it, and whether
 everything one schema admits another admits too.
@@ -111,6 +113,12 @@ On Python 3.11 or later, from PyPI, with valgebra, a Rust extension published as
 ```bash
 pip install valgebra-jsonschema
 ```
+
+Every `0.0.x` release of the ecosystem may change what an earlier one answered, so a deployment
+pins the set a release was tested with: the
+[`constraints.txt`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/constraints.txt)
+at its tag holds valgebra and every other dependency at the versions the suite and the studies
+ran on, `pip install valgebra-jsonschema==0.0.6 -c constraints.txt`.
 
 ## License
 

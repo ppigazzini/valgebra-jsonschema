@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
@@ -33,3 +34,19 @@ def test_the_gate_is_the_test_job() -> None:
 def test_every_run_carries_no_sync() -> None:
     commands = _gate() + _job("test") + _job("floor") + _job("docs")
     assert all(command.startswith("uv run --no-sync ") for command in commands), commands
+
+
+def test_the_tested_set_is_the_lock_s() -> None:
+    """`constraints.txt` pins each dependency at the lock's version: the set a release ran on.
+
+    It is `uv export --locked --no-dev --no-emit-project --no-hashes`, its header naming the
+    command; a lock that moves a version it pins fails here until it is exported again.
+    """
+    locked = {
+        package["name"]: package["version"]
+        for package in tomllib.loads((ROOT / "uv.lock").read_text(encoding="utf-8"))["package"]
+    }
+    written = (ROOT / "constraints.txt").read_text(encoding="utf-8")
+    pinned = dict(re.findall(r"^([A-Za-z0-9._-]+)==(\S+)$", written, re.MULTILINE))
+    assert "valgebra" in pinned
+    assert {name: locked.get(name) for name in pinned} == pinned

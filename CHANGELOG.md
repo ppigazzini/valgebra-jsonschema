@@ -8,6 +8,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Added
 
+- `constraints.txt` holds the tested set, every dependency at the lock's version, as
+  `uv export --locked --no-dev --no-emit-project --no-hashes` writes it, and a test holds its pins
+  to the lock's. The README says to pin the file at a release's tag, and carries the license
+  under its title.
+
 - A schema whose `$schema` names its own meta-schema, passed among `documents`, is read through
   the meta-schema's `$vocabulary`: `compile_schema(..., vocabularies={uri: {name: Keyword}})`
   reads each vocabulary outside draft 2020-12's through the keywords registered for it. A

@@ -118,7 +118,7 @@ jobs:
         # The token lets zizmor resolve each action's ref, beside the static audits.
         env:
           GH_TOKEN: ${{ github.token }}
-        run: uvx zizmor==1.32.0 .github/
+        run: uvx zizmor==1.33.0 .github/
 
   api:
     name: the public API against the last release

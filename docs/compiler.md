@@ -211,6 +211,40 @@ an embedded `$id` whose resource declares another `$schema`, a draft other than 
 resource, and a property name holding a lone surrogate. A keyword outside the vocabularies is an
 annotation, as draft 2020-12 says, and `Compiler.ignored` records it.
 
+## Registered keywords
+
+Draft 2020-12 lets anyone define a keyword, and says implementations "SHOULD treat keywords they
+do not support as annotations", "save for explicit agreement" (draft 2020-12, section 6.5).
+Registering one is that agreement: `compile_schema(schema, keywords={name: Keyword(kind,
+holds)})` reads `name` as an assertion on `kind`, `"number"`, `"string"`, `"array"` or
+`"object"`, every other kind passing as an assertion keyword's does, and `holds(instance, value)`
+answering for an instance of the kind, `value` being the keyword's value in the schema. It is an
+opaque predicate, recorded in `Compiler.opaque`: membership is exact, and a relation reading
+inside it is `undecided`. A unit quaternion, a sum of squares no JSON Schema keyword states, is
+one:
+
+```python
+import math
+
+from valgebra_jsonschema import Keyword, compile_schema
+
+
+def unit(quaternion, tolerance):
+    return len(quaternion) == 4 and abs(math.fsum(x * x for x in quaternion) - 1) <= tolerance
+
+
+FOUR = {"type": "array", "prefixItems": [{"type": "number"}] * 4, "minItems": 4, "maxItems": 4}
+QUATERNION = {**FOUR, "x-robot-unit-quaternion": 1e-6}
+reading = compile_schema(QUATERNION, keywords={"x-robot-unit-quaternion": Keyword("array", unit)})
+assert reading.is_valid([0.5, 0.5, 0.5, 0.5])
+assert not reading.is_valid([0, 0, 0, 5])
+assert compile_schema(QUATERNION).is_valid([0, 0, 0, 5])
+assert compile_schema(FOUR).relation_to(reading) == "undecided"
+```
+
+A keyword draft 2020-12 defines is not registered, and the attempt raises `ValueError` naming it.
+An unregistered keyword stays an annotation.
+
 ## Measured
 
 ```bash

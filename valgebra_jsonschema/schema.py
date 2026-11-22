@@ -47,7 +47,7 @@ from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Annotated, Any, TypeAlias
+from typing import Annotated, Any, Literal, TypeAlias
 from urllib.parse import unquote, urljoin
 
 from annotated_types import Ge, Gt, Le, Lt, MaxLen, MinLen, MultipleOf
@@ -382,6 +382,29 @@ def _past_valgebras_limit(exc: ValueError) -> Unsupported:
     return Unsupported(f"{_PAST_VALGEBRAS_LIMIT}: {exc}")
 
 
+@dataclass(frozen=True, slots=True)
+class Keyword:
+    """A keyword a caller registers: the kind of instance it reads, and whether one holds it.
+
+    ``holds`` takes an instance of ``kind`` and the keyword's value in the schema, and answers
+    whether the instance meets it. Registering one is the explicit agreement draft 2020-12
+    asks before an implementation supports a keyword it does not define (draft 2020-12, section
+    6.5): it asserts there, where an unregistered one is an annotation.
+    """
+
+    kind: Literal["number", "string", "array", "object"]
+    holds: Callable[[Any, Any], bool]
+
+
+#: The Python type each kind a registered keyword reads is checked as, a bool being no number.
+_KINDS: Mapping[str, object] = {
+    "number": int | float,
+    "string": str,
+    "array": list[Any],
+    "object": dict[str, Any],
+}
+
+
 class Compiler:
     """Compile one root document, resolving ``$ref`` against it.
 
@@ -398,8 +421,19 @@ class Compiler:
         by_clauses: bool = True,
         by_predicate: bool = False,
         documents: Mapping[str, object] | None = None,
+        keywords: Mapping[str, Keyword] | None = None,
     ) -> None:
         self.root = root
+        #: The keywords the caller registers, each asserting on its kind as a predicate.
+        self.keywords: Mapping[str, Keyword] = keywords or {}
+        if defined := sorted(
+            name
+            for name in self.keywords
+            if name in _HANDLERS or name in ANNOTATIONS or name in REFUSED or name in _GROUPS
+        ):
+            named = ", ".join(map(repr, defined))
+            msg = f"{named}: a keyword draft 2020-12 defines is not registered"
+            raise ValueError(msg)
         #: The documents a reference may name beside this one, by the URI each is retrieved
         #: by; a reference to any other is refused, and none is fetched.
         self.documents: Mapping[str, object] = documents or {}
@@ -646,6 +680,9 @@ class Compiler:
                 or (keyword == "$id" and self._inert(schema))
             ):
                 continue
+            if keyword in self.keywords:
+                parts.append(self._registered(keyword, schema.get(keyword)))
+                continue
             group = _GROUPS.get(keyword, keyword)
             if group in seen:
                 continue
@@ -658,6 +695,19 @@ class Compiler:
                 self.ignored.add(keyword)
                 continue
             parts.append(handler(self, schema))
+
+    def _registered(self, name: str, value: object) -> Validator[Any]:
+        """Return the values a registered keyword admits: every other kind, and those it holds.
+
+        It is a predicate, recorded in `opaque`: membership stays exact, and a relation that
+        reads inside it is `undecided`.
+        """
+        keyword = self.keywords[name]
+        self.opaque.add(name)
+        holding = opaque(_KINDS[keyword.kind], lambda instance: keyword.holds(instance, value))
+        if keyword.kind == "number":
+            holding = intersection(holding, NOT_BOOL)
+        return self.guard(keyword.kind, holding)
 
     def _format(self, name: object) -> Validator[Any]:
         """Return the values a ``format`` admits: every other kind, and strings of its form.
@@ -2868,7 +2918,11 @@ def _check_nesting(document: object) -> None:
 
 
 def compile_schema(
-    schema: object, *, assert_format: bool = False, documents: Mapping[str, object] | None = None
+    schema: object,
+    *,
+    assert_format: bool = False,
+    documents: Mapping[str, object] | None = None,
+    keywords: Mapping[str, Keyword] | None = None,
 ) -> Validator[Any]:
     """Compile a root schema document, upgrading a 2019-09, -07, -06 or -04 one first.
 
@@ -2876,15 +2930,17 @@ def compile_schema(
     and one naming any other dialect raises `UnsupportedDialect`. With ``assert_format``, a
     ``format`` this package reads asserts rather than annotates, and any other raises
     `Unsupported`. ``documents`` maps a URI to the document a reference to it names; one
-    declaring no ``$schema`` is read in the dialect of the document compiled.
+    declaring no ``$schema`` is read in the dialect of the document compiled. ``keywords``
+    maps a name to a `Keyword` the caller registers, which asserts as a predicate where any
+    other keyword outside the vocabularies is an annotation.
     """
     if documents and isinstance(schema, dict) and isinstance(schema.get("$schema"), str):
         documents = in_dialect(documents, schema["$schema"])
     if (draft := older(schema)) is not None:
         schema = upgrade(schema, draft)
-    return compile_with_fallbacks(schema, schema, assert_format=assert_format, documents=documents)[
-        1
-    ]
+    return compile_with_fallbacks(
+        schema, schema, assert_format=assert_format, documents=documents, keywords=keywords
+    )[1]
 
 
 #: The readings `compile_with_fallbacks` asks in turn: a clause per cell of keys is more
@@ -2905,19 +2961,24 @@ def compile_with_fallbacks(
     *,
     assert_format: bool = False,
     documents: Mapping[str, object] | None = None,
+    keywords: Mapping[str, Keyword] | None = None,
 ) -> tuple[Compiler, Validator[Any]]:
     """Return a compiler of ``root`` and the set ``schema`` compiles to.
 
     It is read the first way `_FALLBACKS` lists that stays inside valgebra's limit.
     """
     for options in _FALLBACKS[:-1]:
-        compiler = Compiler(root, assert_format=assert_format, documents=documents, **options)
+        compiler = Compiler(
+            root, assert_format=assert_format, documents=documents, keywords=keywords, **options
+        )
         try:
             return compiler, compiler.compile(schema)
         except Unsupported as exc:
             if not str(exc).startswith(_PAST_VALGEBRAS_LIMIT):
                 raise
-    compiler = Compiler(root, assert_format=assert_format, documents=documents, **_FALLBACKS[-1])
+    compiler = Compiler(
+        root, assert_format=assert_format, documents=documents, keywords=keywords, **_FALLBACKS[-1]
+    )
     return compiler, compiler.compile(schema)
 
 

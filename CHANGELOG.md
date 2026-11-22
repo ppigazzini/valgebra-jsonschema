@@ -8,6 +8,15 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Added
 
+- A caller may register a keyword outside the vocabularies: `compile_schema(schema,
+  keywords={name: Keyword(kind, holds)})`, and `Compiler` and `compile_with_fallbacks` alike, read
+  it as an assertion on its kind, `holds(instance, value)` answering for an instance, every other
+  kind passing. Draft 2020-12 makes such a keyword an annotation "save for explicit agreement"
+  (section 6.5), and registering it is that agreement. It is an opaque predicate, recorded in
+  `Compiler.opaque`: a unit quaternion is exact on membership, and a relation through it is
+  `undecided`. An unregistered keyword stays in `Compiler.ignored`, and a keyword draft 2020-12
+  defines is not registered.
+
 - The recipes hold "a number that is finite": `{"type": "number"}` admits `1e400`, which
   `json.loads` reads as infinity, and the float range as bounds is the decided "finite", a bounded
   number `subset` of it and a plain one `not_subset`.

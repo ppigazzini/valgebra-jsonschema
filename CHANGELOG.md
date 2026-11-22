@@ -6,37 +6,16 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-11-22
+
+A release of three readings and the tested set, on valgebra 0.0.32: a schema read closed at its
+root, the assumption that a server sends no key its schema does not name; a keyword a caller
+registers, which asserts where draft 2020-12 makes an unknown one an annotation; a meta-schema's
+vocabularies read through the registered ones; and a constraints file naming the versions a
+release ran on. Every case of the suite gets the verdict it got, and the corpus and containment
+studies read no difference on 0.0.32.
+
 ### Added
-
-- `constraints.txt` holds the tested set, every dependency at the lock's version, as
-  `uv export --locked --no-dev --no-emit-project --no-hashes` writes it, and a test holds its pins
-  to the lock's. The README says to pin the file at a release's tag, and carries the license
-  under its title.
-
-- A schema whose `$schema` names its own meta-schema, passed among `documents`, is read through
-  the meta-schema's `$vocabulary`: `compile_schema(..., vocabularies={uri: {name: Keyword}})`
-  reads each vocabulary outside draft 2020-12's through the keywords registered for it. A
-  required vocabulary no caller registers is refused with `UnsupportedDialect` naming it, as
-  draft 2020-12 has an implementation refuse it (section 8.1.2); an optional one's keywords stay
-  annotations; and a dialect leaving out core, applicator, unevaluated or validation is refused,
-  since the compiler would assert keywords it makes annotations. `dialect` answers which keywords
-  a schema's meta-schema registers. The suite reads no difference.
-
-- A caller may register a keyword outside the vocabularies: `compile_schema(schema,
-  keywords={name: Keyword(kind, holds)})`, and `Compiler` and `compile_with_fallbacks` alike, read
-  it as an assertion on its kind, `holds(instance, value)` answering for an instance, every other
-  kind passing. Draft 2020-12 makes such a keyword an annotation "save for explicit agreement"
-  (section 6.5), and registering it is that agreement. It is an opaque predicate, recorded in
-  `Compiler.opaque`: a unit quaternion is exact on membership, and a relation through it is
-  `undecided`. An unregistered keyword stays in `Compiler.ignored`, and a keyword draft 2020-12
-  defines is not registered.
-
-- The recipes hold "a number that is finite": `{"type": "number"}` admits `1e400`, which
-  `json.loads` reads as infinity, and the float range as bounds is the decided "finite", a bounded
-  number `subset` of it and a plain one `not_subset`.
-- The README names the schemas pydantic's `model_json_schema()` emits, as the MCP Python SDK and
-  FastMCP publish a tool's, as compiling as written, which the suite holds, and counts the
-  recipes, eight.
 
 - `closed(schema)` reads a schema closed at its root: its members holding no key that no
   keyword of the root evaluates, the root with `unevaluatedProperties: false` (draft 2020-12,
@@ -48,6 +27,37 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   where it refuses `unevaluatedProperties` beside the root's other keywords. Over 300 drawn
   schemas, the closing is below each and holds what `jsonschema` reads it to hold, and narrows
   205.
+
+- A caller may register a keyword outside the vocabularies: `compile_schema(schema,
+  keywords={name: Keyword(kind, holds)})`, and `Compiler` and `compile_with_fallbacks` alike, read
+  it as an assertion on its kind, `holds(instance, value)` answering for an instance, every other
+  kind passing. Draft 2020-12 makes such a keyword an annotation "save for explicit agreement"
+  (section 6.5), and registering it is that agreement. It is an opaque predicate, recorded in
+  `Compiler.opaque`: a unit quaternion is exact on membership, and a relation through it is
+  `undecided`. An unregistered keyword stays in `Compiler.ignored`, and a keyword draft 2020-12
+  defines is not registered.
+
+- A schema whose `$schema` names its own meta-schema, passed among `documents`, is read through
+  the meta-schema's `$vocabulary`: `compile_schema(..., vocabularies={uri: {name: Keyword}})`
+  reads each vocabulary outside draft 2020-12's through the keywords registered for it. A
+  required vocabulary no caller registers is refused with `UnsupportedDialect` naming it, as
+  draft 2020-12 has an implementation refuse it (section 8.1.2); an optional one's keywords stay
+  annotations; and a dialect leaving out core, applicator, unevaluated or validation is refused,
+  since the compiler would assert keywords it makes annotations. `dialect` answers which keywords
+  a schema's meta-schema registers. The suite reads no difference.
+
+- The recipes hold "a number that is finite": `{"type": "number"}` admits `1e400`, which
+  `json.loads` reads as infinity, and the float range as bounds is the decided "finite", a bounded
+  number `subset` of it and a plain one `not_subset`.
+
+- The README names the schemas pydantic's `model_json_schema()` emits, as the MCP Python SDK and
+  FastMCP publish a tool's, as compiling as written, which the suite holds, and counts the
+  recipes, eight.
+
+- `constraints.txt` holds the tested set, every dependency at the lock's version, as
+  `uv export --locked --no-dev --no-emit-project --no-hashes` writes it, and a test holds its pins
+  to the lock's. The README says to pin the file at a release's tag, and carries the license
+  under its title.
 
 ## [0.0.5] - 2026-11-22
 
@@ -231,7 +241,8 @@ A release of the user guide, with no change to the compiler: every schema compil
   records. Of the containment test suite's 10890 questions, 7048 are proven, 3560 refuted,
   246 undecided and 36 refused.
 
-[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.5...HEAD
+[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.6...HEAD
+[0.0.6]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.2...v0.0.3

@@ -2976,6 +2976,50 @@ def interval(schema: object) -> Interval | None:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class Length:
+    """A sized schema that is a length range and nothing more: its kind and its bounds.
+
+    ``least`` and ``most`` count what the kind's length keywords count: a string's code
+    points, an array's elements and an object's properties. A missing upper bound is None.
+    """
+
+    kind: str
+    least: int = 0
+    most: int | None = None
+
+
+#: The kinds a length bounds, and the two keywords each reads its bounds from.
+_LENGTH_KEYS: Mapping[str, tuple[str, str]] = {
+    "string": ("minLength", "maxLength"),
+    "array": ("minItems", "maxItems"),
+    "object": ("minProperties", "maxProperties"),
+}
+
+
+def length(schema: object) -> Length | None:
+    """Return the length range a schema denotes when it is ``type`` and its length bounds alone.
+
+    The reader beside `interval`: ``{"type": "string", "minLength": 2, "maxLength": 5}`` is a
+    `Length` of strings from two to five code points, and an array's ``minItems`` and
+    ``maxItems`` and an object's ``minProperties`` and ``maxProperties`` read alike. A count
+    is read as the compiler reads it, ``2.0`` as the integer 2. A schema holding any other
+    assertion, a ``type`` list, or a count no non-negative integer is, is no length range.
+    """
+    if not isinstance(schema, dict) or schema.get("type") not in ("string", "array", "object"):
+        return None
+    kind = schema["type"]
+    low_key, high_key = _LENGTH_KEYS[kind]
+    if set(schema) - {"type", low_key, high_key} - ANNOTATIONS:
+        return None
+    try:
+        least = _count(schema, low_key) if low_key in schema else 0
+        most = _count(schema, high_key) if high_key in schema else None
+    except Unsupported:
+        return None
+    return Length(kind, least, most)
+
+
 def branches(schema: object) -> list[object] | None:
     """Return the subschemas whose union ``schema`` is, when it is a union and nothing more.
 

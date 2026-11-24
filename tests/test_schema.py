@@ -14,6 +14,7 @@ import pytest
 from annotated_types import MinLen
 from valgebra import ValidationError, Validator, complement, intersection, nothing
 
+from valgebra_jsonschema import Length, length
 from valgebra_jsonschema import schema as schema_module
 from valgebra_jsonschema.schema import (
     ANNOTATIONS,
@@ -2196,6 +2197,45 @@ class TestLocated:
         self, schema, value, path, keyword, where
     ):
         assert (path, keyword, where) in self._located(schema, value)
+
+
+class TestLength:
+    """A sized schema that is a length range alone reads as one, beside `interval`."""
+
+    @pytest.mark.parametrize(
+        ("schema", "expected"),
+        [
+            ({"type": "string", "minLength": 2, "maxLength": 5}, Length("string", 2, 5)),
+            ({"type": "array", "maxItems": 3}, Length("array", 0, 3)),
+            ({"type": "object", "minProperties": 1.0}, Length("object", 1, None)),
+            ({"type": "string", "description": "a name"}, Length("string", 0, None)),
+        ],
+    )
+    def test_a_kind_and_its_length_bounds_are_a_length(self, schema, expected):
+        assert length(schema) == expected
+
+    @pytest.mark.parametrize(
+        "schema",
+        [
+            {"type": "string", "minLength": 2, "pattern": "^a"},
+            {"type": ["string", "null"], "maxLength": 2},
+            {"type": "array", "minLength": 2},
+            {"type": "string", "maxLength": -1},
+            {"type": "integer", "minimum": 0},
+            True,
+        ],
+    )
+    def test_anything_else_is_no_length(self, schema):
+        assert length(schema) is None
+
+    def test_a_length_holds_what_the_schema_holds(self):
+        schema = {"type": "string", "minLength": 2, "maxLength": 3}
+        read = length(schema)
+        assert read is not None
+        compiled = compile_schema(schema)
+        for text in ("", "a", "ab", "abc", "abcd", "\U0001f600\U0001f600"):
+            within = read.least <= len(text) <= (read.most if read.most is not None else len(text))
+            assert compiled.is_valid(text) == within, text
 
 
 #: Each order bound, the bound written and the order a number within it holds.

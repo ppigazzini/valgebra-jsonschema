@@ -34,6 +34,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Added
 
+- `length(schema)` reads a length range beside `interval`'s numeric one: a schema that is `type`
+  and its two length keywords alone, a string's `minLength` and `maxLength`, an array's
+  `minItems` and `maxItems` or an object's `minProperties` and `maxProperties`, is a `Length` of
+  its kind and its bounds, `2.0` read as 2, and anything else is `None`.
+
 - A failure names the keyword that made it. valgebra reports a failure's instance path and the
   set the schema compiled to, so `{"type": "integer", "minimum": 1}` refused `0` as `union_error`
   over `int and >= 1, float and >= 1`, with no keyword. `Compiler.located(failure, value)` adds

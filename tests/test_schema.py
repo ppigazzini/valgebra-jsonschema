@@ -792,6 +792,23 @@ class TestUniverse:
         # NaN is no JSON value, so a constant of it holds none.
         assert compile_schema({"const": math.nan}).relation_to(compile_schema(False)) == "subset"
 
+    @pytest.mark.parametrize(("schema", "deepest"), [(True, 127), ({}, 127), ({"not": _STR}, 126)])
+    def test_a_value_past_valgebras_walk_is_refused_by_every_schema(self, schema, deepest):
+        # The ledger's row: valgebra's walk bounds its own depth, so a value nested past it is
+        # refused whatever the schema, and `validate` says why; a `not` takes a level.
+        def nested(lists: int) -> object:
+            value: object = 0
+            for _ in range(lists):
+                value = [value]
+            return value
+
+        compiled = compile_schema(schema)
+        assert compiled.is_valid(nested(deepest))
+        assert not compiled.is_valid(nested(deepest + 1))
+        with pytest.raises(ValidationError) as refused:
+            compiled.validate(nested(deepest + 1))
+        assert refused.value.errors[0]["code"] == "recursion_limit"
+
     def test_every_number_lies_below_one_of_two_overlapping_bounds(self):
         # A NaN in the universe would be outside both bounds and refute what every number
         # satisfies.

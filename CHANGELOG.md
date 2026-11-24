@@ -32,6 +32,13 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   refuses fails with the format's own code, `string_pattern_mismatch` for a regular one, as a
   `minLength` fails with its own, where it failed with `union_error`.
 
+### Changed
+
+- The ledger of differences names valgebra's walk depth. A value nested past valgebra's walk is
+  refused by every schema, `is_valid` answering `False` and `validate` raising `recursion_limit`:
+  under `true` and `{}`, 127 lists around a number are admitted and 128 refused, and a `not` takes
+  a level, where the specification admits a JSON value at any depth.
+
 ### Fixed
 
 - A tool's `inputSchema` naming `type: "object"` beside a `$ref` is read. `read_tool` followed

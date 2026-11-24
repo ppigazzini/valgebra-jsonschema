@@ -1530,19 +1530,40 @@ def _bound(marker: Callable[[float], object], key: str) -> Callable[..., Validat
     return build
 
 
-def _multiple_of(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
-    """Return multiples of the step: decided for an integral step, opaque for a fraction.
+#: The largest integral step valgebra's `MultipleOf` decides exactly over the floats: past
+#: it a step has no float equal to it, and a float multiple of the float nearest it reads
+#: as a multiple, so ``1e16`` passed ``multipleOf: 10000000000000001``.
+EXACT_STEP = 2**53
 
-    ``0.0075 % 0.0001`` is not zero in binary floating point, and JSON Schema means the
-    decimal numbers written, so a fractional step is checked on the exact rationals those
-    numbers denote. `decimal` would round past its context's 28 digits, so ``1e26`` would
-    be refused as a multiple of ``0.01``.
+
+class _IntegralStep(MultipleOf):
+    """`MultipleOf` of an integral step, a class of its own so no float step stands for it.
+
+    `typing.Annotated` caches a subscript by its arguments' equality, and
+    ``MultipleOf(2) == MultipleOf(2.0)``, so in a process that built
+    ``Annotated[int, MultipleOf(2.0)]`` first a later ``Annotated[int, MultipleOf(2)]`` held
+    the float step, which reads ``2**53 + 1`` as its float, a multiple of 2. valgebra reads
+    a marker by the class in its MRO, so this one is read as `MultipleOf`.
+    """
+
+    __slots__ = ()
+
+
+def _multiple_of(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
+    """Return multiples of the step: decided for an integral step, opaque past that.
+
+    An integral step up to `EXACT_STEP` is valgebra's `MultipleOf`, decided exactly. Past
+    it, and for a fraction, the step is checked on the exact rationals the numbers written
+    denote: ``0.0075 % 0.0001`` is not zero in binary floating point, and JSON Schema
+    means the decimal numbers written. `decimal` would round past its context's 28 digits,
+    so ``1e26`` would be refused as a multiple of ``0.01``.
     """
     step = s["multipleOf"]
-    if isinstance(step, int) or step.is_integer():
-        return c.guard("number", _number(MultipleOf(int(step))))
+    if (isinstance(step, int) or step.is_integer()) and abs(int(step)) <= EXACT_STEP:
+        return c.guard("number", _number(_IntegralStep(int(step))))
     c.opaque.add("multipleOf")
-    multiple = _multiples(Fraction(str(step)))
+    exact = Fraction(int(step)) if isinstance(step, int) or step.is_integer() else None
+    multiple = _multiples(exact if exact is not None else Fraction(str(step)))
     return c.guard("number", intersection(opaque(int | float, multiple), NOT_BOOL))
 
 

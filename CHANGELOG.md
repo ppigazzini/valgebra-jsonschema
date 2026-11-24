@@ -8,6 +8,14 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Security
 
+- An integral `multipleOf` is decided exactly. A step past `2**53` has no float equal to it, and
+  valgebra's `MultipleOf` read a float instance against the float nearest the step, so `1e16`
+  passed `multipleOf: 10000000000000001`. And `typing.Annotated` caches a subscript by its
+  arguments' equality, where `MultipleOf(2) == MultipleOf(2.0)`, so in a process that had built
+  `Annotated[int, MultipleOf(2.0)]` first, `multipleOf: 2` held the float step and admitted
+  `2**53 + 1`. A step up to `2**53` is a class of its own that no float step stands for, and one
+  past it is checked in exact rational arithmetic, as a fractional step is.
+
 - A constant past the float range is its infinity. `json.loads` reads `1e400` as `inf`, in a
   schema and in an instance alike, and `type` and `maximum` read it so, but a `const` or an `enum`
   of it compiled to the empty set: `{"const": 1e400}` refused the instance written the same way,

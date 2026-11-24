@@ -2,6 +2,9 @@ import contextlib
 import json
 import math
 import random
+import subprocess
+import sys
+from fractions import Fraction
 from typing import Annotated, Any
 
 import pytest
@@ -55,6 +58,60 @@ class TestSemantics:
         compiler = Compiler({"multipleOf": 0.0001})
         assert compiler.compile({"multipleOf": 0.0001}).is_valid(0.0075)
         assert compiler.opaque == {"multipleOf"}
+
+    def test_an_integral_step_is_decided_exactly(self):
+        # Past `EXACT_STEP` a step has no float equal to it, and `1e16`, a multiple of the
+        # float nearest `10000000000000001`, is no multiple of the step.
+        step = 10000000000000001
+        past = Compiler({"multipleOf": step})
+        compiled = past.compile({"multipleOf": step})
+        assert not compiled.is_valid(1e16)
+        assert compiled.is_valid(2 * step)
+        assert past.opaque == {"multipleOf"}
+        assert Compiler({"multipleOf": 2}).opaque == set()
+
+    def test_an_integral_step_agrees_with_exact_arithmetic(self):
+        # Steps on both sides of `EXACT_STEP`, against integers, integral floats past 2**53
+        # and any floats, each answered as `Fraction` arithmetic answers it; seed 0.
+        rng = random.Random(0)
+        edge = schema_module.EXACT_STEP
+        for _ in range(200):
+            step = rng.choice(
+                [rng.randrange(1, edge + 1), edge, edge - 1, edge + 1, rng.randrange(edge, 2**70)]
+            )
+            compiled = compile_schema({"multipleOf": step})
+            for _ in range(25):
+                value = rng.choice(
+                    [
+                        float(step * rng.randrange(1, 2**20)),
+                        step * rng.randrange(-(2**20), 2**20),
+                        float(rng.randrange(1, 2**80)),
+                        rng.randrange(1, 2**90),
+                        rng.uniform(1, 2**60),
+                    ]
+                )
+                exact = Fraction(value) % step == 0
+                assert compiled.is_valid(value) == exact, (step, value)
+
+    def test_an_integral_step_is_no_float_step_typing_cached(self):
+        # `typing.Annotated` caches a subscript by its arguments' equality, and
+        # `MultipleOf(2) == MultipleOf(2.0)`: a process that built the float step first held
+        # it where an integral step was asked, and admitted `2**53 + 1`.
+        program = (
+            "from typing import Annotated\n"
+            "from annotated_types import MultipleOf\n"
+            "Annotated[int, MultipleOf(2.0)], Annotated[float, MultipleOf(2.0)]\n"
+            "from valgebra_jsonschema import compile_schema\n"
+            "print(compile_schema({'multipleOf': 2}).is_valid(2**53 + 1))\n"
+        )
+        ran = subprocess.run(  # noqa: S603 - this interpreter, a fixed program
+            [sys.executable, "-c", program],
+            capture_output=True,
+            text=True,
+            encoding="locale",
+            check=True,
+        )
+        assert ran.stdout.split() == ["False"]
 
     def test_a_recursive_reference_compiles_to_its_fixpoint(self):
         tree = {

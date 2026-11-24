@@ -718,6 +718,23 @@ class TestUniverse:
         assert not compile_schema({"maximum": 1e308}).is_valid(huge)
         assert not compile_schema({"type": "integer"}).is_valid(huge)
 
+    @pytest.mark.parametrize("keyword", ["const", "enum"])
+    def test_a_constant_past_the_float_range_is_its_infinity(self, keyword):
+        # `1e400` is read by `json.loads` as an infinity in a schema and in an instance alike,
+        # so a constant of it holds the instance it equals, as `type` and `maximum` read it.
+        for text, sign in (("1e400", 1), ("-1e400", -1)):
+            value = json.loads(text)
+            schema = {keyword: value if keyword == "const" else [value]}
+            compiled = compile_schema(schema)
+            assert compiled.is_valid(sign * math.inf)
+            assert not compiled.is_valid(-sign * math.inf)
+            assert not compiled.is_valid(sign * 1e308)
+            zero = compile_schema({keyword: 0 if keyword == "const" else [0]})
+            assert compiled.relation_to(zero) == "not_subset"
+            assert compiled.relation_to(compile_schema(False)) == "not_subset"
+        # NaN is no JSON value, so a constant of it holds none.
+        assert compile_schema({"const": math.nan}).relation_to(compile_schema(False)) == "subset"
+
     def test_every_number_lies_below_one_of_two_overlapping_bounds(self):
         # A NaN in the universe would be outside both bounds and refute what every number
         # satisfies.

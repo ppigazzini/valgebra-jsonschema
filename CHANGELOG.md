@@ -8,6 +8,13 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Security
 
+- A constant past the float range is its infinity. `json.loads` reads `1e400` as `inf`, in a
+  schema and in an instance alike, and `type` and `maximum` read it so, but a `const` or an `enum`
+  of it compiled to the empty set: `{"const": 1e400}` refused the instance written the same way,
+  and was `subset` of every schema, `false` among them. An infinity compiles to its literal, so
+  the constant holds the infinity of its sign and nothing else, and is `not_subset` of
+  `{"const": 0}` and of `false`; a constant of `nan`, which JSON holds none of, stays empty.
+
 - An asserted `format` alone admits only JSON values. Its set was the strings of the format beside
   every value that is no string, met with nothing, so `{"format": "date"}` read with
   `assert_format=True` admitted `nan`, a tuple, bytes and a set, on the root and under a tool's

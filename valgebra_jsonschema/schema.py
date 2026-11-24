@@ -257,12 +257,15 @@ def _constant(value: object) -> Validator[Any]:
 
     Numbers compare by value and never equal a boolean; arrays and objects compare
     element-wise and key-wise, so a constant compiles structurally rather than as one
-    `Literal`, which would compare with Python's ``==`` and admit ``True`` for ``1``.
+    `Literal`, which would compare with Python's ``==`` and admit ``True`` for ``1``. An
+    infinity is `json.loads`'s reading of a number past the float range, such as ``1e400``,
+    and equals the instance read from the same text, as ``type`` and ``maximum`` read it;
+    ``nan`` is no JSON value, so a constant of it holds none.
     """
     if value is None or isinstance(value, (bool, str)):
         return Validator(_literal(value))
     if isinstance(value, (int, float)):
-        if isinstance(value, float) and not math.isfinite(value):
+        if isinstance(value, float) and math.isnan(value):
             return nothing
         return union(*(_literal(v) for v in spellings(value)))
     if isinstance(value, list):

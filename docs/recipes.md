@@ -356,7 +356,7 @@ assert {name: problems(text) for name, text in files.items()} == {
     "jobs.json": [
         (("name",), "too_short"),
         (("port",), "union_error"),
-        (("release",), "union_error"),
+        (("release",), "string_pattern_mismatch"),
         (("debug",), "extra_forbidden"),
     ],
     "admin.json": [((), "json_invalid")],

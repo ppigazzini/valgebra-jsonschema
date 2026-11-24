@@ -38,6 +38,23 @@ def test_a_format_passes_every_other_kind(name):
         assert compiled.is_valid(value), value
 
 
+@pytest.mark.parametrize("name", sorted(set(LANGUAGES) | set(PREDICATES)))
+def test_a_format_alone_admits_only_json_values(name):
+    """An asserted format alone is met with the JSON values, as every keyword is.
+
+    The values outside its strings that are no JSON instance, `nan`, a tuple, bytes and a
+    set, are refused, on the root and under a tool's arguments, and the format alone is
+    below `true`: a set that held them was not.
+    """
+    compiled = compile_schema({"format": name}, assert_format=True)
+    spec = {"name": "t", "inputSchema": {"type": "object", "properties": {"on": {"format": name}}}}
+    arguments = read_tool(spec, assert_format=True).arguments
+    for value in (float("nan"), (1, 2), b"x", {1}):
+        assert not compiled.is_valid(value), value
+        assert not arguments.is_valid({"on": value}), value
+    assert compiled.relation_to(compile_schema(True)) == "subset"
+
+
 def test_a_format_it_does_not_read_is_refused_when_it_asserts():
     with pytest.raises(Unsupported, match="format"):
         compile_schema({"format": "uri"}, assert_format=True)

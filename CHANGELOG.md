@@ -6,6 +6,17 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- An asserted `format` alone admits only JSON values. Its set was the strings of the format beside
+  every value that is no string, met with nothing, so `{"format": "date"}` read with
+  `assert_format=True` admitted `nan`, a tuple, bytes and a set, on the root and under a tool's
+  arguments, and `{"format": "uuid"}` was `not_subset` of `true`. A format is guarded as every other
+  keyword is, so a schema holding it is met with the JSON values: the four are refused under each
+  format, and a format alone is `subset` of `true`. Beside `"type": "string"`, a string the format
+  refuses fails with the format's own code, `string_pattern_mismatch` for a regular one, as a
+  `minLength` fails with its own, where it failed with `union_error`.
+
 ## [0.0.6] - 2026-11-22
 
 A release of three readings and the tested set, on valgebra 0.0.32: a schema read closed at its

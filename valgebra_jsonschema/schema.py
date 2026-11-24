@@ -713,13 +713,16 @@ class Compiler:
         """Return the values a ``format`` admits: every other kind, and strings of its form.
 
         A format this does not read is refused, since an assertion left out would admit what
-        the schema refuses, and the format-assertion vocabulary has it fail too.
+        the schema refuses, and the format-assertion vocabulary has it fail too. Guarded as
+        every keyword is (`guard`), so a schema holding it is met with the JSON values: the
+        complement of the strings holds `nan`, a tuple, bytes and a set, which no JSON
+        instance is.
         """
         if isinstance(name, str) and name in LANGUAGES:
-            return guard(str, Annotated[str, Regex(LANGUAGES[name])])
+            return self.guard("string", Annotated[str, Regex(LANGUAGES[name])])
         if isinstance(name, str) and name in PREDICATES:
             self.opaque.add(f"format {name}")
-            return guard(str, opaque(str, PREDICATES[name]))
+            return self.guard("string", opaque(str, PREDICATES[name]))
         msg = f"keyword 'format' holds {name!r:.60}, which is not asserted here"
         raise Unsupported(msg)
 

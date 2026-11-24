@@ -77,6 +77,32 @@ jobs:
       - run: uv sync --locked
       - run: uv run --no-sync python -X warn_default_encoding -m pytest
 
+  # The wheel a user installs, built as the release builds it, installed in an environment
+  # holding nothing else and imported with every warning an error, as valgebra's push installs
+  # its own: a wheel that builds and does not load fails the push rather than the release
+  # smoke. The release smokes the wheel and the sdist on every platform and at the floors.
+  wheel:
+    name: the wheel, installed and imported
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.4.0
+        with: { version: "0.13.9", python-version: "3.15", enable-cache: true }
+      - run: |
+          uv export --locked --only-group build --no-emit-project -o "$RUNNER_TEMP/build.txt"
+          uv build --wheel --no-sources --build-constraints "$RUNNER_TEMP/build.txt" --require-hashes
+      - run: |
+          uv venv "$RUNNER_TEMP/installed"
+          uv pip install --python "$RUNNER_TEMP/installed" dist/*.whl
+          uv pip check --python "$RUNNER_TEMP/installed"
+          # `python -c` puts the working directory first on the path, and the root holds the
+          # package: the import runs outside the tree, or it reads the checkout.
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/installed/bin/python" -W error -c 'import importlib, pkgutil, importlib.metadata as md, valgebra_jsonschema as m; assert "site-packages" in m.__file__, m.__file__; [importlib.import_module(f"valgebra_jsonschema.{n.name}") for n in pkgutil.iter_modules(m.__path__)]; s = m.compile_schema({"type": "integer"}); assert s.is_valid(1) and s.is_valid(1.0) and not s.is_valid(True); print("wheel ok", md.version("valgebra-jsonschema"), "on valgebra", md.version("valgebra"))'
+
   docs:
     name: the site, built strict
     runs-on: ubuntu-26.04

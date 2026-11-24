@@ -32,6 +32,21 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   refuses fails with the format's own code, `string_pattern_mismatch` for a regular one, as a
   `minLength` fails with its own, where it failed with `union_error`.
 
+### Added
+
+- A failure names the keyword that made it. valgebra reports a failure's instance path and the
+  set the schema compiled to, so `{"type": "integer", "minimum": 1}` refused `0` as `union_error`
+  over `int and >= 1, float and >= 1`, with no keyword. `Compiler.located(failure, value)` adds
+  `keyword` and `keywordLocation`, the keyword's location along the evaluation path through each
+  `$ref` (Core, section 12.3.1): `minimum` at `#/minimum` there, `type` where a value of the wrong
+  kind, `nan` among them, is refused, and `enum` where a listed value is missed.
+  `Compiler.keywords_failed(value, path)` lists every keyword refusing the value at a path, the
+  ones pinning a kind first. Each is asked of the value again beside the keywords it depends on,
+  and named where it refuses what they admit: a branch of an `anyOf` that holds, an `if`, the
+  branch it does not pick and a dependent schema of a key the object lacks name nothing, and a
+  missing key is named by the `required` or `dependentRequired` asking for it. Over 600 drawn
+  schemas of several keywords, every keyword named is one `jsonschema` reports.
+
 ### Changed
 
 - The ledger of differences names valgebra's walk depth. A value nested past valgebra's walk is

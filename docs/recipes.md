@@ -367,7 +367,14 @@ assert {name: problems(text) for name, text in files.items()} == {
 compiled to, not the keyword it was written as: a `format` reads as its predicate or its
 regular expression, a `pattern` as its translation into valgebra's dialect, and an `integer`
 with a bound as `int and >= 1, float and >= 1`. The path names the value and the code the
-failed check, and both are stable. A file in TOML or YAML is parsed by the library that owns the
+failed check, and both are stable. The keyword that made a failure is the compiler's to name:
+`Compiler(schema).located(failure, value)` adds `keyword` and `keywordLocation`, the location
+along the evaluation path through each `$ref`, as JSON Schema's output names an error, so a
+`minimum` refusing `0` is named `minimum` at `#/minimum` where valgebra reports `union_error`,
+and a missing key is named by the `required` asking for it. A branch of an `anyOf` that holds, an
+`if` and the branch it does not pick name nothing, and a failure no keyword made gains neither
+key.
+A file in TOML or YAML is parsed by the library that owns the
 format, and the value it returns checked with `validate`, which reads only what `json.loads`
 could return: a TOML date is no JSON value, and no schema admits it. `assert_format=True`
 refuses a schema whose `format` is one of the many it does not read, `uri` among them, so a

@@ -5,7 +5,7 @@ import random
 
 import jsonschema
 import pytest
-from valgebra import intersection
+from valgebra import ValidationError, intersection
 
 from valgebra_jsonschema import closed
 from valgebra_jsonschema.schema import ITEM, Compiler, Unsupported, compile_schema
@@ -140,3 +140,85 @@ def test_a_closed_schema_is_below_its_schema_and_held_as_jsonschema_holds_it(see
             value = _value(rng)
             assert reading.is_valid(value) == reference.is_valid(value), (schema, value)
             assert not reading.is_valid(value) or written.is_valid(value), (schema, value)
+
+
+#: The keywords a failure below is reported under by its subschema's own.
+READING_DOWN = {
+    *("properties", "patternProperties", "additionalProperties", "unevaluatedProperties"),
+    *("prefixItems", "items", "unevaluatedItems", "contains", "propertyNames"),
+}
+
+
+def _many_keywords(rng):
+    """Draw a schema object of several keywords, the applicators `_schema` leaves out among them."""
+
+    def sub():
+        return _schema(rng, 1)
+
+    more = [
+        lambda: {"patternProperties": {"^[ab]$": sub()}},
+        lambda: {"dependentSchemas": {"a": sub()}},
+        lambda: {"$ref": "#/$defs/A"},
+        lambda: {"unevaluatedProperties": rng.choice([False, sub()])},
+        lambda: {"properties": {"a": False}},
+        lambda: {"items": False},
+        lambda: {"if": sub(), "then": sub(), "else": sub()},
+        lambda: {"contains": sub(), "minContains": 2},
+        lambda: {"minimum": rng.randrange(-3, 4), "maximum": rng.randrange(-3, 4)},
+    ]
+    schema = {}
+    for _ in range(rng.randrange(1, 4)):
+        schema |= _schema(rng) if rng.random() < 0.5 else rng.choice(more)()
+    return schema | {"$defs": {"A": sub()}}
+
+
+def _reported(schema, value):
+    """Return the location of every error `jsonschema` reports, the ones inside a union too."""
+    where = set()
+    errors = list(jsonschema.Draft202012Validator(schema).iter_errors(value))
+    while errors:
+        error = errors.pop()
+        where.add("".join(f"/{step}" for step in error.absolute_schema_path))
+        errors += error.context
+    return where
+
+
+@pytest.mark.parametrize("seed", range(10))
+def test_every_keyword_named_is_one_the_jsonschema_package_reports(seed):
+    rng = random.Random(f"located:{seed}")
+    failures = unnamed = 0
+    for _ in range(60):
+        schema = _many_keywords(rng)
+        compiler = Compiler(schema)
+        compiled = compiler.compile(schema)
+        for _ in range(12):
+            value = _value(rng)
+            try:
+                compiled.validate(value)
+            except ValidationError as refused:
+                where = _reported(schema, value)
+                for failure in refused.errors:
+                    path = failure["path"]
+                    assert isinstance(path, tuple)
+                    named = compiler.keywords_failed(value, path)
+                    failures += 1
+                    # valgebra reports the nearest branch of a union, so a failure may be of the
+                    # `else` its `if` does not pick, which no keyword made; and a key left
+                    # unevaluated beside a sibling that fails is not told from one left by it.
+                    unnamed += not named and not schema.keys() & {"else", "unevaluatedProperties"}
+                    for keyword, location in named:
+                        # `jsonschema` leaves a reference, and the name of a field whose schema
+                        # is `false`, out of a location, where Core's section 12.3.1 writes both.
+                        at = location.removeprefix("#").replace("/$ref", "")
+                        below = any(other.startswith(f"{at}/") for other in where)
+                        assert (
+                            at in where
+                            or (keyword in READING_DOWN and below)
+                            or (
+                                keyword == "properties"
+                                and "/properties" in at
+                                and at.rpartition("/")[0] in where
+                            )
+                        ), (schema, value, path, location, where)
+    assert failures > 200
+    assert unnamed == 0

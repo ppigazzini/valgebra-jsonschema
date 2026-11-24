@@ -42,6 +42,22 @@ IMPLEMENTED-BY: schema.py
 
 HELD-BY: test_an_assertion_passes_every_other_kind, test_a_type_list_keeps_the_guard_of_each_other_kind, test_the_universe_is_refuted_below_a_keyword_of_one_kind, test_membership_agrees_with_the_jsonschema_package_on_random_schemas, test_every_case_the_compiler_accepts_gets_the_specified_verdict
 
+## Failures
+
+**A failure is made by the keywords that refuse the value, each read beside the ones it depends
+on.** A schema object's result is the conjunction of its keywords', and a dependent keyword is
+read after the ones it depends on, `additionalProperties` after the adjacent `properties` and
+`patternProperties`, `unevaluatedProperties` after every keyword that evaluates a child (Attouche
+et al. 2024, §4.5); a boolean applicator combines its subschemas' results, so a branch that holds
+leaves an `anyOf`'s others out of the failure (Attouche et al. 2024, §4.3). valgebra reports a
+failure's path and no keyword, so each keyword that applies at the path is asked of the value
+alone, its dependencies beside it, and named where it refuses what they admit. A failure of a
+branch that does not apply is named by none. **[LOAD-BEARING: failing-keywords]**
+
+IMPLEMENTED-BY: schema.py::Compiler.keywords_failed
+
+HELD-BY: test_every_keyword_named_is_one_the_jsonschema_package_reports, test_a_failure_is_named_by_the_keywords_that_fail, test_a_key_or_an_item_refused_is_named_by_the_keyword_refusing_it, test_a_dependent_key_is_asked_for_by_the_key_the_object_holds
+
 ## References
 
 **A URI names one schema.** Before validation every resource a document embeds moves into one

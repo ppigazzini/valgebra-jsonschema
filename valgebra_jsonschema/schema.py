@@ -47,7 +47,7 @@ from collections import Counter
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Annotated, Any, Literal, TypeAlias
+from typing import Annotated, Any, Literal, NamedTuple, TypeAlias
 from urllib.parse import unquote, urljoin
 
 from annotated_types import Ge, Gt, Le, Lt, MaxLen, MinLen, MultipleOf
@@ -406,6 +406,32 @@ _KINDS: Mapping[str, object] = {
     "array": list[Any],
     "object": dict[str, Any],
 }
+
+
+class _Site(NamedTuple):
+    """A subschema met on the way to a value, and what `Compiler.keywords_failed` names it by."""
+
+    node: object
+    #: The base URI around it.
+    base: str
+    #: Its location along the evaluation path, and the applicator that led to it.
+    where: str
+    by: str
+    #: The part of the instance it applies to.
+    value: object
+
+
+#: No value: what a step that leads nowhere in an instance answers.
+_ABSENT = object()
+
+
+def _at(value: object, step: object) -> object:
+    """Return the field or item one ``step`` inside ``value``, or `_ABSENT`."""
+    if isinstance(value, Mapping):
+        return value.get(step, _ABSENT)
+    if isinstance(value, list) and isinstance(step, int) and 0 <= step < len(value):
+        return value[step]
+    return _ABSENT
 
 
 class Compiler:
@@ -1199,6 +1225,175 @@ class Compiler:
         for step in path:
             reading = self._step(reading, step, frozenset())
         return self._read(reading)
+
+    def keywords_failed(self, instance: object, path: Sequence[object]) -> list[tuple[str, str]]:
+        """Return each keyword that refuses the value at ``path`` in ``instance``, and where it is.
+
+        JSON Schema's output names, for each failure, the keyword that made it and the keyword's
+        location along the evaluation path, through each ``$ref`` (Core, sections 12.3.1 and
+        12.3.3). valgebra reports the instance's path alone, so the keywords are read again on
+        the value: a schema object's result is the conjunction of its keywords', a dependent one
+        read after those it depends on, so the keywords an instance fails made its failure
+        (Attouche et al. 2024, §4.5). A keyword is compiled beside the ones it depends on, at
+        the object's base URI, and named where that set refuses the value and they alone do not:
+        the ones that pin a kind, ``type``, ``const`` and ``enum``, before the rest of their
+        object, so a value of the wrong kind is named by its kind, and the ones that read the
+        value's items or fields after it.
+
+        The schema objects that apply at ``path`` are reached from the root: through
+        ``properties``, a matching ``patternProperties`` or ``additionalProperties``, the
+        ``prefixItems`` entry or ``items`` at an element's place, and in place through ``allOf``
+        and ``$ref``, the ``then`` or ``else`` its ``if`` picks, the ``dependentSchemas`` of a
+        key the object holds, and the branches of an ``anyOf`` or a ``oneOf`` none of which
+        holds, since an applicator combines its branches' results and one that holds leaves the
+        others' out (Attouche et al. 2024, §4.3). A key the object lacks is named by the
+        ``required`` or ``dependentRequired`` asking for it, one refused as it stands by
+        ``propertyNames`` or ``unevaluatedProperties``, and a value no schema admits by the
+        applicator of its ``false``. A failure no keyword made, as one valgebra reports of a
+        branch that does not apply, is named by none, and the list is empty.
+        """
+        root, steps = _Site(self.root, "", "#", "", instance), list(path)
+        failed: list[tuple[str, str]] = []
+        for site in self._applying(root, steps):
+            if isinstance(site.node, dict):
+                failed += [
+                    (keyword, f"{site.where}/{_escaped(keyword)}")
+                    for keyword in sorted(site.node, key=lambda name: _RANK.get(name, _ASSERTED))
+                    if self._refuses(site, keyword)
+                ]
+            elif site.node is False and site.by:
+                failed.append((site.by, site.where))
+        for site in self._applying(root, steps[:-1]) if steps else ():
+            failed += self._step_failed(site, steps[-1])
+        return failed
+
+    def located(self, failure: Mapping[str, object], instance: object) -> dict[str, object]:
+        """Return a failure valgebra reports, with the keyword that made it and its location.
+
+        The failure gains ``keyword`` and ``keywordLocation``, the first of `keywords_failed`
+        at its ``path``, as JSON Schema's output names an error (Core, section 12.3); a
+        failure no keyword is found for gains neither. Every other key is valgebra's.
+        """
+        out = dict(failure)
+        path = failure.get("path")
+        found = self.keywords_failed(instance, path if isinstance(path, tuple) else ())
+        if found:
+            out["keyword"], out["keywordLocation"] = found[0]
+        return out
+
+    def _applying(
+        self, site: _Site, path: list[object], seen: frozenset[int] = frozenset()
+    ) -> Iterator[_Site]:
+        """Yield the schema objects whose failures, on the value at ``path``, are the site's own."""
+        node = site.node
+        if not isinstance(node, dict):
+            if not path:
+                yield site
+            return
+        if id(node) in seen:
+            return
+        seen |= {id(node)}
+        site = site._replace(base=_within(site.base, node))
+        if not path:
+            yield site
+        for child in self._in_place(site):
+            yield from self._applying(child, path, seen)
+        below = _at(site.value, path[0]) if path else _ABSENT
+        if below is _ABSENT:
+            return
+        for child, at in self._children_at(node, path[0]):
+            by = at.partition("/")[0]
+            inner = _Site(child, site.base, f"{site.where}/{at}", by, below)
+            yield from self._applying(inner, path[1:])
+
+    def _in_place(self, site: _Site) -> Iterator[_Site]:
+        """Yield the subschemas a schema object applies to its own value and fails by."""
+        node, base, where, _, value = site
+        if not isinstance(node, dict):
+            return
+        for at, member in enumerate(node.get("allOf", ())):
+            yield _Site(member, base, f"{where}/allOf/{at}", "allOf", value)
+        if isinstance(reference := node.get("$ref"), str):
+            target, target_base = self._locate(reference, base)
+            yield _Site(target, target_base, f"{where}/$ref", "$ref", value)
+        for keyword in ("anyOf", "oneOf"):
+            # A branch that holds leaves the others' failures out: an `anyOf` holds, and a
+            # `oneOf` fails, if it does, by holding twice, which no branch's keyword made.
+            if keyword in node and self._holds({"anyOf": node[keyword]}, base, value) is False:
+                for at, member in enumerate(node[keyword]):
+                    yield _Site(member, base, f"{where}/{keyword}/{at}", keyword, value)
+        if "if" in node and (picked := self._holds(node["if"], base, value)) is not None:
+            branch = "then" if picked else "else"
+            if branch in node:
+                yield _Site(node[branch], base, f"{where}/{branch}", branch, value)
+        dependent = node.get("dependentSchemas")
+        for name, member in dependent.items() if isinstance(dependent, dict) else ():
+            if isinstance(value, Mapping) and name in value:
+                at = f"dependentSchemas/{_escaped(name)}"
+                yield _Site(member, base, f"{where}/{at}", "dependentSchemas", value)
+
+    def _holds(self, schema: object, base: str, value: object) -> bool | None:
+        """Return whether ``schema`` at ``base`` admits ``value``: None where it is refused."""
+        try:
+            return self._compile_at(schema, base).is_valid(value)
+        except Unsupported:
+            return None
+
+    def _refuses(self, site: _Site, keyword: str) -> bool:
+        """Return whether ``keyword`` refuses the site's value, its siblings' failures left out."""
+        node, base, _, _, value = site
+        if not isinstance(node, dict) or keyword in _ENTERED or keyword in ANNOTATIONS:
+            return False
+        beside = {name: node[name] for name in _BESIDE.get(keyword, ()) if name in node}
+        if self._holds({**beside, keyword: node[keyword]}, base, value) is not False:
+            return False
+        return not beside or self._holds(beside, base, value) is True
+
+    def _step_failed(self, site: _Site, step: object) -> list[tuple[str, str]]:
+        """Return each keyword of a schema object that refuses its value for ``step`` itself."""
+        node, base, where, _, value = site
+        if not isinstance(node, dict):
+            return []
+        found: list[str] = []
+        if _at(value, step) is not _ABSENT:
+            names = node.get("propertyNames", True)
+            if isinstance(step, str) and self._holds(names, base, step) is False:
+                found.append("propertyNames")
+            left = "unevaluatedProperties" if isinstance(step, str) else "unevaluatedItems"
+            if left in node and self._refuses(site, left):
+                found.append(left)
+        elif isinstance(value, Mapping):
+            asking = node.get("dependentRequired")
+            dependent = asking.items() if isinstance(asking, dict) else ()
+            if step in node.get("required", ()):
+                found.append("required")
+            if any(name in value and step in names for name, names in dependent):
+                found.append("dependentRequired")
+        return [(keyword, f"{where}/{keyword}") for keyword in found]
+
+    def _children_at(self, node: dict[str, Any], step: object) -> list[tuple[object, str]]:
+        """Return the subschemas a step's own applicators give it, and the path to each."""
+        if isinstance(step, int):
+            prefix = node.get("prefixItems")
+            if isinstance(prefix, list) and step < len(prefix):
+                return [(prefix[step], f"prefixItems/{step}")]
+            return [(node["items"], "items")] if "items" in node else []
+        if not isinstance(step, str):
+            return []
+        named = node.get("properties")
+        children: list[tuple[object, str]] = []
+        if isinstance(named, dict) and step in named:
+            children.append((named[step], f"properties/{_escaped(step)}"))
+        patterns = node.get("patternProperties")
+        matched = [
+            (sub, f"patternProperties/{_escaped(pattern)}")
+            for pattern, sub in (patterns.items() if isinstance(patterns, dict) else [])
+            if _search(pattern).is_valid(step)
+        ]
+        children.extend(matched)
+        if "additionalProperties" in node and not matched and not children:
+            children.append((node["additionalProperties"], "additionalProperties"))
+        return children
 
     def _root_checked(self) -> None:
         """Refuse a root `compile` refuses before reading any keyword of it."""
@@ -2547,6 +2742,51 @@ def _check_shapes(schema: dict[str, Any]) -> None:
         if shape is not None and not shape(value):
             msg = f"keyword {keyword!r} holds {value!r:.60}, as no schema may"
             raise Unsupported(msg)
+
+
+#: The keywords a failure is read through and not named by: an applicator whose subschemas
+#: the walk enters, and a keyword that only alters another.
+_ENTERED = frozenset(
+    {"allOf", "$ref", "if", "then", "else", "dependentSchemas", "minContains", "maxContains"}
+)
+
+#: The keywords whose subschemas evaluate an object's fields or an array's items, which
+#: ``unevaluatedProperties`` and ``unevaluatedItems`` leave out (Core, section 11).
+_EVALUATING = (
+    *("properties", "patternProperties", "additionalProperties", "prefixItems", "items"),
+    *("contains", "minContains", "maxContains", "allOf", "anyOf", "oneOf", "$ref"),
+    *("if", "then", "else", "dependentSchemas"),
+)
+
+#: The keywords a keyword depends on, beside which it is compiled to be named.
+_BESIDE: Mapping[str, tuple[str, ...]] = {
+    "items": ("prefixItems",),
+    "contains": ("minContains", "maxContains"),
+    "additionalProperties": ("properties", "patternProperties"),
+    "unevaluatedProperties": _EVALUATING,
+    "unevaluatedItems": _EVALUATING,
+}
+
+#: The order an object's failing keywords are named in: the ones pinning a kind, the ones
+#: asserting on the value, and the ones reading its items or fields.
+_ASSERTED = 3
+_RANK: Mapping[str, int] = {
+    "type": 0,
+    "const": 1,
+    "enum": 2,
+    "properties": 4,
+    "patternProperties": 4,
+    "additionalProperties": 4,
+    "unevaluatedProperties": 4,
+    "prefixItems": 4,
+    "items": 4,
+    "unevaluatedItems": 4,
+}
+
+
+def _escaped(token: str) -> str:
+    """Return a JSON pointer's reference token for ``token`` (RFC 6901, section 3)."""
+    return token.replace("~", "~0").replace("/", "~1")
 
 
 #: Keywords draft 2020-12 couples: each group compiles once, from all its members.

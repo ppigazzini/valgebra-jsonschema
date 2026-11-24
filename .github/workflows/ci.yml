@@ -42,7 +42,7 @@ jobs:
       - run: uv run --no-sync ruff format --check
       - run: uv run --no-sync ty check
       - run: uv run --no-sync python tools/check_markdown.py
-      - run: uv run --no-sync pytest
+      - run: uv run --no-sync python -X warn_default_encoding -m pytest
       # Every published count is one this code still produces.
       - run: uv run --no-sync python tools/suite.py --check docs/studies/json-schema-test-suite.json
       - run: uv run --no-sync python tools/suite.py --draft 2019-09 --check docs/studies/json-schema-test-suite-draft2019-09.json
@@ -64,7 +64,7 @@ jobs:
       - uses: astral-sh/setup-uv@v10.4.0
         with: { version: "0.13.9", python-version: "3.11", enable-cache: true }
       - run: uv sync --locked
-      - run: uv run --no-sync pytest
+      - run: uv run --no-sync python -X warn_default_encoding -m pytest
 
   docs:
     name: the site, built strict

@@ -21,7 +21,7 @@ uv run --no-sync ruff check
 uv run --no-sync ruff format --check
 uv run --no-sync ty check
 uv run --no-sync python tools/check_markdown.py
-uv run --no-sync pytest
+uv run --no-sync python -X warn_default_encoding -m pytest
 uv run --no-sync python tools/suite.py --check docs/studies/json-schema-test-suite.json
 uv run --no-sync python tools/suite.py --draft 2019-09 --check docs/studies/json-schema-test-suite-draft2019-09.json
 uv run --no-sync python tools/suite.py --draft 7 --check docs/studies/json-schema-test-suite-draft7.json

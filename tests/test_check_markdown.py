@@ -33,8 +33,8 @@ def test_a_link_to_the_site_names_a_published_page_and_anchor() -> None:
 
 
 def test_the_llms_manifest_is_held_to_the_nav_and_the_descriptions(tmp_path: Path) -> None:
-    (tmp_path / "a.md").write_text("---\ndescription: The first page.\n---\n")
-    (tmp_path / "b.md").write_text("---\ndescription: The second page.\n---\n")
+    (tmp_path / "a.md").write_text("---\ndescription: The first page.\n---\n", encoding="utf-8")
+    (tmp_path / "b.md").write_text("---\ndescription: The second page.\n---\n", encoding="utf-8")
     config = (
         "nav:\n  - A: a.md\n  - B: b.md\n"
         "plugins:\n  - llmstxt:\n      sections:\n        S:\n"

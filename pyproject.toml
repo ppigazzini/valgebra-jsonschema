@@ -90,6 +90,12 @@ default-groups = ["dev"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+# Text read or written with no encoding named is the locale's, cp1252 on Windows below 3.15
+# and UTF-8 everywhere else, so such a test passes on Linux and fails on Windows on the first
+# character past ASCII. Run under `-X warn_default_encoding`, as the gate and CI run it, such
+# an open warns, and this makes the warning a failure on every platform. A pipe to a child
+# names `encoding="locale"`, which both of its ends use.
+filterwarnings = ["error::EncodingWarning"]
 faulthandler_timeout = 600
 faulthandler_exit_on_timeout = true
 

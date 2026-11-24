@@ -108,6 +108,7 @@ def tracked() -> list[Path]:
         ["git", "ls-files"],  # noqa: S607
         capture_output=True,
         text=True,
+        encoding="locale",
         check=True,
     )
     return [Path(line) for line in out.stdout.splitlines() if line]

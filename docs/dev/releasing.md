@@ -163,8 +163,9 @@ curl -sS https://test.pypi.org/simple/valgebra-jsonschema/ \
 
 ## What this does not cover
 
-- **The push lanes past Linux, 3.11 and 3.15.** CPython 3.12 to 3.14, macOS and Windows are
-  read by the smoke alone, when a release is dispatched.
+- **The push lanes on macOS and Windows past 3.15.** A push runs the suite on every CPython the
+  classifiers name on Linux and on 3.15 on macOS and Windows: 3.11 to 3.14 there are read by the
+  smoke alone, when a release is dispatched.
 - **Free-threaded CPython and PyPy.** No job runs them and no classifier claims them.
 - **valgebra's other wheels.** Linux on aarch64 and musl, macOS on x86_64 and Windows on arm64
   run no leg here: valgebra's own release smoke installs each of those wheels on its platform and

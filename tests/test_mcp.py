@@ -145,6 +145,24 @@ class TestTool:
         assert tool.arguments.is_valid({"a": 1})
         assert not tool.arguments.is_valid({})
 
+    def test_a_root_typed_object_beside_a_reference_names_an_object(self):
+        # A `$ref` is an applicator its siblings meet (Core, section 8.2.3.1), so a root naming
+        # `type: "object"` beside one is an object schema, as the same set through `allOf` is.
+        # A root typed otherwise beside a reference to an object names none.
+        defs = {"$defs": {"Q": {"type": "object", "properties": {"q": {"type": "string"}}}}}
+        for root in (
+            {"$ref": "#/$defs/Q", **defs},
+            {"type": "object", "$ref": "#/$defs/Q", **defs},
+            {"type": "object", "allOf": [{"$ref": "#/$defs/Q"}], **defs},
+        ):
+            tool = read_tool({"name": "search", "inputSchema": root})
+            assert tool.arguments.is_valid({"q": "x"})
+            assert not tool.arguments.is_valid({"q": 1})
+        with pytest.raises(Unsupported, match="names no object"):
+            read_tool(
+                {"name": "search", "inputSchema": {"type": "string", "$ref": "#/$defs/Q", **defs}}
+            )
+
     def test_an_unsupported_dialect_in_either_contract_fails(self):
         wrong = {"$schema": "https://example.com/mine", "type": "object"}
         with pytest.raises(UnsupportedDialect):

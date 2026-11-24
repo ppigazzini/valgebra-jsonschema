@@ -34,8 +34,10 @@ class Tool:
 def _names_an_object(schema: object) -> bool:
     """Return whether a root schema is an object schema, following bare references.
 
-    The protocol has ``inputSchema`` state ``type: "object"``. A root that is a bare ``$ref``
-    names one, as a generated schema's named root does, so it holds there.
+    The protocol has ``inputSchema`` state ``type: "object"``. A schema naming it is an object
+    schema whatever stands beside it, since a ``$ref`` is an applicator its siblings meet
+    (Core, section 8.2.3.1). A root that is a bare ``$ref`` names one where its target does,
+    as a generated schema's named root does.
     """
     draft = older(schema)
     root = upgrade(schema, draft) if draft is not None else schema
@@ -43,6 +45,8 @@ def _names_an_object(schema: object) -> bool:
     for _ in range(8):
         if not (isinstance(here, dict) and "$ref" in here):
             break
+        if here.get("type") in ("object", ["object"]):
+            return True
         if set(here) - ANNOTATIONS - {"$ref", "$id", "$defs", "definitions"}:
             return False
         here = Compiler(root).resolve(here["$ref"])

@@ -68,8 +68,9 @@ dialect with no `$schema` is read as 2020-12: name its dialect with `{"$schema":
   rule against dereferencing a network reference reads here.
 - **Bounds hold what a document may cost.** A document past `MAX_NESTING` is refused before it is
   walked, and valgebra refuses a set past the bounds it holds.
-- **`inputSchema` names an object**: `type: "object"`, or a root that is a bare `$ref` to one, as
-  zod's named schemas are. `outputSchema` may be any schema.
+- **`inputSchema` names an object**: `type: "object"`, whatever stands beside it, a `$ref` among
+  them, or a root that is a bare `$ref` to one, as zod's named schemas are. `outputSchema` may be
+  any schema.
 
 ## What a model vendor enforces
 

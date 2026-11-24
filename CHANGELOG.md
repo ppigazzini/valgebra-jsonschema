@@ -32,6 +32,14 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   refuses fails with the format's own code, `string_pattern_mismatch` for a regular one, as a
   `minLength` fails with its own, where it failed with `union_error`.
 
+### Fixed
+
+- A tool's `inputSchema` naming `type: "object"` beside a `$ref` is read. `read_tool` followed
+  a root's `$ref` first and refused one with any sibling but an annotation, so
+  `{"type": "object", "$ref": "#/$defs/Q"}` was refused as naming no object while the same set
+  through `allOf` was read. A `$ref` is an applicator its siblings meet (Core, section 8.2.3.1),
+  so a root naming `type: "object"` is an object schema whatever stands beside it.
+
 ## [0.0.6] - 2026-11-22
 
 A release of three readings and the tested set, on valgebra 0.0.32: a schema read closed at its

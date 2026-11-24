@@ -49,6 +49,15 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Changed
 
+- A schema object's order bounds compile to one interval a kind. `{"type": "number", "minimum": 0,
+  "maximum": 100}` was the meet of the kind and a guarded set per bound, each a union of an `int`
+  and a `float` refinement, so a value walked the two kinds once per bound. The bounds of one
+  object compile together, the integers and the floats each under all of them, with the same
+  members: `is_valid` on it takes 76 ns where it took 101 on `50.5`, and 4,559 instructions for
+  three calls where it took 5,174, on CPython 3.15. The kind stays in the meet, where a relation
+  finds its refutation: without it, `{"type": "number"}` is `undecided` below the numbers under a
+  bound of more than 1,024 bits, which `inf` refutes.
+
 - The ledger of differences names valgebra's walk depth. A value nested past valgebra's walk is
   refused by every schema, `is_valid` answering `False` and `validate` raising `recursion_limit`:
   under `true` and `{}`, 127 lists around a number are admitted and 128 refused, and a `not` takes

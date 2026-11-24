@@ -248,8 +248,9 @@ FAMILIES: Mapping[str, tuple[Validator[Any], Validator[Any], frozenset[str]]] = 
 }
 
 
-def _number(bound: object) -> Validator[Any]:
-    return intersection(union(Annotated[int, bound], Annotated[float, bound]), NOT_BOOL)
+def _number(*bounds: object) -> Validator[Any]:
+    """Return the integers and the floats under every one of ``bounds``, ``bool`` left out."""
+    return intersection(union(Annotated[(int, *bounds)], Annotated[(float, *bounds)]), NOT_BOOL)
 
 
 def _constant(value: object) -> Validator[Any]:
@@ -1718,11 +1719,25 @@ def _const(_c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     return _constant(s["const"])
 
 
-def _bound(marker: Callable[[float], object], key: str) -> Callable[..., Validator[Any]]:
-    def build(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
-        return c.guard("number", _number(marker(s[key])))
+#: The order bounds and the marker each is read as.
+_BOUNDS: Mapping[str, Callable[[float], object]] = {
+    "minimum": Ge,
+    "maximum": Le,
+    "exclusiveMinimum": Gt,
+    "exclusiveMaximum": Lt,
+}
 
-    return build
+
+def _bounds(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
+    """Return the numbers within a schema object's order bounds: one interval a kind.
+
+    The bounds of one object meet, and the meet of intervals is the interval holding every
+    bound, so the object's bounds are one set: the integers and the floats each under all of
+    them, read in one pass of each kind, where a set per bound met the kinds' guards once per
+    bound. NaN is no value of either, since it orders against no bound.
+    """
+    markers = [marker(s[key]) for key, marker in _BOUNDS.items() if key in s]
+    return c.guard("number", _number(*markers))
 
 
 #: The largest integral step valgebra's `MultipleOf` decides exactly over the floats: past
@@ -2791,6 +2806,9 @@ def _escaped(token: str) -> str:
 
 #: Keywords draft 2020-12 couples: each group compiles once, from all its members.
 _GROUPS: Mapping[str, str] = {
+    "maximum": "minimum",
+    "exclusiveMinimum": "minimum",
+    "exclusiveMaximum": "minimum",
     "prefixItems": "items",
     "minContains": "contains",
     "maxContains": "contains",
@@ -2805,10 +2823,7 @@ _HANDLERS: dict[str, Callable[[Compiler, dict[str, Any]], Validator[Any]]] = {
     "type": _type,
     "enum": _enum,
     "const": _const,
-    "minimum": _bound(Ge, "minimum"),
-    "maximum": _bound(Le, "maximum"),
-    "exclusiveMinimum": _bound(Gt, "exclusiveMinimum"),
-    "exclusiveMaximum": _bound(Lt, "exclusiveMaximum"),
+    "minimum": _bounds,
     "multipleOf": _multiple_of,
     "minLength": _min_length,
     "maxLength": _max_length,

@@ -1,9 +1,12 @@
 import contextlib
+import itertools
 import json
 import math
+import operator
 import random
 import subprocess
 import sys
+from collections.abc import Callable
 from fractions import Fraction
 from typing import Annotated, Any
 
@@ -2193,3 +2196,45 @@ class TestLocated:
         self, schema, value, path, keyword, where
     ):
         assert (path, keyword, where) in self._located(schema, value)
+
+
+#: Each order bound, the bound written and the order a number within it holds.
+ORDER_BOUNDS: dict[str, tuple[float, Callable[[Any, Any], bool]]] = {
+    "minimum": (1, operator.ge),
+    "exclusiveMinimum": (1, operator.gt),
+    "maximum": (4, operator.le),
+    "exclusiveMaximum": (4, operator.lt),
+}
+
+#: Values on each side of both bounds, a number past every bound, and one of each other kind.
+AROUND_THE_BOUNDS = [
+    *(0, 1, 1.0, 1.5, 2, 4, 4.0, 4.5, 5, -(10**30), 10**30, math.inf, -math.inf, math.nan),
+    *(True, False, None, "x", [], {}),
+]
+
+
+class TestOrderBounds:
+    """The order bounds of one object are one set: the numbers within every one of them."""
+
+    @pytest.mark.parametrize("typed", [False, True])
+    @pytest.mark.parametrize(
+        "keys", [keys for n in range(1, 5) for keys in itertools.combinations(ORDER_BOUNDS, n)]
+    )
+    def test_a_number_lies_within_every_bound_the_object_writes(self, keys, typed):
+        schema: dict[str, Any] = {key: ORDER_BOUNDS[key][0] for key in keys}
+        compiled = compile_schema({**schema, "type": "number"} if typed else schema)
+        for value in AROUND_THE_BOUNDS:
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                expected = all(ORDER_BOUNDS[key][1](value, ORDER_BOUNDS[key][0]) for key in keys)
+            else:
+                expected = not typed
+            assert compiled.is_valid(value) == expected, value
+
+    @pytest.mark.parametrize("bound", [sys.float_info.max, 10**309])
+    def test_a_number_below_the_numbers_under_a_bound_is_refuted(self, bound):
+        # The kind beside the bounds offers `inf`, which refutes it where an integer past a
+        # bound of more than 1,024 bits is one valgebra does not build.
+        under = compile_schema({"type": "number", "minimum": -bound, "maximum": bound})
+        number = compile_schema({"type": "number"})
+        assert number.relation_to(under) == "not_subset"
+        assert under.relation_to(number) == "subset"

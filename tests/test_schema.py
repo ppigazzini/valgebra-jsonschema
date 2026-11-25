@@ -2278,3 +2278,17 @@ class TestOrderBounds:
         number = compile_schema({"type": "number"})
         assert number.relation_to(under) == "not_subset"
         assert under.relation_to(number) == "subset"
+
+    @pytest.mark.parametrize(
+        ("narrow", "wide"),
+        [
+            ({"type": "integer", "minimum": 2**121 + 1}, {"type": "integer", "minimum": 2**121}),
+            ({"type": "number", "maximum": 1e100}, {"type": "number", "maximum": 1e200}),
+            ({"maximum": 1e100}, {"maximum": 1e101}),
+            ({"type": "integer", "maximum": 1e100}, {"type": "number", "maximum": 1e100}),
+            ({"type": "integer", "maximum": sys.float_info.max}, {"type": "integer"}),
+        ],
+    )
+    def test_two_bounds_past_2_to_the_120_are_decided_both_ways(self, narrow, wide):
+        assert compile_schema(narrow).relation_to(compile_schema(wide)) == "subset"
+        assert compile_schema(wide).relation_to(compile_schema(narrow)) == "not_subset"

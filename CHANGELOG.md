@@ -63,6 +63,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   finds its refutation: without it, `{"type": "number"}` is `undecided` below the numbers under a
   bound of more than 1,024 bits, which `inf` refutes.
 
+- valgebra is required from 0.0.35, which holds an integer bound to 1,024 bits where one past
+  `2**120` declined. `{"type": "integer", "minimum": 2**121}` is `not_subset` of the integers from
+  `2**121 + 1` and `{"maximum": 1e101}` of `{"maximum": 1e100}`, each `undecided` before, and the
+  integers up to `1e100` are `subset` of the numbers up to it. No study's count moves.
+
 - The ledger of differences names valgebra's walk depth. A value nested past valgebra's walk is
   refused by every schema, `is_valid` answering `False` and `validate` raising `recursion_limit`:
   under `true` and `{}`, 127 lists around a number are admitted and 128 refused, and a `not` takes

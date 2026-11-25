@@ -120,7 +120,7 @@ Every `0.0.x` release of the ecosystem may change what an earlier one answered, 
 pins the set a release was tested with: the
 [`constraints.txt`](https://github.com/ppigazzini/valgebra-jsonschema/blob/main/constraints.txt)
 at its tag holds valgebra and every other dependency at the versions the suite and the studies
-ran on, `pip install valgebra-jsonschema==0.0.6 -c constraints.txt`.
+ran on, `pip install valgebra-jsonschema==0.0.7 -c constraints.txt`.
 
 ## License
 

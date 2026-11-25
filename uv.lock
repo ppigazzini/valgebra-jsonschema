@@ -1160,7 +1160,7 @@ wheels = [
 
 [[package]]
 name = "valgebra-jsonschema"
-version = "0.0.6"
+version = "0.0.7"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },

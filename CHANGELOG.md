@@ -6,6 +6,16 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-11-25
+
+A release of three readings made exact and two answers to ask for, on valgebra 0.0.35. An asserted
+`format` alone, a constant past the float range and an integral step past `2**53` each admitted a
+value the schema refuses or proved an inclusion that does not hold, and no longer do. A failure
+names the keyword that made it, held to the locations `jsonschema` reports, and a sized schema
+reads as its length range. valgebra's newer floor decides a relation between two bounds past
+`2**120`. Every case of the suite gets the verdict it got, and the corpus and containment studies
+read no difference on 0.0.35.
+
 ### Security
 
 - An integral `multipleOf` is decided exactly. A step past `2**53` has no float equal to it, and
@@ -316,7 +326,8 @@ A release of the user guide, with no change to the compiler: every schema compil
   records. Of the containment test suite's 10890 questions, 7048 are proven, 3560 refuted,
   246 undecided and 36 refused.
 
-[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.6...HEAD
+[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.7...HEAD
+[0.0.7]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.3...v0.0.4

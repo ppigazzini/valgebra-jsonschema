@@ -1,9 +1,10 @@
 # Releasing
 
 How a version reaches PyPI: where it is declared, how it is built, what stands between a
-dispatch and an upload, what the repository and the indexes hold for it, the order of the steps,
-and the checks on what an index serves. `.github/workflows/release.yml` owns the build, the tests
-of the built artifacts and the upload; this page owns the order and the checks outside it.
+dispatch and an upload, what the repository and the indexes hold for it, what is made ready
+before the bump, the order of the steps, the checks on what an index serves, and the advisory.
+`.github/workflows/release.yml` owns the build, the tests of the built artifacts and the upload;
+this page owns the order and the checks outside it.
 
 ## The version is declared once
 
@@ -79,6 +80,65 @@ The first upload of the name creates the project from a pending publisher, enter
 under the account's publishing settings, with the same four fields: the project name, the owner
 and repository, `release.yml` and the environment.
 
+## Before the bump
+
+Everything the version carries is committed before the bump, one concern to a commit, so the
+bump holds the version and the changelog alone. `LAST` is the version PyPI serves, and the
+window is `git log --oneline "v$LAST"..HEAD`.
+
+**A push, a dispatch, a tag and an advisory each wait for the maintainer's word.** A word given
+for one is not given for the next, and a request to run the tests is none for `main`: a push
+there deploys the site and puts the changelog's `Security` entries in public. A push to
+`github_ci` or a dispatch of `ci.yml` runs the same jobs on a branch.
+
+**Dependencies, tools and actions**, in one `build` commit. Each moves to its latest tagged
+release; the commit names each one held back, and why.
+
+| What moves | By | Read after |
+|---|---|---|
+| `uv.lock`, a floor in `pyproject.toml`, `constraints.txt` | `uv lock --upgrade`, then the export `constraints.txt` names in its header | the `pip-audit` job's two commands |
+| an action | its tag in each `uses:`, then `gh actions-lock` | `gh actions-lock --verify`, and the `zizmor` job's command |
+| a tool a job runs: uv, zizmor, pip-audit, griffe, twine | its pin in `.github/workflows/` | that job's own command |
+| the pre-commit hooks | `uv run --no-sync pre-commit autoupdate` | `uv run --no-sync pre-commit run --all-files` |
+
+**Performance, of the code that changed and of no other.** The window's diff names it:
+
+```bash
+git diff --stat "v$LAST" -- valgebra_jsonschema
+```
+
+Where the diff moves no code nothing is timed, and the bump's message says so. Elsewhere each
+function it changes is timed on the input the change is about, in the last release and in the
+tree, with every dependency at one version:
+
+```bash
+uv venv /tmp/last && VIRTUAL_ENV=/tmp/last uv pip install "valgebra-jsonschema==$LAST" -c constraints.txt
+(cd / && /tmp/last/bin/python -m timeit -s "$SETUP" "$CALL")
+.venv/bin/python -m timeit -s "$SETUP" "$CALL"
+```
+
+The first runs from outside the tree, since `python -m` puts the working directory first on the
+path. A rise is restored in the commit of the window that made it, or is named in the version's
+section with what it buys. A count is no time: the gate's `--check` holds each study's, and one
+that moves is regenerated in the commit that moves it.
+
+**Documentation.** Each page that states what the diff changes states the tree as it stands: the
+guide, the README, `SECURITY.md`, `llms.txt`'s sections, the docstrings.
+`tools/check_markdown.py` passes, and so does the site's strict build, `uv run --no-sync
+zensical build --strict` after `uv sync --locked --group docs`.
+
+**Papers and theorems.** Every item the diff adds or changes that implements a numbered result
+cites it by key and place, and [the theory page](theory.md) names the item under the claim, as
+[citing a paper](writing.md#citing-a-paper) says. No check sees a citation that is missing, so
+the diff is read for one. `tests/test_theory_ledger.py` holds the citations to the page.
+
+**Security.** Each defect of `LAST` that is one
+[the security policy](../../SECURITY.md#what-is-a-security-issue) names stands under `Security`
+in `Unreleased`, and [its advisory](#an-advisory) is drafted before the dispatch to PyPI.
+
+**The changelog.** Each change a user meets has its entry under `Unreleased`, and each public
+name removed or changed is one under Changed or Removed: the `api` job's command lists them.
+
 ## The order
 
 1. **Move valgebra's floor where the release needs it.** `pyproject.toml` names valgebra's floor
@@ -92,9 +152,12 @@ and repository, `release.yml` and the environment.
    lock's: at a release's tag it is the set the release was tested with, which the README tells
    a deployment to pin. This package is the second of
    [the release order](https://github.com/ppigazzini/valgebra-planning/blob/main/docs/dev/releasing.md#the-release-order).
-2. **Bump, in one commit.** `version` in `pyproject.toml`, `uv lock`, and the changelog: the
-   `Unreleased` entries roll into a section for the version, dated the day of the commit, with its
-   compare and tag links. It lands on `main`, and the push runs `ci.yml` on the tree about to
+2. **Bump, in one commit, the tip of the window.** `version` in `pyproject.toml`, `uv lock`, the
+   README's install pin, and the changelog: the `Unreleased` entries roll into a section for the
+   version, dated the day of the commit and opened by a paragraph saying what a user gets, with
+   its compare and tag links. The message says which checks ran, what they read, and what was not
+   measured. A job a commit of the window broke is repaired by amending that commit, and the bump
+   stays the tip. It lands on `main`, and the push runs `ci.yml` on the tree about to
    be published; the dispatches wait until it passes. The run's `api` job lists each public name
    removed or changed since the last tag, and each is an entry under Changed or Removed: one it
    lists and the changelog does not is fixed in the bump commit before any dispatch.
@@ -104,9 +167,10 @@ and repository, `release.yml` and the environment.
    gh workflow run release.yml -f publish_target=testpypi -f confirm_version=X.Y.Z
    ```
 
-4. **Check what TestPyPI serves** ([below](#checking-an-index)).
+4. **Check what TestPyPI serves** ([the fast test](#checking-an-index)).
 5. **Dispatch to PyPI**, `-f publish_target=pypi`, the same version.
-6. **Check what PyPI serves.**
+6. **Check what PyPI serves**, and publish [the advisory](#an-advisory) of a section with
+   `Security` entries.
 7. **Tag the published commit**, annotated:
 
    ```bash
@@ -119,6 +183,26 @@ and repository, `release.yml` and the environment.
 The smoke proves each artifact. It cannot prove what the index serves: the resolution, the file an
 installer picks and the metadata it reads all come after the upload, and steps 4 and 6 are the only
 ones that read them.
+
+**The fast test**, in minutes and from outside the tree:
+
+1. The release run is green on the commit that will be tagged, and the index lists the version,
+   its wheel and its sdist.
+2. Each file has the sha256 the index states, and a provenance naming this repository,
+   `release.yml` and the index's environment
+   (`https://pypi.org/integrity/valgebra-jsonschema/X.Y.Z/<file>/provenance`). Two builds of one
+   commit give the same bytes, so PyPI's hashes are TestPyPI's.
+3. Every file of the wheel and the sdist that is in the tree equals the commit's.
+4. The wheel installs on the floor and on the newest CPython, the sdist on the newest, and the
+   wheel on the floor with `--resolution lowest-direct`; `uv pip check` passes on each.
+5. The package imports with every warning an error, from `site-packages`, and one recipe the
+   release touched prints what its page shows.
+6. One behavior for each `Security` and `Fixed` entry, asked of the last release and of this
+   one. The two answer differently, and a control both answer alike shows that the question
+   reaches the code: one they answer alike tests nothing.
+
+The suite is not part of it: the release's smoke ran it on the files it uploaded. Where the fast
+test leaves an artifact in doubt, the install and the suite below are run on it.
 
 TestPyPI serves whatever anyone uploaded under a name, so only this package comes from it, without
 its dependencies, and those come from PyPI at the lock's versions, in an install of their own. From
@@ -160,6 +244,29 @@ curl -sS https://test.pypi.org/simple/valgebra-jsonschema/ \
   -H "Accept: application/vnd.pypi.simple.v1+json" \
   | python3 -c "import json, sys; print(json.load(sys.stdin)['versions'])"
 ```
+
+## An advisory
+
+A section with `Security` entries has one advisory, published when PyPI serves the fix, as
+`SECURITY.md` says: a fix and its advisory go out together. It is a row for each way through,
+with what went through and the releases affected.
+
+**A range is what the published releases answer.** Each one is installed from PyPI and asked the
+case, beside a control that release handles, so a release without the feature does not read as
+one unaffected. A case an earlier advisory covers names that advisory.
+
+**Each sentence is probed before it is published.** The draft is made, read back and corrected,
+then published:
+
+```bash
+gh api -X POST repos/ppigazzini/valgebra-jsonschema/security-advisories --input advisory.json
+gh api repos/ppigazzini/valgebra-jsonschema/security-advisories/$GHSA --jq .description
+gh api -X PATCH repos/ppigazzini/valgebra-jsonschema/security-advisories/$GHSA -f state=published
+```
+
+`advisory.json` holds `summary`, `description`, `cvss_vector_string`, `cwe_ids` and one of
+`vulnerabilities`, the `pip` package with `vulnerable_version_range` and `patched_versions`. It
+names no person and no address.
 
 ## What this does not cover
 

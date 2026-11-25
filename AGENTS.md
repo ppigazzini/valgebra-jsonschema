@@ -50,7 +50,10 @@ a link and on the nav to a warning, so a dead link, a dead anchor or a page off 
   its `nav` and of its `llmstxt` sections, the second the page's `description:`. `docs/dev/`
   holds the developer pages, which are not published.
 - [The releasing page](docs/dev/releasing.md) is the order a version reaches PyPI in, and only
-  a dispatch of `.github/workflows/release.yml` uploads one.
+  a dispatch of `.github/workflows/release.yml` uploads one. A cut follows it from
+  [Before the bump](docs/dev/releasing.md#before-the-bump) on, every step in its order;
+  performance is read for the code the window changed and for no other; and a push, a dispatch,
+  a tag and an advisory each wait for the maintainer's word, given for that one.
 - A proof is valgebra's or a concrete value's; nothing here turns "not proven" into "false" or
   "true". A relation valgebra cannot decide is `undecided`.
 - A keyword the compiler does not translate raises `Unsupported`.

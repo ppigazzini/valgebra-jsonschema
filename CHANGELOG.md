@@ -24,7 +24,10 @@ read no difference on 0.0.35.
   arguments' equality, where `MultipleOf(2) == MultipleOf(2.0)`, so in a process that had built
   `Annotated[int, MultipleOf(2.0)]` first, `multipleOf: 2` held the float step and admitted
   `2**53 + 1`. A step up to `2**53` is a class of its own that no float step stands for, and one
-  past it is checked in exact rational arithmetic, as a fractional step is.
+  past it is checked in exact rational arithmetic, as a fractional step is. The exact check costs
+  more: under `{"type": "integer", "multipleOf": 10000000000000001}`, `is_valid` of the step
+  itself takes 0.72 µs where 0.0.6 took 0.09, on CPython 3.15, and 14 under `multipleOf: 7` takes
+  60 ns in both.
 
 - A constant past the float range is its infinity. `json.loads` reads `1e400` as `inf`, in a
   schema and in an instance alike, and `type` and `maximum` read it so, but a `const` or an `enum`

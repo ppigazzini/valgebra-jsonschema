@@ -29,7 +29,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.4.0
-        with: { version: "0.13.9", python-version: "3.15", enable-cache: true }
+        with: { version: "0.13.10", python-version: "3.15", enable-cache: true }
       # The corpus and the containment suite are fetched at the commits the two tools pin;
       # the key follows those files, so a run downloads them only when one changes.
       - uses: actions/cache@v6.1.0
@@ -73,7 +73,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.4.0
-        with: { version: "0.13.9", python-version: "${{ matrix.python }}", enable-cache: true }
+        with: { version: "0.13.10", python-version: "${{ matrix.python }}", enable-cache: true }
       - run: uv sync --locked
       - run: uv run --no-sync python -X warn_default_encoding -m pytest
 
@@ -90,7 +90,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.4.0
-        with: { version: "0.13.9", python-version: "3.15", enable-cache: true }
+        with: { version: "0.13.10", python-version: "3.15", enable-cache: true }
       - run: |
           uv export --locked --only-group build --no-emit-project -o "$RUNNER_TEMP/build.txt"
           uv build --wheel --no-sources --build-constraints "$RUNNER_TEMP/build.txt" --require-hashes
@@ -114,7 +114,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.4.0
-        with: { version: "0.13.9", python-version: "3.15", enable-cache: true }
+        with: { version: "0.13.10", python-version: "3.15", enable-cache: true }
       - run: uv sync --locked --group docs
       - run: uv run --no-sync zensical build --strict
 
@@ -150,12 +150,12 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.4.0
-        with: { version: "0.13.9", python-version: "3.15", enable-cache: false }
+        with: { version: "0.13.10", python-version: "3.15", enable-cache: false }
       - name: Audit the workflows
         # The token lets zizmor resolve each action's ref, beside the static audits.
         env:
           GH_TOKEN: ${{ github.token }}
-        run: uvx zizmor==1.33.0 .github/
+        run: uvx zizmor==1.33.1 .github/
 
   api:
     name: the public API against the last release
@@ -173,7 +173,7 @@ jobs:
           # griffe loads the tag from git, so the history and its tags are fetched.
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v10.4.0
-        with: { version: "0.13.9", python-version: "3.15", enable-cache: false }
+        with: { version: "0.13.10", python-version: "3.15", enable-cache: false }
       - name: Compare the API with the last tag
         run: |
           set -euo pipefail
@@ -196,7 +196,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@v10.4.0
-        with: { version: "0.13.9", python-version: "3.15", enable-cache: false }
+        with: { version: "0.13.10", python-version: "3.15", enable-cache: false }
       - name: Audit the locked dependencies
         run: |
           set -euo pipefail

@@ -108,19 +108,44 @@ git diff --stat "v$LAST" -- valgebra_jsonschema
 ```
 
 Where the diff moves no code nothing is timed, and the bump's message says so. Elsewhere each
-function it changes is timed on the input the change is about, in the last release and in the
-tree, with every dependency at one version:
+function it changes is timed on the input the change is about, in two environments of the last
+release and in the tree, on one interpreter and with every dependency at one version:
 
 ```bash
-uv venv /tmp/last && VIRTUAL_ENV=/tmp/last uv pip install "valgebra-jsonschema==$LAST" -c constraints.txt
-(cd / && /tmp/last/bin/python -m timeit -s "$SETUP" "$CALL")
-.venv/bin/python -m timeit -s "$SETUP" "$CALL"
+uv sync --locked
+for env in /tmp/last1 /tmp/last2; do
+  uv venv --python .venv/bin/python "$env"
+  VIRTUAL_ENV="$env" uv pip install "valgebra-jsonschema==$LAST" -c constraints.txt
+done
+uptime
+tree="$PWD"; cd /
+for round in 1 2 3 4 5; do
+  for env in /tmp/last1 /tmp/last2 "$tree/.venv"; do
+    echo "$env $(taskset -c 2 "$env/bin/python" -m timeit -s "$SETUP" "$CALL")"
+  done
+done
+cd "$tree"
 ```
 
-The first runs from outside the tree, since `python -m` puts the working directory first on the
-path. A rise is restored in the commit of the window that made it, or is named in the version's
-section with what it buys. A count is no time: the gate's `--check` holds each study's, and one
-that moves is regenerated in the commit that moves it.
+The three run from `/`, since `python -m` puts the working directory first on the path. A figure
+is the median of its rounds, and the last release's second environment is the control: a
+difference inside the spread of the two is none.
+
+**A time is read on a quiet box.** No build, suite, sweep or second reading runs beside it, no
+one else uses the machine, and `uptime` reads a one-minute load under 0.5 before the first
+round. `taskset` keeps each run on one core, and the environments take turns, so a drift of the
+machine falls on each alike. A driver written for a reading runs in a shell that bounds it,
+`ulimit -u` the processes and `ulimit -v` the memory of each, and its file takes no standard
+library module's name: `python bisect.py` puts its folder first on the path, where `random`
+imports it as `bisect`.
+
+A rise is restored in the commit of the window that made it, or is named in the version's
+section with what it buys; one read after the tag is named in the published version's section,
+and is restored, or kept for what it buys, in a commit of the next window. The wheel holds the
+tree's Python files and nothing compiled, so the reading before the bump is of what the index
+serves, and none follows the upload. A count is no time, and reads the same on any box: the
+gate's `--check` holds each study's, and one that moves is regenerated in the commit that moves
+it.
 
 **Documentation.** Each page that states what the diff changes states the tree as it stands: the
 guide, the README, `SECURITY.md`, `llms.txt`'s sections, the docstrings.

@@ -52,8 +52,9 @@ a link and on the nav to a warning, so a dead link, a dead anchor or a page off 
 - [The releasing page](docs/dev/releasing.md) is the order a version reaches PyPI in, and only
   a dispatch of `.github/workflows/release.yml` uploads one. A cut follows it from
   [Before the bump](docs/dev/releasing.md#before-the-bump) on, every step in its order;
-  performance is read for the code the window changed and for no other; and a push, a dispatch,
-  a tag and an advisory each wait for the maintainer's word, given for that one.
+  performance is read for the code the window changed and for no other, a time on a quiet box;
+  and a push, a dispatch, a tag and an advisory each wait for the maintainer's word, given for
+  that one.
 - A proof is valgebra's or a concrete value's; nothing here turns "not proven" into "false" or
   "true". A relation valgebra cannot decide is `undecided`.
 - A keyword the compiler does not translate raises `Unsupported`.

@@ -1230,16 +1230,17 @@ class Compiler:
     def keywords_failed(self, instance: object, path: Sequence[object]) -> list[tuple[str, str]]:
         """Return each keyword that refuses the value at ``path`` in ``instance``, and where it is.
 
-        JSON Schema's output names, for each failure, the keyword that made it and the keyword's
-        location along the evaluation path, through each ``$ref`` (Core, sections 12.3.1 and
-        12.3.3). valgebra reports the instance's path alone, so the keywords are read again on
-        the value: a schema object's result is the conjunction of its keywords', a dependent one
-        read after those it depends on, so the keywords an instance fails made its failure
-        (Attouche et al. 2024, §4.5). A keyword is compiled beside the ones it depends on, at
-        the object's base URI, and named where that set refuses the value and they alone do not:
-        the ones that pin a kind, ``type``, ``const`` and ``enum``, before the rest of their
-        object, so a value of the wrong kind is named by its kind, and the ones that read the
-        value's items or fields after it.
+        JSON Schema's output names, for each failure, the keyword that made it and the
+        keyword's location along the evaluation path, through each ``$ref`` (draft 2020-12,
+        sections 12.3.1 and 12.3.3). valgebra reports the instance's path alone, so the
+        keywords are read again on the value: a schema object's result is the conjunction of
+        its keywords', a dependent one read after those it depends on, so the keywords an
+        instance fails made its failure (Attouche et al. 2024, §4.5). A keyword is compiled
+        beside the ones it depends on, at the object's base URI, and named where that set
+        refuses the value and they alone do not: the ones that pin a kind, ``type``,
+        ``const`` and ``enum``, before the rest of their object, so a value of the wrong
+        kind is named by its kind, and the ones that read the value's items or fields after
+        it.
 
         The schema objects that apply at ``path`` are reached from the root: through
         ``properties``, a matching ``patternProperties`` or ``additionalProperties``, the
@@ -1272,7 +1273,7 @@ class Compiler:
         """Return a failure valgebra reports, with the keyword that made it and its location.
 
         The failure gains ``keyword`` and ``keywordLocation``, the first of `keywords_failed`
-        at its ``path``, as JSON Schema's output names an error (Core, section 12.3); a
+        at its ``path``, as JSON Schema's output names an error (draft 2020-12, section 12.3); a
         failure no keyword is found for gains neither. Every other key is valgebra's.
         """
         out = dict(failure)
@@ -2766,7 +2767,7 @@ _ENTERED = frozenset(
 )
 
 #: The keywords whose subschemas evaluate an object's fields or an array's items, which
-#: ``unevaluatedProperties`` and ``unevaluatedItems`` leave out (Core, section 11).
+#: ``unevaluatedProperties`` and ``unevaluatedItems`` leave out (draft 2020-12, section 11).
 _EVALUATING = (
     *("properties", "patternProperties", "additionalProperties", "prefixItems", "items"),
     *("contains", "minContains", "maxContains", "allOf", "anyOf", "oneOf", "$ref"),

@@ -146,9 +146,9 @@ class TestTool:
         assert not tool.arguments.is_valid({})
 
     def test_a_root_typed_object_beside_a_reference_names_an_object(self):
-        # A `$ref` is an applicator its siblings meet (Core, section 8.2.3.1), so a root naming
-        # `type: "object"` beside one is an object schema, as the same set through `allOf` is.
-        # A root typed otherwise beside a reference to an object names none.
+        # A `$ref` is an applicator its siblings meet (draft 2020-12, section 8.2.3.1), so a root
+        # naming `type: "object"` beside one is an object schema, as the same set through `allOf`
+        # is. A root typed otherwise beside a reference to an object names none.
         defs = {"$defs": {"Q": {"type": "object", "properties": {"q": {"type": "string"}}}}}
         for root in (
             {"$ref": "#/$defs/Q", **defs},

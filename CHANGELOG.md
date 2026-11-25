@@ -39,12 +39,12 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   `minItems` and `maxItems` or an object's `minProperties` and `maxProperties`, is a `Length` of
   its kind and its bounds, `2.0` read as 2, and anything else is `None`.
 
-- A failure names the keyword that made it. valgebra reports a failure's instance path and the
-  set the schema compiled to, so `{"type": "integer", "minimum": 1}` refused `0` as `union_error`
-  over `int and >= 1, float and >= 1`, with no keyword. `Compiler.located(failure, value)` adds
+- A failure names the keyword that made it. valgebra reports a failure's instance path and the set
+  the schema compiled to, so `{"type": "integer", "minimum": 1}` refused `0` as `union_error` over
+  `int and >= 1, float and >= 1`, with no keyword. `Compiler.located(failure, value)` adds
   `keyword` and `keywordLocation`, the keyword's location along the evaluation path through each
-  `$ref` (Core, section 12.3.1): `minimum` at `#/minimum` there, `type` where a value of the wrong
-  kind, `nan` among them, is refused, and `enum` where a listed value is missed.
+  `$ref` (draft 2020-12, section 12.3.1): `minimum` at `#/minimum` there, `type` where a value of
+  the wrong kind, `nan` among them, is refused, and `enum` where a listed value is missed.
   `Compiler.keywords_failed(value, path)` lists every keyword refusing the value at a path, the
   ones pinning a kind first. Each is asked of the value again beside the keywords it depends on,
   and named where it refuses what they admit: a branch of an `anyOf` that holds, an `if`, the
@@ -75,11 +75,11 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Fixed
 
-- A tool's `inputSchema` naming `type: "object"` beside a `$ref` is read. `read_tool` followed
-  a root's `$ref` first and refused one with any sibling but an annotation, so
-  `{"type": "object", "$ref": "#/$defs/Q"}` was refused as naming no object while the same set
-  through `allOf` was read. A `$ref` is an applicator its siblings meet (Core, section 8.2.3.1),
-  so a root naming `type: "object"` is an object schema whatever stands beside it.
+- A tool's `inputSchema` naming `type: "object"` beside a `$ref` is read. `read_tool` followed a
+  root's `$ref` first and refused one with any sibling but an annotation, so `{"type": "object",
+  "$ref": "#/$defs/Q"}` was refused as naming no object while the same set through `allOf` was
+  read. A `$ref` is an applicator its siblings meet (draft 2020-12, section 8.2.3.1), so a root
+  naming `type: "object"` is an object schema whatever stands beside it.
 
 ## [0.0.6] - 2026-11-22
 

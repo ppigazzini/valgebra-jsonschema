@@ -36,8 +36,8 @@ def _names_an_object(schema: object) -> bool:
 
     The protocol has ``inputSchema`` state ``type: "object"``. A schema naming it is an object
     schema whatever stands beside it, since a ``$ref`` is an applicator its siblings meet
-    (Core, section 8.2.3.1). A root that is a bare ``$ref`` names one where its target does,
-    as a generated schema's named root does.
+    (draft 2020-12, section 8.2.3.1). A root that is a bare ``$ref`` names one where its target
+    does, as a generated schema's named root does.
     """
     draft = older(schema)
     root = upgrade(schema, draft) if draft is not None else schema

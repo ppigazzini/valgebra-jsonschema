@@ -46,7 +46,9 @@ gives the verdict the specification gives. A keyword it cannot translate raises
 
 - **The `jsonschema` package**, pinned in the development group, as a second
   implementation: `tests/test_properties.py` compares membership on 400 random schemas
-  and 25 random values each, over the keywords whose meaning the two share exactly.
+  and 25 random values each, over the keywords whose meaning the two share exactly, and holds
+  each keyword `Compiler.keywords_failed` names, on 600 random schemas of several keywords, to a
+  location the package reports.
 
 Where the specification and the package disagree, the specification wins, and the disagreement
 is a ledger entry against the package.

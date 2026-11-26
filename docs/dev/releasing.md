@@ -18,8 +18,8 @@ The build job makes the files the publish job uploads, so every Python package i
 from `uv.lock`, each hash required: the backend `[build-system]` names is the group `build`, and
 the job passes that group's export to `uv build` as build constraints, with `--require-hashes`.
 A backend release reaches the artifacts only through a lock update, which pip-audit reads as it
-reads every group. twine, which resolves fresh, checks the metadata in a job of its own, on
-copies of the artifacts. hatchling fixes every timestamp, and two builds of one commit
+reads every group. twine, which resolves fresh, checks the metadata in the first Linux smoke
+job, on copies of the artifacts, where nothing it writes reaches the upload. hatchling fixes every timestamp, and two builds of one commit
 give the same bytes.
 
 ## Publishing is a dispatch, and a tag publishes nothing
@@ -96,8 +96,8 @@ release; the commit names each one held back, and why.
 
 | What moves | By | Read after |
 |---|---|---|
-| `uv.lock`, a floor in `pyproject.toml`, `constraints.txt` | `uv lock --upgrade`, then the export `constraints.txt` names in its header | the `pip-audit` job's two commands |
-| an action | its tag in each `uses:`, then `gh actions-lock` | `gh actions-lock --verify`, and the `zizmor` job's command |
+| `uv.lock`, a floor in `pyproject.toml`, `constraints.txt` | `uv lock --upgrade`, then the export `constraints.txt` names in its header | the two commands of the `checks` job's dependency audit |
+| an action | its tag in each `uses:`, then `gh actions-lock` | `gh actions-lock --verify`, and the `checks` job's zizmor command |
 | a tool a job runs: uv, zizmor, pip-audit, griffe, twine | its pin in `.github/workflows/` | that job's own command |
 | the pre-commit hooks | `uv run --no-sync pre-commit autoupdate` | `uv run --no-sync pre-commit run --all-files` |
 
@@ -162,7 +162,7 @@ the diff is read for one. `tests/test_theory_ledger.py` holds the citations to t
 in `Unreleased`, and [its advisory](#an-advisory) is drafted before the dispatch to PyPI.
 
 **The changelog.** Each change a user meets has its entry under `Unreleased`, and each public
-name removed or changed is one under Changed or Removed: the `api` job's command lists them.
+name removed or changed is one under Changed or Removed: the `checks` job's API step lists them.
 
 ## The order
 
@@ -183,7 +183,7 @@ name removed or changed is one under Changed or Removed: the `api` job's command
    its compare and tag links. The message says which checks ran, what they read, and what was not
    measured. A job a commit of the window broke is repaired by amending that commit, and the bump
    stays the tip. It lands on `main`, and the push runs `ci.yml` on the tree about to
-   be published; the dispatches wait until it passes. The run's `api` job lists each public name
+   be published; the dispatches wait until it passes. The run's `checks` job lists each public name
    removed or changed since the last tag, and each is an entry under Changed or Removed: one it
    lists and the changelog does not is fixed in the bump commit before any dispatch.
 3. **Dispatch to TestPyPI**, with the version confirmed:

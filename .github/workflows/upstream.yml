@@ -6,7 +6,8 @@ name: Upstream
 # names valgebra's floor and no ceiling.
 on:
   schedule:
-    - cron: "23 4 * * 1"
+    # Clear of valgebra's nightly, which fires at 04:00 UTC on the same account's job limit.
+    - cron: "23 10 * * 1"
   workflow_dispatch:
 
 # The job reads the repository and writes nothing back.

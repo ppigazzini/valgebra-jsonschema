@@ -60,51 +60,47 @@ jobs:
           path: suite.txt
           if-no-files-found: error
 
-  metadata:
-    name: the metadata, as the index reads it
-    needs: [build]
-    runs-on: ubuntu-26.04
-    timeout-minutes: 10
-    # twine and what it imports resolve fresh, so they run here and not in the build job: they
-    # read copies of the artifacts, and nothing this job writes reaches the upload.
-    steps:
-      - uses: actions/download-artifact@v8.0.2
-        with:
-          name: dist
-          path: dist
-      - uses: astral-sh/setup-uv@v10.4.0
-        with: { version: "0.13.10", python-version: "3.15", enable-cache: false }
-      # The metadata, and the README as the index renders it.
-      - run: uvx twine==7.0.0 check --strict dist/*
-
+  # Each artifact is installed as a user installs it, its dependencies resolved from PyPI, and
+  # the suite the sdist carries runs on it. A version cannot be replaced on an index once
+  # uploaded, only yanked, so a broken artifact fails here.
+  #
+  # A leg is an artifact, a resolution and an interpreter, and a job runs every leg of its
+  # platform, each in an environment of its own and a group of its own in the log, and fails at
+  # the end naming each leg that failed: a job is what GitHub's concurrency limit counts, five
+  # macOS jobs at once across the account, so the platform is the job and the interpreter is not.
+  #
+  # twine and what it imports resolve fresh, so they run here and not in the build job: they read
+  # copies of the artifacts, and nothing a smoke job writes reaches the upload.
   smoke:
-    name: smoke ${{ matrix.artifact }} on ${{ matrix.python }}, ${{ matrix.os }}, ${{ matrix.resolution }}
+    name: smoke on ${{ matrix.platform.name }}
     needs: [build]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    # Each artifact is installed as a user installs it, its dependencies resolved from PyPI,
-    # and the suite the sdist carries runs on it. A version cannot be replaced on an index once
-    # uploaded, only yanked, so a broken artifact fails here.
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        # The wheel on every CPython the classifiers name, on x86_64 Linux, Apple silicon macOS
-        # and x64 Windows: an install of this package pulls the valgebra wheel of its interpreter
-        # and platform, and each of those is a build of its own. valgebra's release smokes its
-        # other wheels, macOS x86_64 among them, on each of their platforms.
-        os: [ubuntu-26.04, macos-26, windows-2025-vs2026]
-        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
-        artifact: [wheel]
-        resolution: [highest]
-        include:
-          # The sdist on the floor and the newest release: what it adds to the wheel is its
-          # file list, which neither the interpreter nor the platform moves.
-          - { os: ubuntu-26.04, python: "3.11", artifact: sdist, resolution: highest }
-          - { os: ubuntu-26.04, python: "3.15", artifact: sdist, resolution: highest }
-          # Each dependency at the floor `pyproject.toml` names, where every other leg installs
-          # the newest release each admits.
-          - { os: ubuntu-26.04, python: "3.11", artifact: wheel, resolution: lowest-direct }
-          - { os: ubuntu-26.04, python: "3.15", artifact: wheel, resolution: lowest-direct }
+        platform:
+          # The sdist on the floor and the newest release: what it adds to the wheel is its file
+          # list, which neither the interpreter nor the platform moves. And the wheel with each
+          # dependency at the floor `pyproject.toml` names, where every other leg installs the
+          # newest release each admits.
+          - name: Linux, the sdist and the floors
+            os: ubuntu-26.04
+            metadata: true
+            legs: sdist/highest/3.11 sdist/highest/3.15 wheel/lowest-direct/3.11 wheel/lowest-direct/3.15
+          # The wheel on every CPython the classifiers name, on x86_64 Linux, Apple silicon macOS
+          # and x64 Windows: an install of this package pulls the valgebra wheel of its
+          # interpreter and platform, and each of those is a build of its own. valgebra's release
+          # smokes its other wheels, macOS x86_64 among them, on each of their platforms.
+          - name: Linux, the wheel
+            os: ubuntu-26.04
+            legs: wheel/highest/3.11 wheel/highest/3.12 wheel/highest/3.13 wheel/highest/3.14 wheel/highest/3.15
+          - name: macOS, the wheel
+            os: macos-26
+            legs: wheel/highest/3.11 wheel/highest/3.12 wheel/highest/3.13 wheel/highest/3.14 wheel/highest/3.15
+          - name: Windows, the wheel
+            os: windows-2025-vs2026
+            legs: wheel/highest/3.11 wheel/highest/3.12 wheel/highest/3.13 wheel/highest/3.14 wheel/highest/3.15
     # Windows runs the same script under Git's bash, where a virtual environment keeps its
     # executables in `Scripts` rather than `bin`.
     defaults:
@@ -119,51 +115,70 @@ jobs:
         with:
           name: suite
       - uses: astral-sh/setup-uv@v10.4.0
-        with:
-          version: "0.13.10"
-          python-version: ${{ matrix.python }}
-          # Nothing is checked out yet for the cache to key on.
-          enable-cache: false
-      - name: Install the artifact and import it
-        # The floors are the dependencies `pyproject.toml` names, read from the sdist and
-        # resolved to the lowest release each admits, so the installed versions are the ones a
-        # user on the floor holds.
+        # Nothing is checked out yet for the cache to key on.
+        with: { version: "0.13.10", enable-cache: false }
+      # The metadata, and the README as the index renders it.
+      - if: ${{ matrix.platform.metadata }}
+        run: uvx --python 3.15 twine==7.0.0 check --strict dist/*
+      # The floors are the dependencies `pyproject.toml` names, read from the sdist and resolved
+      # to the lowest release each admits, so the installed versions are the ones a user on the
+      # floor holds.
+      #
+      # Then the sdist's own suite, so a file the suite reads and the sdist leaves out fails here.
+      # It runs through the environment's `pytest` script, which puts no directory of the
+      # unpacked tree on the path, from a working directory that holds no package: the suite
+      # imports the installed artifact. The group `test` pins no package the artifact depends on
+      # above its floor, so the floor legs keep their floors.
+      - name: Install each artifact, import it and run the suite it carries, a leg at a time
         env:
-          ARTIFACT: ${{ matrix.artifact }}
-          RESOLUTION: ${{ matrix.resolution }}
+          LEGS: ${{ matrix.platform.legs }}
         run: |
-          set -euo pipefail
-          mkdir suite
-          tar -xzf dist/*.tar.gz -C suite --strip-components 1
-          uv venv
-          case "$ARTIFACT" in
-            wheel) file="$(ls dist/*.whl)" ;;
-            sdist) file="$(ls dist/*.tar.gz)" ;;
-          esac
-          case "$RESOLUTION" in
-            highest) uv pip install "$file" ;;
-            lowest-direct) uv pip install --resolution lowest-direct -r suite/pyproject.toml "$file" ;;
-          esac
-          uv pip check
-          uv pip list
-          bin=.venv/bin; [ -d .venv/Scripts ] && bin=.venv/Scripts
-          "$bin/python" -W error -c 'import importlib.metadata as md, valgebra_jsonschema as m; assert "site-packages" in m.__file__, m.__file__; s = m.compile_schema({"type": "integer"}); assert s.is_valid(1) and s.is_valid(1.0) and not s.is_valid(True); print("smoke ok", md.version("valgebra-jsonschema"), "on valgebra", md.version("valgebra"))'
-      - name: Run the suite the sdist carries on the installed artifact
-        # The sdist's own suite, so a file the suite reads and the sdist leaves out fails here.
-        # It runs through the environment's `pytest` script, which puts no directory of the
-        # unpacked tree on the path, from a working directory that holds no package: the suite
-        # imports the installed artifact. The group `test` pins no package the artifact
-        # depends on above its floor, so the floor legs keep their floors.
-        run: |
-          set -euo pipefail
-          uv pip install -r suite.txt
-          uv pip check
-          bin=.venv/bin; [ -d .venv/Scripts ] && bin=.venv/Scripts
-          "$bin/pytest" -p no:cacheprovider suite/tests
+          # A leg stops at its first failure, in a subshell of its own; the loop runs every leg, so
+          # the step's own shell does not stop at one, and GitHub starts it with `-e` set.
+          set +e -uo pipefail
+          mkdir suite && tar -xzf dist/*.tar.gz -C suite --strip-components 1 || exit 1
+          leg() {
+            set -euo pipefail
+            local artifact="$1" resolution="$2" python="$3"
+            local env=".venv-$artifact-$resolution-$python" file
+            local bin="$env/bin"
+            case "$artifact" in
+              wheel) file="$(ls dist/*.whl)" ;;
+              sdist) file="$(ls dist/*.tar.gz)" ;;
+            esac
+            uv venv --python "$python" "$env"
+            [ -d "$env/Scripts" ] && bin="$env/Scripts"
+            case "$resolution" in
+              highest) uv pip install --python "$env" "$file" ;;
+              lowest-direct) uv pip install --python "$env" --resolution lowest-direct -r suite/pyproject.toml "$file" ;;
+            esac
+            uv pip check --python "$env"
+            uv pip list --python "$env"
+            "$bin/python" -W error -c 'import importlib.metadata as md, valgebra_jsonschema as m; assert "site-packages" in m.__file__, m.__file__; s = m.compile_schema({"type": "integer"}); assert s.is_valid(1) and s.is_valid(1.0) and not s.is_valid(True); print("smoke ok", md.version("valgebra-jsonschema"), "on valgebra", md.version("valgebra"))'
+            uv pip install --python "$env" -r suite.txt
+            uv pip check --python "$env"
+            "$bin/pytest" -p no:cacheprovider suite/tests
+          }
+          failed=()
+          for spec in $LEGS; do
+            IFS=/ read -r artifact resolution python <<< "$spec"
+            echo "::group::$artifact, $resolution, $python"
+            ( leg "$artifact" "$resolution" "$python" )
+            status=$?
+            echo "::endgroup::"
+            if [ "$status" -ne 0 ]; then
+              echo "::error::the smoke failed on $artifact, $resolution, $python"
+              failed+=("$spec")
+            fi
+          done
+          if [ "${#failed[@]}" -ne 0 ]; then
+            echo "failed: ${failed[*]}"
+            exit 1
+          fi
 
   publish:
     name: publish to ${{ inputs.publish_target }}
-    needs: [build, metadata, smoke]
+    needs: [build, smoke]
     runs-on: ubuntu-26.04
     timeout-minutes: 10
     # A dry run uploads nothing, and a dispatch from another branch cannot publish a commit the

@@ -35,16 +35,27 @@ def test_the_gate_is_the_test_job() -> None:
 
 
 def test_every_run_carries_no_sync() -> None:
-    commands = _gate() + _job("test") + _job("suite") + _job("docs")
-    assert all(command.startswith("uv run --no-sync ") for command in commands), commands
+    """Every `uv run` the gate and the workflows write carries `--no-sync`."""
+    assert all(command.startswith("uv run --no-sync ") for command in _gate() + _job("test"))
+    for workflow in sorted((ROOT / ".github" / "workflows").glob("*.yml")):
+        code = "\n".join(
+            line
+            for line in workflow.read_text(encoding="utf-8").splitlines()
+            if not line.lstrip().startswith("#")
+        )
+        runs = re.findall(r"\buv run\b(.*)", code)
+        if workflow.name in {"ci.yml", "docs.yml"}:
+            assert runs, workflow.name
+        assert all(run.startswith(" --no-sync ") for run in runs), (workflow.name, runs)
 
 
 def test_the_suite_runs_on_every_interpreter_and_platform() -> None:
     """Every interpreter the classifiers name runs the suite at push, and so do macOS and Windows.
 
-    `test` runs it on Linux at the newest, and `suite` at each one below it there and at the
-    newest on macOS and Windows, as valgebra's push runs its own: a defect one interpreter or
-    one platform alone reaches fails the push rather than the release smoke.
+    `test` runs it on Linux at the newest, `suite` at each one below it there, a pair of steps
+    an interpreter in one job, and `platforms` at the newest on macOS and Windows, as valgebra's
+    push runs its own: a defect one interpreter or one platform alone reaches fails the push
+    rather than the release smoke.
     """
     classifiers = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     named = {
@@ -56,19 +67,16 @@ def test_the_suite_runs_on_every_interpreter_and_platform() -> None:
     test = _job_text("test")
     assert re.search(rf'python-version: "{re.escape(newest)}"', test), test
     suite = _job_text("suite")
-    systems = re.findall(r"^\s+os: \[(.+)\]$", suite, re.MULTILINE)
-    versions = re.findall(r"^\s+python: \[(.+)\]$", suite, re.MULTILINE)
-    assert len(systems) == len(versions) == 1, suite
-    linux = {
-        (os.strip(), version.strip().strip('"'))
-        for os in systems[0].split(",")
-        for version in versions[0].split(",")
-    }
-    included = set(re.findall(r'- \{ os: ([\w.-]+), python: "([\d.]+)" \}', suite))
-    assert linux | included == {("ubuntu-26.04", version) for version in named - {newest}} | {
-        ("macos-26", newest),
-        ("windows-2025-vs2026", newest),
-    }
+    assert re.search(r"^\s+runs-on: ubuntu-26\.04$", suite, re.MULTILINE), suite
+    synced = re.findall(r'UV_PYTHON: "([\d.]+)".*\n\s+run: uv sync --locked$', suite, re.MULTILINE)
+    pytest = r"uv run --no-sync python -X warn_default_encoding -m pytest"
+    tested = re.findall(rf'UV_PYTHON: "([\d.]+)".*\n\s+run: {pytest}$', suite, re.MULTILINE)
+    assert synced == tested, suite
+    assert set(tested) == named - {newest}, tested
+    platforms = _job_text("platforms")
+    systems = re.findall(r"^\s+os: \[(.+)\]$", platforms, re.MULTILINE)
+    assert [s.strip() for s in systems[0].split(",")] == ["macos-26", "windows-2025-vs2026"]
+    assert re.search(rf'python-version: "{re.escape(newest)}"', platforms), platforms
 
 
 def test_the_tested_set_is_the_lock_s() -> None:

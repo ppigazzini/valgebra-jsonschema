@@ -35,7 +35,7 @@ uv run --no-sync python tools/containment.py --check docs/studies/containment.js
 All of them must exit 0 before a commit. A change that moves a published count regenerates
 the study with `--json` in the same commit and says why the count moved.
 
-The job `docs` builds the site on every push, after `uv sync --locked --group docs`, with
+The job `checks` builds the site on every push, after `uv sync --locked --group docs`, with
 `uv run --no-sync zensical build --strict`: `mkdocs.yml` raises every check the builder makes on
 a link and on the nav to a warning, so a dead link, a dead anchor or a page off the nav fails it.
 

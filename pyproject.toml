@@ -52,7 +52,7 @@ dev = [
     { include-group = "test" },
     "pre-commit>=4.7.0",
     "ruff>=0.17.6",
-    "ty>=0.0.110",
+    "ty>=0.0.112",
 ]
 # The backend `[build-system]` names, at the lock's version and hashes: the release workflow
 # builds the published artifacts with it alone, so a backend release reaches them only through

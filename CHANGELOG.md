@@ -6,6 +6,14 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-11-26
+
+A release on valgebra 0.0.36, with no change to the compiler. An excluded middle,
+`{"anyOf": [{"not": C}, C]}`, leaves no array out under emptiness as under the relation, with
+`C` a list `const` or an `enum` of lists, and a meet no reading decides is declined at a cost
+bounded a complement. Every case of the suite gets the verdict it got, and the corpus and
+containment studies read no difference on 0.0.36.
+
 ### Changed
 
 - valgebra is required from 0.0.36, which reads a meet below an excluded middle empty as its
@@ -337,7 +345,8 @@ A release of the user guide, with no change to the compiler: every schema compil
   records. Of the containment test suite's 10890 questions, 7048 are proven, 3560 refuted,
   246 undecided and 36 refused.
 
-[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.7...HEAD
+[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.8...HEAD
+[0.0.8]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.4...v0.0.5

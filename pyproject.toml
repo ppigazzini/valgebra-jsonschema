@@ -1,6 +1,6 @@
 [project]
 name = "valgebra-jsonschema"
-version = "0.0.7"
+version = "0.0.8"
 description = "JSON Schema read into valgebra's sets: membership as the specification states it, and inclusion decided between two schemas."
 readme = "README.md"
 license = "MIT OR Apache-2.0"

@@ -28,7 +28,7 @@ dependencies = [
     # The decision procedure every answer here rests on, from the release the studies were read
     # on. No ceiling: a ceiling cannot be lifted from a published version, so a valgebra release
     # installs beside this package the day it is published, and asks no release here.
-    "valgebra>=0.0.35",
+    "valgebra>=0.0.36",
 ]
 
 [project.urls]

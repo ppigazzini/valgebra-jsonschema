@@ -6,6 +6,14 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- valgebra is required from 0.0.36, which reads a meet below an excluded middle empty as its
+  relation proves it. `{"anyOf": [{"not": C}, C]}` holds every JSON value, and with `C` a list
+  `const` or an `enum` of lists the arrays' meet with its complement was not read empty, though
+  the arrays were `subset` of it; it is now, for `{"const": [1]}` and `{"enum": [[1], [2]]}`. A
+  meet no reading decides is declined at a cost bounded a complement.
+
 ## [0.0.7] - 2026-11-25
 
 A release of three readings made exact and two answers to ask for, on valgebra 0.0.35. An asserted

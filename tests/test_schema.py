@@ -1016,6 +1016,20 @@ class TestDecisions:
     def test_false_is_empty(self):
         assert compile_schema(False).relation_to(nothing) == "subset"
 
+    @pytest.mark.parametrize(
+        "schema",
+        [{"const": [1]}, {"enum": [[1], [2]]}, {"minItems": 2}, {"const": 1}],
+        ids=["list-const", "list-enum", "min-items", "scalar-const"],
+    )
+    def test_an_excluded_middle_leaves_no_array_out(self, schema):
+        # `anyOf: [{not: C}, C]` holds every JSON value. valgebra proves the arrays below it
+        # by splitting them on `C`, and reads the arrays' meet with its complement empty by
+        # the same split: on valgebra 0.0.35 a list constant's meet declined.
+        everything = compile_schema({"anyOf": [{"not": schema}, schema]})
+        array = compile_schema({"type": "array"})
+        assert array.relation_to(everything) == "subset"
+        assert intersection(array, complement(everything)).is_empty()
+
 
 class TestRefusals:
     @pytest.mark.parametrize(

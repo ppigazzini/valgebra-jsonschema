@@ -17,6 +17,9 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Changed
 
+- `constants` reads a `type` beside an `enum` or a `const`, keeping the listed values of its
+  kinds: `{"type": "string", "enum": ["mug", "box"]}`, the spelling pydantic writes for a
+  `Literal`, lists `["mug", "box"]` where it read nothing.
 - `keywordLocation` is a JSON Pointer, as draft 2020-12 asks (section 12.3.1) and prints
   (section 12.4.2): `/properties/pos/$ref/maximum` where it was `#/properties/pos/$ref/maximum`.
   The `#` made it a URI fragment, which percent-encodes a key as a pointer does not, so a key

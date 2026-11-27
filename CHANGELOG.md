@@ -23,6 +23,14 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   holding `%41` read back as one named `A`; a pointer walk reads each location back to the
   keyword it names.
 
+### Fixed
+
+- An `enum` or a `const` whose values span more nodes than valgebra builds, `MAX_SCHEMA_NODES`,
+  is refused before it is built: each scalar counts its spellings, an integer two, and the union
+  of several values one, so an `enum` of 50,000 integers, 100,001 nodes, is refused in 0.05 s
+  where valgebra refused it after 3.0 s of building. A container's own nodes are not counted, so
+  nothing valgebra holds is refused: 49,999 integers compile as before.
+
 ## [0.0.8] - 2026-11-26
 
 A release on valgebra 0.0.36, with no change to the compiler. An excluded middle,

@@ -20,6 +20,7 @@ from typing import Annotated, Any, TypedDict
 from annotated_types import Len, Predicate
 from valgebra import (
     MAX_SCHEMA_DEPTH,
+    MAX_SCHEMA_NODES,
     Regex,
     ValidationError,
     Validator,
@@ -33,6 +34,7 @@ from valgebra import (
 
 __all__ = [
     "MAX_SCHEMA_DEPTH",
+    "MAX_SCHEMA_NODES",
     "NOT_BOOL",
     "Asked",
     "Regex",

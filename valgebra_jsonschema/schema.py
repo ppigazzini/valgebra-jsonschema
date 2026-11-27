@@ -54,6 +54,7 @@ from annotated_types import Ge, Gt, Le, Lt, MaxLen, MinLen, MultipleOf
 
 from valgebra_jsonschema._valgebra import (
     MAX_SCHEMA_DEPTH,
+    MAX_SCHEMA_NODES,
     NOT_BOOL,
     Asked,
     Regex,
@@ -1812,11 +1813,42 @@ def _type(_c: Compiler, s: dict[str, Any]) -> Validator[Any]:
 
 
 def _enum(_c: Compiler, s: dict[str, Any]) -> Validator[Any]:
+    _within_budget("enum", s["enum"], union=len(s["enum"]) > 1)
     return union(*(_constant(v) for v in s["enum"])) if s["enum"] else nothing
 
 
 def _const(_c: Compiler, s: dict[str, Any]) -> Validator[Any]:
+    _within_budget("const", [s["const"]], union=False)
     return _constant(s["const"])
+
+
+def _within_budget(keyword: str, values: Sequence[object], *, union: bool) -> None:
+    """Raise `Unsupported` for listed values valgebra would refuse to hold, before building them.
+
+    valgebra builds no validator past `MAX_SCHEMA_NODES` nodes, and refuses one only once it is
+    built: 50,000 listed integers take seconds to refuse. Each scalar spells as many nodes as
+    it has spellings, an integer two (`spellings`), and a union of several values one more; a
+    container's own nodes are not counted, so the count is at most valgebra's, and a value it
+    passes is built and asked of valgebra as before.
+    """
+    nodes, pending = int(union), list(values)
+    while pending and nodes <= MAX_SCHEMA_NODES:
+        value = pending.pop()
+        if isinstance(value, list):
+            pending += value
+        elif isinstance(value, dict):
+            pending += value.values()
+        elif isinstance(value, (int, float)) and not isinstance(value, bool):
+            nodes += len(spellings(value))
+        else:
+            nodes += 1
+    if nodes > MAX_SCHEMA_NODES:
+        what = f"its enum of {len(values)} values" if keyword == "enum" else "its const"
+        msg = (
+            f"{_PAST_VALGEBRAS_LIMIT}: schema is too large: {what} spans {nodes} nodes or"
+            f" more, past the limit of {MAX_SCHEMA_NODES}"
+        )
+        raise Unsupported(msg)
 
 
 #: The order bounds and the marker each is read as.

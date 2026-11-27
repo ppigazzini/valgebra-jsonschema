@@ -4,6 +4,7 @@ import json
 import math
 import operator
 import random
+import re
 import subprocess
 import sys
 from collections.abc import Callable
@@ -2054,6 +2055,39 @@ class TestKeys:
         leaf = {"a": {"b": {"c": {"d": {"a": "s"}}}}}
         assert compiled.is_valid(leaf)
         assert not compiled.is_valid({"e": 1})
+
+
+class TestNodeBudget:
+    """A listed value past valgebra's node budget is refused before it is built."""
+
+    @pytest.mark.parametrize(
+        ("schema", "refused"),
+        [
+            ({"enum": list(range(50_000))}, "its enum of 50000 values spans 100001 nodes or more"),
+            (
+                {"enum": list(range(100_000))},
+                "its enum of 100000 values spans 100001 nodes or more",
+            ),
+            ({"const": list(range(60_000))}, "its const spans 100002 nodes or more"),
+        ],
+    )
+    def test_a_listed_value_past_the_budget_is_refused_unbuilt(
+        self, schema: dict[str, Any], refused: str, monkeypatch: pytest.MonkeyPatch
+    ):
+        # An integer spells two nodes and the union one: 50,000 integers are 100,001, past
+        # 100,000, which valgebra refused only after seconds of building them.
+        built: list[object] = []
+        monkeypatch.setattr(schema_module, "_constant", built.append)
+        with pytest.raises(Unsupported, match=re.escape(refused)):
+            compile_schema(schema)
+        assert built == []
+
+    def test_a_listed_value_within_the_budget_compiles_as_before(self):
+        # 49,999 integers are 99,999 nodes, which valgebra holds.
+        validator = compile_schema({"enum": list(range(49_999))})
+        assert validator.is_valid(49_998)
+        assert validator.is_valid(1.0)
+        assert not validator.is_valid(49_999)
 
 
 class TestLocated:

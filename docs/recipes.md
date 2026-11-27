@@ -378,7 +378,13 @@ key. `Compiler(schema).at(location)` returns the schema object the location's ke
 each `$ref` on the way followed as evaluation followed it, which a plain pointer walk cannot do:
 `/properties/pos/$ref/maximum` gives the object under `$defs` holding the `maximum`. Where that
 object's resource declares an absolute `$id`, `located` adds `absoluteKeywordLocation`, its URI
-and a fragment, as `https://example.com/joint#/maximum`.
+and a fragment, as `https://example.com/joint#/maximum`. `admitted(schema)` words what that
+object admits, one phrase for each value or branch, from `constants`, `branches`, `interval` and
+`length`: `['"mug"', '"bottle"', '"box"']`, `['a number from 0.2 to 0.6']`, `['a string of 1 to
+300 characters']`, and `None` for a schema those readers do not read. Joining the phrases, `or`
+between them or `one of` before them, is the caller's, and so is writing `*` for a key a client
+sent that the contract does not declare: valgebra-planning's `contract_names` reads both of a
+tool's schemas for it.
 A file in TOML or YAML is parsed by the library that owns the
 format, and the value it returns checked with `validate`, which reads only what `json.loads`
 could return: a TOML date is no JSON value, and no schema admits it. `assert_format=True`

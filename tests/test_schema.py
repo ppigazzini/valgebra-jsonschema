@@ -15,7 +15,7 @@ import pytest
 from annotated_types import MinLen
 from valgebra import ValidationError, Validator, complement, intersection, nothing
 
-from valgebra_jsonschema import Length, length
+from valgebra_jsonschema import Length, admitted, length
 from valgebra_jsonschema import schema as schema_module
 from valgebra_jsonschema.schema import (
     ANNOTATIONS,
@@ -2062,6 +2062,144 @@ class TestKeys:
         leaf = {"a": {"b": {"c": {"d": {"a": "s"}}}}}
         assert compiled.is_valid(leaf)
         assert not compiled.is_valid({"e": 1})
+
+
+def _either(words: list[str]) -> str:
+    """Join phrases as fishtest's refusal does: `"mug", "bottle" or "box"`."""
+    return words[0] if len(words) == 1 else f"{', '.join(words[:-1])} or {words[-1]}"
+
+
+#: Input schemas of a robot's skills, as the MADE proof of concept publishes them.
+OBJECT_ID = {"type": "string", "pattern": "^obj_[0-9]{1,6}$", "description": "an id"}
+METERS: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "unit": {"type": "string", "const": "m"},
+        "value": {"type": "number", "minimum": 0.2, "maximum": 0.6},
+    },
+    "required": ["unit", "value"],
+    "additionalProperties": False,
+}
+SKILLS: dict[str, dict[str, Any]] = {
+    "detect_object": {
+        "type": "object",
+        "properties": {"label": {"type": "string", "enum": ["mug", "bottle", "box"]}},
+        "required": ["label"],
+        "additionalProperties": False,
+    },
+    "estimate_pose": {
+        "type": "object",
+        "properties": {"object_id": OBJECT_ID},
+        "required": ["object_id"],
+        "additionalProperties": False,
+    },
+    "say": {
+        "type": "object",
+        "properties": {
+            "text": {"type": "string", "minLength": 1, "maxLength": 300, "description": "x"},
+            "language": {"type": "string", "enum": ["it", "en"]},
+        },
+        "required": ["text", "language"],
+        "additionalProperties": False,
+    },
+    "grasp": {
+        "type": "object",
+        "properties": {"pose_status": {"type": "string", "const": "ok"}, "distance": METERS},
+        "required": ["pose_status", "distance"],
+        "additionalProperties": False,
+    },
+}
+
+
+class TestAdmitted:
+    """What a schema admits is worded as both its adopters word it where the schema decides."""
+
+    @pytest.mark.parametrize(
+        ("skill", "arguments", "worded"),
+        [
+            ("detect_object", {"label": "cup"}, [("enum", ['"mug"', '"bottle"', '"box"'])]),
+            (
+                "estimate_pose",
+                {"object_id": "mug"},
+                [("pattern", ["a string matching ^obj_[0-9]{1,6}$"])],
+            ),
+            ("estimate_pose", {"object_id": 5}, [("type", ["a string matching ^obj_[0-9]{1,6}$"])]),
+            (
+                "say",
+                {"text": "", "language": "it"},
+                [("minLength", ["a string of 1 to 300 characters"])],
+            ),
+            (
+                "grasp",
+                {"pose_status": "pending", "distance": {"unit": "m", "value": 0.3}},
+                [("const", ['"ok"'])],
+            ),
+            (
+                "grasp",
+                {"pose_status": "ok", "distance": {"unit": "cm", "value": 0.9}},
+                [("const", ['"m"']), ("maximum", ["a number from 0.2 to 0.6"])],
+            ),
+            ("estimate_pose", ["obj_1"], [("type", ["an object"])]),
+        ],
+    )
+    def test_a_refusal_is_worded_at_its_keyword(
+        self, skill: str, arguments: object, worded: list[tuple[str, list[str]]]
+    ):
+        schema = SKILLS[skill]
+        compiler = Compiler(schema)
+        with pytest.raises(ValidationError) as refused:
+            compiler.compile(schema).validate(arguments)
+        found = []
+        for failure in refused.value.errors:
+            named = compiler.located(failure, arguments)
+            location = named["keywordLocation"]
+            assert isinstance(location, str)
+            found.append((named["keyword"], admitted(compiler.at(location))))
+
+        assert found == worded
+
+    def test_the_phrases_join_into_each_adopters_words(self):
+        # fishtest joins with "or"; the proof of concept writes "one of" before a list and
+        # "exactly" before one value: the joining is the caller's, the phrases the schema's.
+        label = admitted(SKILLS["detect_object"]["properties"]["label"])
+        assert label is not None
+        assert _either(label) == '"mug", "bottle" or "box"'
+        assert "one of " + ", ".join(label) == 'one of "mug", "bottle", "box"'
+        (status,) = admitted(SKILLS["grasp"]["properties"]["pose_status"]) or []
+        assert f"exactly {status}" == 'exactly "ok"'
+        assert admitted(METERS["properties"]["value"]) == ["a number from 0.2 to 0.6"]
+
+    @pytest.mark.parametrize(
+        ("schema", "words"),
+        [
+            ({"type": "integer", "minimum": 1, "maximum": 5}, ["an integer from 1 to 5"]),
+            ({"type": "number", "exclusiveMinimum": 0}, ["a number greater than 0"]),
+            (
+                {"type": "integer", "minimum": 0, "multipleOf": 2},
+                ["an integer of at least 0, a multiple of 2"],
+            ),
+            ({"type": "number", "maximum": 2**60}, ["a number of at most 1.152921504606847e+18"]),
+            (
+                {"type": "array", "minItems": 1, "items": {"type": "string"}},
+                ["an array of at least 1 item"],
+            ),
+            ({"type": "string", "maxLength": 3}, ["a string of at most 3 characters"]),
+            ({"type": "string", "minLength": 2, "maxLength": 2}, ["a string of 2 characters"]),
+            (
+                {"anyOf": [{"const": "a"}, {"type": "integer", "minimum": 3}]},
+                ['"a"', "an integer of at least 3"],
+            ),
+            ({"type": ["string", "null"]}, ["a string", "null"]),
+            ({"type": "boolean", "description": "d"}, ["a boolean"]),
+            ({"$ref": "#/$defs/x"}, None),
+            ({"type": "string", "format": "date"}, None),
+            ({"anyOf": [{"type": "string"}, {"not": {}}]}, None),
+        ],
+    )
+    def test_a_schema_is_worded_by_the_readers_or_not_at_all(
+        self, schema: dict[str, Any], words: list[str] | None
+    ):
+        assert admitted(schema) == words
 
 
 class TestNodeBudget:

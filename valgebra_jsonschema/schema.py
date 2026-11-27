@@ -48,7 +48,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from fractions import Fraction
 from typing import Annotated, Any, Literal, NamedTuple, TypeAlias
-from urllib.parse import unquote, urljoin
+from urllib.parse import quote, unquote, urljoin
 
 from annotated_types import Ge, Gt, Le, Lt, MaxLen, MinLen, MultipleOf
 
@@ -513,6 +513,11 @@ class Compiler:
         #: schema for the whole compile, as the document compiled names its own URI before
         #: `_index` runs and after.
         self._located: dict[tuple[str, str], tuple[object, str]] = {}
+        #: The base URI and the pointer from its resource's root of each schema object of the
+        #: document, by identity, read at the first `at` crossing a reference (`_places`).
+        self._placed: dict[int, tuple[str, str]] | None = None
+        #: What each location names, and its absolute location (`_walked`).
+        self._walks: dict[str, tuple[object, str | None]] = {}
         #: Each pair of ``oneOf`` branches asked whether it meets (`exactly_one`).
         self.asked: Asked = {}
         #: Each resource by its URI and each anchor by its resource's URI and its name, with
@@ -1282,7 +1287,105 @@ class Compiler:
         found = self.keywords_failed(instance, path if isinstance(path, tuple) else ())
         if found:
             out["keyword"], out["keywordLocation"] = found[0]
+            walked = self._walks.get(found[0][1]) or self._walked(found[0][1])
+            if walked[1] is not None:
+                out["absoluteKeywordLocation"] = walked[1]
         return out
+
+    def at(self, location: str) -> object:
+        """Return the schema object holding the keyword a location along the evaluation path names.
+
+        Such a location passes through ``$ref`` as through a keyword, so a JSON Pointer walk of
+        the document may not resolve it (draft 2020-12, section 12.3.1); each ``$ref`` on the way
+        is resolved here against the base URI around it, as evaluation resolved it. A location
+        ending on a keyword returns the schema object the keyword sits in, as python-jsonschema's
+        ``ValidationError.schema`` gives the schema its failing keyword sits in; one ending on a
+        subschema, as a ``false`` under ``properties``, returns that subschema, and the empty
+        pointer the root. Raises `Unsupported` for a location naming nothing in the document.
+        """
+        return self._walked(location)[0]
+
+    def _walked(self, location: str) -> tuple[object, str | None]:
+        """Return `_walk` of ``location``, walked once a compiler.
+
+        What a walk reads is fixed for the compiler's life: the document, each reference's
+        target (`_locate`) and each object's place (`_places`). A location refused is walked
+        again, and refused again.
+        """
+        if (walked := self._walks.get(location)) is None:
+            walked = self._walks[location] = self._walk(location)
+        return walked
+
+    def _walk(self, location: str) -> tuple[object, str | None]:
+        """Return what `at` returns, and the location dereferenced as an absolute URI.
+
+        The second is the canonical URI of the schema resource the location ends in, with a
+        JSON Pointer fragment from that resource's root, as ``absoluteKeywordLocation`` is
+        written (draft 2020-12, section 12.3.2), and None where that resource declares no
+        absolute URI or sits in another document.
+        """
+        if location and not location.startswith("/"):
+            msg = f"location {location!r} is no JSON Pointer"
+            raise Unsupported(msg)
+        node, base, pointer, kind = self.root, self._root_base, "", "schema"
+        holder: object = node
+        for raw in location.split("/")[1:] if location else ():
+            step = raw.replace("~1", "/").replace("~0", "~") if "~" in raw else raw
+            if kind == "schema" and isinstance(node, dict) and step == "$ref" and step in node:
+                # The target's place is its resource's, its own `$id` already read there.
+                holder = node
+                node, base = self._locate(node["$ref"], base)
+                base, pointer = self._places().get(id(node), (base, None))
+                continue
+            if kind == "schema" and isinstance(node, dict) and step in node:
+                holder, node = node, node[step]
+                kind = _HOLDS.get(step, "value")
+            elif kind == "map" and isinstance(node, dict) and step in node:
+                node, kind = node[step], "schema"
+            elif kind == "list" and isinstance(node, list) and _INDEX.fullmatch(step):
+                if int(step) >= len(node):
+                    msg = f"location {location!r} names nothing in the document"
+                    raise Unsupported(msg)
+                node, kind = node[int(step)], "schema"
+            else:
+                msg = f"location {location!r} names nothing in the document"
+                raise Unsupported(msg)
+            if pointer is not None:
+                pointer = f"{pointer}/{raw}"
+            if kind == "schema" and isinstance(node, dict) and "$id" in node:
+                base, pointer = _within(base, node), ""
+        # A location ending on a keyword, one holding schemas as `oneOf` does among them, names
+        # the keyword: the object holding it is the one returned.
+        found = node if kind == "schema" else holder
+        if pointer is None or ":" not in base:
+            return found, None
+        return found, f"{base}#{quote(pointer, safe=_FRAGMENT)}"
+
+    def _places(self) -> dict[int, tuple[str, str]]:
+        """Return the base URI and the pointer from its resource's root of each schema object.
+
+        Read once, over the document the compiler holds: an object a reference names is placed
+        by its identity, wherever the reference named it from.
+        """
+        if self._placed is None:
+            self._placed = {}
+            pending: list[tuple[object, str, str]] = [(self.root, self._root_base, "")]
+            while pending:
+                node, base, pointer = pending.pop()
+                if not isinstance(node, dict):
+                    continue
+                if "$id" in node and node is not self.root:
+                    base, pointer = _within(base, node), ""
+                self._placed[id(node)] = (base, pointer)
+                for key, value in node.items():
+                    at = f"{pointer}/{_escaped(key)}"
+                    if key in _ONE or key in _ONE_BESIDE:
+                        pending.append((value, base, at))
+                    elif key in _MAP and isinstance(value, dict):
+                        pending += [(v, base, f"{at}/{_escaped(k)}") for k, v in value.items()]
+                    elif (key in _MANY or key == "prefixItems") and isinstance(value, list):
+                        pending += [(v, base, f"{at}/{i}") for i, v in enumerate(value)]
+        return self._placed
 
     def _applying(
         self, site: _Site, path: list[object], seen: frozenset[int] = frozenset()
@@ -3051,8 +3154,21 @@ def _same(a: object, b: object) -> bool:
 
 
 _ONE = frozenset({"not", "if", "then", "else", "additionalProperties", "contains", "propertyNames"})
+#: The keywords holding one subschema beside those `_ONE` names: draft 2020-12's ``items``,
+#: the two ``unevaluated`` keywords and ``contentSchema``.
+_ONE_BESIDE = frozenset({"items", "unevaluatedItems", "unevaluatedProperties", "contentSchema"})
+#: The characters a URI fragment holds as written (RFC 3986, section 3.5): any other is
+#: percent-encoded, as a JSON Pointer in a fragment is (RFC 6901, section 6).
+_FRAGMENT = "/?:@!$&'()*+,;=-._~"
 _MANY = frozenset({"allOf", "anyOf", "oneOf"})
 _MAP = frozenset({"properties", "patternProperties", "definitions", "$defs", "dependentSchemas"})
+#: What each keyword holding subschemas holds, as `Compiler.at` steps into it: a map of them, a
+#: list, or one; a keyword missing holds a value.
+_HOLDS: Mapping[str, str] = {
+    **dict.fromkeys(_ONE | _ONE_BESIDE, "schema"),
+    **dict.fromkeys(_MANY | {"prefixItems"}, "list"),
+    **dict.fromkeys(_MAP, "map"),
+}
 #: Keywords drafts after 07 added. No older draft knows them, so in an older schema they
 #: are annotations, and `upgrade` drops them rather than let draft 2020-12 assert them.
 #: ``$defs`` stays: it asserts nothing in either draft, and a pointer may name it.

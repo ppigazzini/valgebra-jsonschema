@@ -6,6 +6,15 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `Compiler.at(location)` returns the schema object holding the keyword a location along the
+  evaluation path names, each `$ref` on the way resolved as evaluation resolved it, which a plain
+  JSON Pointer walk does not do (draft 2020-12, section 12.3.1): the object python-jsonschema
+  gives as `ValidationError.schema`. `located` adds `absoluteKeywordLocation`, the canonical URI of
+  the keyword's resource and a pointer fragment (section 12.3.2), where that resource declares an
+  absolute `$id`.
+
 ### Changed
 
 - `keywordLocation` is a JSON Pointer, as draft 2020-12 asks (section 12.3.1) and prints

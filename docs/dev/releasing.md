@@ -274,9 +274,13 @@ repository root either imports the checkout's package in place of the installed 
 asserts where it read the package from, and the suite runs through the environment's `pytest`
 script, which puts no directory of the tree on the path.
 
-**The simple index lags the JSON API, and the simple index is what an installer reads.** A
-same-day check passes `--refresh-package valgebra-jsonschema`, since uv caches an index's
-answers, and "no such version" is read against the index itself before it is believed:
+**An index's answers lag the upload, and the simple index is what an installer reads.** The
+simple index and the JSON API are each served from a cache of their own, and either can lag
+the other: a version the simple index lists can still read 404 from the JSON API, and a first
+install can read a simple page from before the upload. A same-day check passes
+`--refresh-package valgebra-jsonschema`, since uv caches an index's answers too, and "no such
+version" is read against the index itself, and asked again a minute later, before it is
+believed:
 
 ```bash
 curl -sS https://test.pypi.org/simple/valgebra-jsonschema/ \

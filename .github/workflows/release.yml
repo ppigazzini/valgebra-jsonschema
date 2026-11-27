@@ -89,12 +89,13 @@ jobs:
             metadata: true
             legs: sdist/highest/3.11 sdist/highest/3.15 wheel/lowest-direct/3.11 wheel/lowest-direct/3.15
           # The wheel on every CPython the classifiers name, on x86_64 Linux, Apple silicon macOS
-          # and x64 Windows: an install of this package pulls the valgebra wheel of its
+          # and x64 Windows, and on Linux on the free-threaded build of each from 3.14, as the
+          # push runs the suite: an install of this package pulls the valgebra wheel of its
           # interpreter and platform, and each of those is a build of its own. valgebra's release
           # smokes its other wheels, macOS x86_64 among them, on each of their platforms.
           - name: Linux, the wheel
             os: ubuntu-26.04
-            legs: wheel/highest/3.11 wheel/highest/3.12 wheel/highest/3.13 wheel/highest/3.14 wheel/highest/3.15
+            legs: wheel/highest/3.11 wheel/highest/3.12 wheel/highest/3.13 wheel/highest/3.14 wheel/highest/3.15 wheel/highest/3.14t wheel/highest/3.15t
           - name: macOS, the wheel
             os: macos-26
             legs: wheel/highest/3.11 wheel/highest/3.12 wheel/highest/3.13 wheel/highest/3.14 wheel/highest/3.15

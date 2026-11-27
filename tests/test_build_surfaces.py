@@ -49,13 +49,15 @@ def test_every_run_carries_no_sync() -> None:
         assert all(run.startswith(" --no-sync ") for run in runs), (workflow.name, runs)
 
 
-def test_the_suite_runs_on_every_interpreter_and_platform() -> None:
-    """Every interpreter the classifiers name runs the suite at push, and so do macOS and Windows.
+def _release(version: str) -> tuple[int, ...]:
+    return tuple(map(int, version.removesuffix("t").split(".")))
 
-    `test` runs it on Linux at the newest, `suite` at each one below it there, a pair of steps
-    an interpreter in one job, and `platforms` at the newest on macOS and Windows, as valgebra's
-    push runs its own: a defect one interpreter or one platform alone reaches fails the push
-    rather than the release smoke.
+
+def _interpreters() -> tuple[set[str], str, set[str]]:
+    """The releases the classifiers name, the newest, and the free-threaded builds of them.
+
+    A free-threaded build is supported from 3.14, the first PEP 779 supports, and valgebra ships
+    a wheel for each from there.
     """
     classifiers = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     named = {
@@ -63,20 +65,55 @@ def test_the_suite_runs_on_every_interpreter_and_platform() -> None:
         for line in classifiers["project"]["classifiers"]
         if re.fullmatch(r"Programming Language :: Python :: 3\.\d+", line)
     }
-    newest = max(named, key=lambda version: tuple(map(int, version.split("."))))
+    free = {f"{version}t" for version in named if _release(version) >= (3, 14)}
+    return named, max(named, key=_release), free
+
+
+def test_the_suite_runs_on_every_interpreter_and_platform() -> None:
+    """Every interpreter the classifiers name runs the suite at push, and so do macOS and Windows.
+
+    `test` runs it on Linux at the newest, `suite` at each one below it there and at the
+    free-threaded build of each from 3.14, a pair of steps an interpreter in one job, and
+    `platforms` at the newest on macOS and Windows, as valgebra's push runs its own: a defect one
+    interpreter or one platform alone reaches fails the push rather than the release smoke. Each
+    job's name says the interpreters it runs, so the list of checks on a commit reads them.
+    """
+    named, newest, free = _interpreters()
     test = _job_text("test")
     assert re.search(rf'python-version: "{re.escape(newest)}"', test), test
+    assert re.search(rf"^    name: .+, on Linux at {re.escape(newest)}$", test, re.MULTILINE), test
     suite = _job_text("suite")
     assert re.search(r"^\s+runs-on: ubuntu-26\.04$", suite, re.MULTILINE), suite
-    synced = re.findall(r'UV_PYTHON: "([\d.]+)".*\n\s+run: uv sync --locked$', suite, re.MULTILINE)
+    step = r'UV_PYTHON: "([\d.]+t?)".*\n\s+run: '
+    synced = re.findall(rf"{step}uv sync --locked$", suite, re.MULTILINE)
     pytest = r"uv run --no-sync python -X warn_default_encoding -m pytest"
-    tested = re.findall(rf'UV_PYTHON: "([\d.]+)".*\n\s+run: {pytest}$', suite, re.MULTILINE)
+    tested = re.findall(rf"{step}{pytest}$", suite, re.MULTILINE)
     assert synced == tested, suite
-    assert set(tested) == named - {newest}, tested
+    assert set(tested) == (named - {newest}) | free, tested
+    title = re.search(r"^    name: the suite on Linux at (.+)$", suite, re.MULTILINE)
+    assert title, suite
+    assert re.split(r", | and ", title[1]) == tested, title[1]
     platforms = _job_text("platforms")
     systems = re.findall(r"^\s+os: \[(.+)\]$", platforms, re.MULTILINE)
     assert [s.strip() for s in systems[0].split(",")] == ["macos-26", "windows-2025-vs2026"]
     assert re.search(rf'python-version: "{re.escape(newest)}"', platforms), platforms
+    assert re.search(rf"^    name: .+ at {re.escape(newest)}$", platforms, re.MULTILINE), platforms
+
+
+def test_the_release_smokes_the_wheel_where_the_push_runs_the_suite() -> None:
+    """The smoke installs the wheel on every interpreter the push runs the suite on.
+
+    On Linux every release the classifiers name and its free-threaded build from 3.14; on macOS
+    and Windows every release, where the push runs the newest alone.
+    """
+    named, _, free = _interpreters()
+    text = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    legs = dict(re.findall(r"^\s+- name: (\w+), the wheel\n.*\n\s+legs: (.+)$", text, re.MULTILINE))
+    wheels = {
+        platform: {leg.removeprefix("wheel/highest/") for leg in spec.split()}
+        for platform, spec in legs.items()
+    }
+    assert wheels == {"Linux": named | free, "macOS": named, "Windows": named}, wheels
 
 
 def test_the_tested_set_is_the_lock_s() -> None:

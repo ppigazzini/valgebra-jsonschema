@@ -21,13 +21,14 @@ concurrency:
 
 # A job is what GitHub's concurrency limit counts, and the limit is the account's, shared by every
 # repository on it, with five macOS jobs at once: past it a job more waits, and pays its own
-# checkout, uv setup and sync when it starts. So the push runs five jobs: the gate, the suite below
-# the newest interpreter, the newest on macOS and on Windows, and the other checks. The suite and
-# the platforms wait for the gate, so a commit that fails it takes no macOS or Windows runner.
+# checkout, uv setup and sync when it starts. So the push runs five jobs: the gate at the newest
+# interpreter, the suite on every other on Linux, the newest on macOS and on Windows, and the other
+# checks. Each job's name says the interpreters it runs. The suite and the platforms wait for the
+# gate, so a commit that fails it takes no macOS or Windows runner.
 
 jobs:
   test:
-    name: lint, types, tests, published studies
+    name: lint, types and tests, on Linux at 3.15
     runs-on: ubuntu-26.04
     timeout-minutes: 30
     steps:
@@ -59,13 +60,16 @@ jobs:
       - run: uv run --no-sync python tools/corpus.py --check docs/studies/jsonschemabench.json
       - run: uv run --no-sync python tools/containment.py --check docs/studies/containment.json
 
-  # The suite on every interpreter the classifiers name below the newest, which `test` runs, as
-  # valgebra's push runs its own: one Linux job, each interpreter in an environment of its own and
-  # in steps of its own, so each reports apart and one that fails leaves the others to run. A step
-  # that names its own condition takes `success()` unless it names a status function, so each
-  # names `success() || failure()`: any outcome but a canceled run.
+  # The suite on every interpreter the classifiers name below the newest, which `test` runs, and
+  # on the free-threaded build of each from 3.14, the first PEP 779 supports, as valgebra's push
+  # runs its own: one Linux job, each interpreter in an environment of its own and in steps of its
+  # own, so each reports apart and one that fails leaves the others to run. An import that turns
+  # a free-threaded build's GIL back on warns and raises nothing, so the suite would pass on a
+  # build running as a GIL build does: `tests/test_free_threading.py` fails there. A step that
+  # names its own condition takes `success()` unless it names a status function, so each names
+  # `success() || failure()`: any outcome but a canceled run.
   suite:
-    name: the suite below the newest interpreter, on Linux
+    name: the suite on Linux at 3.11, 3.12, 3.13, 3.14, 3.14t and 3.15t
     needs: [test]
     runs-on: ubuntu-26.04
     timeout-minutes: 20
@@ -110,12 +114,30 @@ jobs:
         if: ${{ (success() || failure()) && steps.sync-314.outcome == 'success' }}
         env: { UV_PYTHON: "3.14", UV_PROJECT_ENVIRONMENT: "${{ runner.temp }}/venv-3.14" }
         run: uv run --no-sync python -X warn_default_encoding -m pytest
+      - name: sync 3.14t
+        id: sync-314t
+        if: ${{ success() || failure() }}
+        env: { UV_PYTHON: "3.14t", UV_PROJECT_ENVIRONMENT: "${{ runner.temp }}/venv-3.14t" }
+        run: uv sync --locked
+      - name: the suite on 3.14t
+        if: ${{ (success() || failure()) && steps.sync-314t.outcome == 'success' }}
+        env: { UV_PYTHON: "3.14t", UV_PROJECT_ENVIRONMENT: "${{ runner.temp }}/venv-3.14t" }
+        run: uv run --no-sync python -X warn_default_encoding -m pytest
+      - name: sync 3.15t
+        id: sync-315t
+        if: ${{ success() || failure() }}
+        env: { UV_PYTHON: "3.15t", UV_PROJECT_ENVIRONMENT: "${{ runner.temp }}/venv-3.15t" }
+        run: uv sync --locked
+      - name: the suite on 3.15t
+        if: ${{ (success() || failure()) && steps.sync-315t.outcome == 'success' }}
+        env: { UV_PYTHON: "3.15t", UV_PROJECT_ENVIRONMENT: "${{ runner.temp }}/venv-3.15t" }
+        run: uv run --no-sync python -X warn_default_encoding -m pytest
 
   # The suite at the newest interpreter on macOS and on Windows, so a defect one platform alone
   # reaches fails the push rather than the release smoke. The release reads the older interpreters
   # there.
   platforms:
-    name: the suite on ${{ matrix.os }}, at the newest interpreter
+    name: the suite on ${{ matrix.os }} at 3.15
     needs: [test]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15

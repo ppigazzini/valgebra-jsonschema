@@ -1444,7 +1444,12 @@ class Compiler:
     def _refuses(self, site: _Site, keyword: str) -> bool:
         """Return whether ``keyword`` refuses the site's value, its siblings' failures left out."""
         node, base, _, _, value = site
-        if not isinstance(node, dict) or keyword in _ENTERED or keyword in ANNOTATIONS:
+        # `format` asserts where the compiler reads it so (draft 2020-12, section 7.2.2), and
+        # its refusal is then the keyword's own.
+        asserted = keyword == "format" and self.assert_format
+        if not isinstance(node, dict) or keyword in _ENTERED:
+            return False
+        if keyword in ANNOTATIONS and not asserted:
             return False
         beside = {name: node[name] for name in _BESIDE.get(keyword, ()) if name in node}
         if self._holds({**beside, keyword: node[keyword]}, base, value) is not False:

@@ -2204,6 +2204,16 @@ class TestLocated:
             compiler.compile(schema).validate(value)
         return compiler.located(refused.value.errors[0], value)
 
+    def test_a_format_is_named_where_the_compiler_asserts_it(self):
+        # Asserted, `format` refuses as any keyword does; read as an annotation, it refuses
+        # nothing and names nothing.
+        schema = {"type": "object", "properties": {"at": {"type": "string", "format": "date"}}}
+        asserted = Compiler(schema, assert_format=True)
+        assert asserted.keywords_failed({"at": "soon"}, ("at",)) == [
+            ("format", "/properties/at/format")
+        ]
+        assert Compiler(schema).keywords_failed({"at": "soon"}, ("at",)) == []
+
     def test_a_location_is_a_json_pointer_a_walk_reads_back(self):
         # A pointer escapes `~` and `/` alone (RFC 6901, section 3), where a URI fragment also
         # percent-encodes: read as a fragment, `/properties/%41` would name the key `A`.

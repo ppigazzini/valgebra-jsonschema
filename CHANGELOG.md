@@ -25,6 +25,10 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Fixed
 
+- A `format` the compiler asserts is named by `keywords_failed` and `located` where it refuses a
+  value, as draft 2020-12's format-assertion vocabulary makes it an assertion: a date refusing
+  `"soon"` is named `format` at `/properties/at/format`. It was read as the annotation it is
+  otherwise, and the failure was named by no keyword.
 - An `enum` or a `const` whose values span more nodes than valgebra builds, `MAX_SCHEMA_NODES`,
   is refused before it is built: each scalar counts its spellings, an integer two, and the union
   of several values one, so an `enum` of 50,000 integers, 100,001 nodes, is refused in 0.05 s

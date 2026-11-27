@@ -8,7 +8,7 @@ import subprocess
 import sys
 from collections.abc import Callable
 from fractions import Fraction
-from typing import Annotated, Any
+from typing import Annotated, Any, ClassVar
 
 import pytest
 from annotated_types import MinLen
@@ -2068,6 +2068,107 @@ class TestLocated:
             (named["path"], named.get("keyword"), named.get("keywordLocation"))
             for named in (compiler.located(failure, value) for failure in refused.value.errors)
         ]
+
+    #: VJ-10's arm: a joint behind a reference, a mode one of two branches.
+    ARM: ClassVar[dict[str, Any]] = {
+        "type": "object",
+        "properties": {
+            "pos": {"$ref": "#/$defs/joint"},
+            "mode": {"anyOf": [{"const": "a"}, {"type": "integer", "minimum": 3}]},
+            "grip": {"$ref": "#/$defs/hand"},
+            "never": False,
+        },
+        "$defs": {
+            "joint": {"type": "number", "minimum": -1.5, "maximum": 1.5},
+            "hand": {"$ref": "#/$defs/joint"},
+        },
+    }
+
+    @pytest.mark.parametrize(
+        ("value", "location", "holding"),
+        [
+            ({"pos": 9.0}, "/properties/pos/$ref/maximum", ("$defs", "joint")),
+            ({"mode": 1}, "/properties/mode/anyOf/1/minimum", None),
+            ({"grip": 9.0}, "/properties/grip/$ref/$ref/maximum", ("$defs", "joint")),
+        ],
+    )
+    def test_the_schema_at_a_location_is_the_one_its_keyword_sits_in(
+        self, value: object, location: str, holding: tuple[str, str] | None
+    ):
+        # A plain pointer walk stops at `$ref`; `at` resolves it as evaluation did, and gives the
+        # object a failing keyword sits in, as python-jsonschema's `ValidationError.schema` does.
+        compiler = Compiler(self.ARM)
+        ((path, _, _),) = self._located(self.ARM, value)
+        assert isinstance(path, tuple)
+        assert location in [where for _, where in compiler.keywords_failed(value, path)]
+        expected = (
+            self.ARM["properties"]["mode"]["anyOf"][1]
+            if holding is None
+            else self.ARM[holding[0]][holding[1]]
+        )
+        assert compiler.at(location) is expected
+
+    @pytest.mark.parametrize(
+        ("schema", "value"),
+        [
+            ({"if": {"type": "string"}, "else": {"minimum": 5}}, 3),
+            ({"oneOf": [{"type": "string"}, {"minimum": 5}]}, 3),
+            ({"dependentSchemas": {"a": {"maxProperties": 1}}}, {"a": 1, "b": 2}),
+            ({"prefixItems": [{"type": "null"}], "items": False}, [None, 1]),
+            ({"properties": {"a": False, "b": {"allOf": [{"maximum": 0}]}}}, {"a": 1, "b": 1}),
+            ({"$defs": {"n": {"type": "integer"}}, "items": {"$ref": "#/$defs/n"}}, ["x"]),
+        ],
+    )
+    def test_every_location_a_failure_is_named_at_reads_back_to_its_keyword(
+        self, schema: dict[str, Any], value: object
+    ):
+        compiler = Compiler(schema)
+        with pytest.raises(ValidationError) as refused:
+            compiler.compile(schema).validate(value)
+        for failure in refused.value.errors:
+            path = failure["path"]
+            assert isinstance(path, tuple)
+            for keyword, where in compiler.keywords_failed(value, path):
+                held = compiler.at(where)
+                assert held is False or (isinstance(held, dict) and keyword in held)
+
+    def test_a_location_ending_on_a_subschema_gives_it_and_one_naming_nothing_is_refused(self):
+        compiler = Compiler(self.ARM)
+        assert compiler.at("/properties/never") is False
+        assert compiler.at("") is self.ARM
+        for nowhere in ("/properties/hand", "/$defs/joint/maximum/x", "/anyOf/0", "properties"):
+            with pytest.raises(Unsupported):
+                compiler.at(nowhere)
+
+    def test_a_location_in_a_resource_with_an_absolute_uri_is_located_there_too(self):
+        # A failure past a reference into a resource with an absolute `$id` carries the
+        # dereferenced location, its canonical URI and a fragment (draft 2020-12, 12.3.2).
+        joint = {"$id": "joint", "maximum": 1.5}
+        schema = {
+            "$id": "https://example.com/arm",
+            "properties": {"pos": {"$ref": "joint"}, "a%b": {"maximum": 0}},
+            "$defs": {"joint": joint},
+        }
+        compiler = Compiler(schema)
+        with pytest.raises(ValidationError) as refused:
+            compiler.compile(schema).validate({"pos": 2, "a%b": 1})
+        located = {
+            failure["path"]: compiler.located(failure, {"pos": 2, "a%b": 1})
+            for failure in refused.value.errors
+        }
+        assert located[("pos",)]["keywordLocation"] == "/properties/pos/$ref/maximum"
+        assert located[("pos",)]["absoluteKeywordLocation"] == "https://example.com/joint#/maximum"
+        assert located[("a%b",)]["absoluteKeywordLocation"] == (
+            "https://example.com/arm#/properties/a%25b/maximum"
+        )
+        assert "absoluteKeywordLocation" not in self._located_dict(self.ARM, {"pos": 9.0})
+
+    @staticmethod
+    def _located_dict(schema: object, value: object) -> dict[str, object]:
+        compiler = Compiler(schema)
+        with pytest.raises(ValidationError) as refused:
+            compiler.compile(schema).validate(value)
+        return compiler.located(refused.value.errors[0], value)
 
     def test_a_location_is_a_json_pointer_a_walk_reads_back(self):
         # A pointer escapes `~` and `/` alone (RFC 6901, section 3), where a URI fragment also

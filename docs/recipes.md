@@ -374,7 +374,11 @@ error, so a `minimum` refusing `0` is named `minimum` at `/minimum` where valgeb
 `union_error`,
 and a missing key is named by the `required` asking for it. A branch of an `anyOf` that holds, an
 `if` and the branch it does not pick name nothing, and a failure no keyword made gains neither
-key.
+key. `Compiler(schema).at(location)` returns the schema object the location's keyword sits in,
+each `$ref` on the way followed as evaluation followed it, which a plain pointer walk cannot do:
+`/properties/pos/$ref/maximum` gives the object under `$defs` holding the `maximum`. Where that
+object's resource declares an absolute `$id`, `located` adds `absoluteKeywordLocation`, its URI
+and a fragment, as `https://example.com/joint#/maximum`.
 A file in TOML or YAML is parsed by the library that owns the
 format, and the value it returns checked with `validate`, which reads only what `json.loads`
 could return: a TOML date is no JSON value, and no schema admits it. `assert_format=True`

@@ -2625,6 +2625,8 @@ def _property_names(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
 
 #: The keywords a schema spells its values out with, beside annotations.
 _SPELLED = frozenset({"const", "enum", "anyOf", "oneOf"})
+#: The keywords a schema `constants` reads may hold: those, a ``type`` and annotations.
+_CONSTANT_KEYS = ANNOTATIONS | _SPELLED | {"type"}
 
 
 def constants(schema: object) -> list[Any] | None:
@@ -2632,26 +2634,41 @@ def constants(schema: object) -> list[Any] | None:
 
     A schema of one ``const``, one ``enum``, or an ``anyOf`` or ``oneOf`` of such schemas,
     beside annotations alone, admits the values it lists, and ``oneOf`` those exactly one
-    branch lists under JSON's equality; ``false`` admits none. A finite set lies inside
-    another exactly where each of its values does, so membership relates such a schema to
-    any other, predicates included [FCB08, §4.1]: every leaf answers a value's spellings
+    branch lists under JSON's equality; ``false`` admits none. A ``type`` beside them keeps
+    the listed values of its kinds, the schema being the meet of the two: the spelling
+    pydantic writes for a ``Literal``, ``{"type": "string", "enum": [...]}``. A finite set
+    lies inside another exactly where each of its values does, so membership relates such a
+    schema to any other, predicates included [FCB08, §4.1]: every leaf answers a value's spellings
     alike, and the compiler's predicates answer from the value alone. A draft-04 ``const``
     is an annotation, so the document `upgrade` returns is the one to read.
     """
     if not isinstance(schema, dict):
         return [] if schema is False else None
-    spelled = set(schema) & _SPELLED
-    if len(spelled) != 1 or set(schema) - ANNOTATIONS - _SPELLED:
+    keys = set(schema)
+    spelled = keys & _SPELLED
+    if len(spelled) != 1 or keys - _CONSTANT_KEYS:
         return None
     (key,) = spelled
     listed = schema[key]
     if key == "const":
-        return [listed]
-    if not isinstance(listed, list):
+        found: list[Any] | None = [listed]
+    elif not isinstance(listed, list):
         return None
-    if key == "enum":
-        return list(listed)
-    return _in_branches([constants(branch) for branch in listed], exactly_one=key == "oneOf")
+    elif key == "enum":
+        found = list(listed)
+    else:
+        found = _in_branches([constants(b) for b in listed], exactly_one=key == "oneOf")
+    if found is None or "type" not in schema:
+        return found
+    names = schema["type"]
+    if isinstance(names, str) and names in KINDS:
+        kind = KINDS[names]
+        return [value for value in found if kind.is_valid(value)]
+    if not isinstance(names, list):
+        return None
+    if not names or not all(isinstance(name, str) and name in KINDS for name in names):
+        return None
+    return [value for value in found if any(KINDS[name].is_valid(value) for name in names)]
 
 
 def _in_branches(branches: list[list[Any] | None], *, exactly_one: bool) -> list[Any] | None:

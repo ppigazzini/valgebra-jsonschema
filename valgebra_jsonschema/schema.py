@@ -1254,7 +1254,7 @@ class Compiler:
         applicator of its ``false``. A failure no keyword made, as one valgebra reports of a
         branch that does not apply, is named by none, and the list is empty.
         """
-        root, steps = _Site(self.root, "", "#", "", instance), list(path)
+        root, steps = _Site(self.root, "", "", "", instance), list(path)
         failed: list[tuple[str, str]] = []
         for site in self._applying(root, steps):
             if isinstance(site.node, dict):
@@ -1273,7 +1273,8 @@ class Compiler:
         """Return a failure valgebra reports, with the keyword that made it and its location.
 
         The failure gains ``keyword`` and ``keywordLocation``, the first of `keywords_failed`
-        at its ``path``, as JSON Schema's output names an error (draft 2020-12, section 12.3); a
+        at its ``path``, as JSON Schema's output names an error (draft 2020-12, section 12.3),
+        the location a JSON Pointer from the root, the empty pointer the root itself; a
         failure no keyword is found for gains neither. Every other key is valgebra's.
         """
         out = dict(failure)

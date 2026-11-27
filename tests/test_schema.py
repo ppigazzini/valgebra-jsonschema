@@ -2069,17 +2069,31 @@ class TestLocated:
             for named in (compiler.located(failure, value) for failure in refused.value.errors)
         ]
 
+    def test_a_location_is_a_json_pointer_a_walk_reads_back(self):
+        # A pointer escapes `~` and `/` alone (RFC 6901, section 3), where a URI fragment also
+        # percent-encodes: read as a fragment, `/properties/%41` would name the key `A`.
+        name = "a%41/b~c"
+        schema = {"properties": {name: {"maximum": 1}}}
+        ((path, keyword, where),) = self._located(schema, {name: 2})
+        assert (path, keyword, where) == ((name,), "maximum", "/properties/a%41~1b~0c/maximum")
+        node: object = schema
+        assert isinstance(where, str)
+        for token in where.split("/")[1:]:
+            assert isinstance(node, dict)
+            node = node[token.replace("~1", "/").replace("~0", "~")]
+        assert node == 1
+
     def test_a_bound_names_itself(self):
-        assert self._located({"type": "integer", "minimum": 1}, 0) == [((), "minimum", "#/minimum")]
+        assert self._located({"type": "integer", "minimum": 1}, 0) == [((), "minimum", "/minimum")]
 
     def test_a_value_of_the_wrong_kind_is_named_by_the_kind(self):
         # NaN is no JSON value, so every keyword refuses it; `type` pins the kind and is named.
         number = {"minimum": 0, "maximum": 100, "type": "number"}
-        assert self._located(number, math.nan) == [((), "type", "#/type")]
-        assert self._located(number, "x") == [((), "type", "#/type")]
+        assert self._located(number, math.nan) == [((), "type", "/type")]
+        assert self._located(number, "x") == [((), "type", "/type")]
 
     def test_a_listed_value_missed_is_named_by_the_list(self):
-        assert self._located({"enum": ["a", "b"]}, "c") == [((), "enum", "#/enum")]
+        assert self._located({"enum": ["a", "b"]}, "c") == [((), "enum", "/enum")]
 
     def test_a_location_runs_through_each_reference(self):
         schema = {
@@ -2087,17 +2101,17 @@ class TestLocated:
             "$defs": {"A": {"type": "string", "maxLength": 2}},
         }
         assert self._located(schema, {"a": "xyz"}) == [
-            (("a",), "maxLength", "#/properties/a/$ref/maxLength")
+            (("a",), "maxLength", "/properties/a/$ref/maxLength")
         ]
 
     def test_an_element_is_named_by_its_place(self):
         schema = {"prefixItems": [{"type": "integer"}], "items": {"type": "string"}}
-        assert self._located(schema, [1, 2, "c"]) == [((1,), "type", "#/items/type")]
+        assert self._located(schema, [1, 2, "c"]) == [((1,), "type", "/items/type")]
 
     def test_every_keyword_refusing_is_listed_and_a_path_no_keyword_reaches_names_none(self):
         compiler = Compiler({"type": "integer", "minimum": 1, "maximum": 0})
-        assert compiler.keywords_failed(5, ()) == [("maximum", "#/maximum")]
-        assert compiler.keywords_failed(-1, ()) == [("minimum", "#/minimum")]
+        assert compiler.keywords_failed(5, ()) == [("maximum", "/maximum")]
+        assert compiler.keywords_failed(-1, ()) == [("minimum", "/minimum")]
         failure = {"path": ("nowhere",), "code": "int_type"}
         assert compiler.located(failure, 5) == failure
 
@@ -2105,39 +2119,39 @@ class TestLocated:
         ("schema", "value", "refusing"),
         [
             # An `if` asserts nothing, and the branch it does not pick applies to nothing.
-            ({"if": {"type": "string"}, "else": {"minimum": 5}}, 3, ["#/else/minimum"]),
+            ({"if": {"type": "string"}, "else": {"minimum": 5}}, 3, ["/else/minimum"]),
             (
                 {"if": {"minimum": 0}, "then": {"maximum": 2}, "else": {"maximum": -5}},
                 3,
-                ["#/then/maximum"],
+                ["/then/maximum"],
             ),
             # A branch of an `anyOf` that holds fails nothing, beside the keyword that does.
             (
                 {"anyOf": [{"type": "string"}, {"type": "integer"}], "$ref": "#/$defs/A"},
                 3,
-                ["#/$ref/minimum"],
+                ["/$ref/minimum"],
             ),
             # A `oneOf` two branches hold fails by itself, and the third by nothing.
             (
                 {"oneOf": [{"type": "null"}, {"type": "integer"}, {"minimum": 0}]},
                 3,
-                ["#/oneOf"],
+                ["/oneOf"],
             ),
             (
                 {"oneOf": [{"type": "null"}, {"minimum": 5}]},
                 3,
-                ["#/oneOf", "#/oneOf/0/type", "#/oneOf/1/minimum"],
+                ["/oneOf", "/oneOf/0/type", "/oneOf/1/minimum"],
             ),
             # A dependent schema applies where the object holds its key.
             (
                 {"dependentSchemas": {"b": {"maxProperties": 0}}, "minProperties": 2},
                 {"a": 1},
-                ["#/minProperties"],
+                ["/minProperties"],
             ),
             (
                 {"dependentSchemas": {"a": {"maxProperties": 0}}},
                 {"a": 1},
-                ["#/dependentSchemas/a/maxProperties"],
+                ["/dependentSchemas/a/maxProperties"],
             ),
             # A keyword is named by its own refusal, and not by one it is read beside.
             (
@@ -2147,9 +2161,9 @@ class TestLocated:
                     "minProperties": 2,
                 },
                 {"a": 3},
-                ["#/minProperties", "#/properties"],
+                ["/minProperties", "/properties"],
             ),
-            ({"prefixItems": [{"type": "null"}], "items": False}, [1], ["#/prefixItems"]),
+            ({"prefixItems": [{"type": "null"}], "items": False}, [1], ["/prefixItems"]),
         ],
     )
     def test_a_failure_is_named_by_the_keywords_that_fail(self, schema, value, refusing):
@@ -2158,53 +2172,53 @@ class TestLocated:
 
     def test_a_dependent_key_is_asked_for_by_the_key_the_object_holds(self):
         compiler = Compiler({"dependentRequired": {"b": ["a"]}, "required": ["a"]})
-        assert compiler.keywords_failed({}, ("a",)) == [("required", "#/required")]
+        assert compiler.keywords_failed({}, ("a",)) == [("required", "/required")]
         assert compiler.keywords_failed({"b": 1}, ("a",)) == [
-            ("required", "#/required"),
-            ("dependentRequired", "#/dependentRequired"),
+            ("required", "/required"),
+            ("dependentRequired", "/dependentRequired"),
         ]
 
     def test_a_reference_is_resolved_against_the_base_around_it(self):
         inner = {"$id": "http://x/a", "$ref": "#/$defs/S", "$defs": {"S": {"minimum": 5}}}
         compiler = Compiler({"properties": {"a": inner}})
         assert compiler.keywords_failed({"a": 3}, ("a",)) == [
-            ("minimum", "#/properties/a/$ref/minimum")
+            ("minimum", "/properties/a/$ref/minimum")
         ]
 
     @pytest.mark.parametrize(
         ("schema", "value", "path", "keyword", "where"),
         [
-            ({"required": ["a"]}, {}, ("a",), "required", "#/required"),
+            ({"required": ["a"]}, {}, ("a",), "required", "/required"),
             (
                 {"dependentRequired": {"b": ["a"]}},
                 {"b": 1},
                 ("a",),
                 "dependentRequired",
-                "#/dependentRequired",
+                "/dependentRequired",
             ),
             (
                 {"propertyNames": {"enum": ["a"]}},
                 {"b": 1},
                 ("b",),
                 "propertyNames",
-                "#/propertyNames",
+                "/propertyNames",
             ),
             (
                 {"additionalProperties": False},
                 {"b": 1},
                 ("b",),
                 "additionalProperties",
-                "#/additionalProperties",
+                "/additionalProperties",
             ),
             (
                 {"unevaluatedProperties": False},
                 {"b": 1},
                 ("b",),
                 "unevaluatedProperties",
-                "#/unevaluatedProperties",
+                "/unevaluatedProperties",
             ),
-            ({"properties": {"a": False}}, {"a": 1}, ("a",), "properties", "#/properties/a"),
-            ({"items": {"type": "string"}, "minItems": 2}, [1], (), "minItems", "#/minItems"),
+            ({"properties": {"a": False}}, {"a": 1}, ("a",), "properties", "/properties/a"),
+            ({"items": {"type": "string"}, "minItems": 2}, [1], (), "minItems", "/minItems"),
         ],
     )
     def test_a_key_or_an_item_refused_is_named_by_the_keyword_refusing_it(

@@ -369,8 +369,9 @@ regular expression, a `pattern` as its translation into valgebra's dialect, and 
 with a bound as `int and >= 1, float and >= 1`. The path names the value and the code the
 failed check, and both are stable. The keyword that made a failure is the compiler's to name:
 `Compiler(schema).located(failure, value)` adds `keyword` and `keywordLocation`, the location
-along the evaluation path through each `$ref`, as JSON Schema's output names an error, so a
-`minimum` refusing `0` is named `minimum` at `#/minimum` where valgebra reports `union_error`,
+along the evaluation path through each `$ref` as a JSON Pointer, as JSON Schema's output names an
+error, so a `minimum` refusing `0` is named `minimum` at `/minimum` where valgebra reports
+`union_error`,
 and a missing key is named by the `required` asking for it. A branch of an `anyOf` that holds, an
 `if` and the branch it does not pick name nothing, and a failure no keyword made gains neither
 key.

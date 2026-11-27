@@ -6,6 +6,14 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `keywordLocation` is a JSON Pointer, as draft 2020-12 asks (section 12.3.1) and prints
+  (section 12.4.2): `/properties/pos/$ref/maximum` where it was `#/properties/pos/$ref/maximum`.
+  The `#` made it a URI fragment, which percent-encodes a key as a pointer does not, so a key
+  holding `%41` read back as one named `A`; a pointer walk reads each location back to the
+  keyword it names.
+
 ## [0.0.8] - 2026-11-26
 
 A release on valgebra 0.0.36, with no change to the compiler. An excluded middle,

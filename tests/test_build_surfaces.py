@@ -72,11 +72,12 @@ def _interpreters() -> tuple[set[str], str, set[str]]:
 def test_the_suite_runs_on_every_interpreter_and_platform() -> None:
     """Every interpreter the classifiers name runs the suite at push, and so do macOS and Windows.
 
-    `test` runs it on Linux at the newest, `suite` at each one below it there and at the
-    free-threaded build of each from 3.14, a pair of steps an interpreter in one job, and
-    `platforms` at the newest on macOS and Windows, as valgebra's push runs its own: a defect one
-    interpreter or one platform alone reaches fails the push rather than the release smoke. Each
-    job's name says the interpreters it runs, so the list of checks on a commit reads them.
+    `test` runs it on Linux at the newest with the gate, `suite` at each one there, the newest
+    among them, and at the free-threaded build of each from 3.14, a pair of steps an interpreter
+    in one job, and `platforms` at the newest on macOS and Windows, as valgebra's push runs its
+    own: a defect one interpreter or one platform alone reaches fails the push rather than the
+    release smoke. Each job's name says the interpreters it runs, so the list of checks on a
+    commit reads them.
     """
     named, newest, free = _interpreters()
     test = _job_text("test")
@@ -89,7 +90,7 @@ def test_the_suite_runs_on_every_interpreter_and_platform() -> None:
     pytest = r"uv run --no-sync python -X warn_default_encoding -m pytest"
     tested = re.findall(rf"{step}{pytest}$", suite, re.MULTILINE)
     assert synced == tested, suite
-    assert set(tested) == (named - {newest}) | free, tested
+    assert set(tested) == named | free, tested
     title = re.search(r"^    name: the suite on Linux at (.+)$", suite, re.MULTILINE)
     assert title, suite
     assert re.split(r", | and ", title[1]) == tested, title[1]

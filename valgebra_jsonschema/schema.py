@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import functools
 import itertools
+import json
 import math
 import re
 from collections import Counter
@@ -3164,6 +3165,109 @@ def length(schema: object) -> Length | None:
     except Unsupported:
         return None
     return Length(kind, least, most)
+
+
+#: Each kind as a reader of JSON Schema names it.
+_KIND_WORDS: Mapping[str, str] = {
+    "string": "a string",
+    "integer": "an integer",
+    "number": "a number",
+    "boolean": "a boolean",
+    "object": "an object",
+    "array": "an array",
+    "null": "null",
+}
+
+
+def admitted(schema: object) -> list[str] | None:
+    """Return what ``schema`` admits, one phrase for each value or branch, or ``None``.
+
+    The words compose the four readers: each value `constants` reads as its JSON text, each
+    branch of `branches` as its own phrases, a number `interval` reads as its kind and range,
+    ``an integer from 1 to 5`` or ``a number greater than 0, a multiple of 2``, and a string or
+    an array `length` reads as its kind and length, with a string's ``pattern`` after it, ``a
+    string of 1 to 300 characters matching ^[a-z]+$``. An object, or a kind with nothing
+    beside it, is its kind: a record's fields are worded where one of them fails, and an
+    array's items where an item does. Any other schema, a reference among them, is ``None``:
+    `Compiler.at` gives the object a failing keyword sits in, its references followed. How the
+    phrases are joined, ``"mug", "bottle" or "box"`` or ``one of "mug", "bottle", "box"``, is
+    the caller's. A ``format`` asserts only where a compiler is asked to read it so, which a
+    schema alone does not say, so a schema holding one is ``None`` too.
+    """
+    if isinstance(schema, dict) and "format" in schema:
+        return None
+    listed = constants(schema)
+    if listed is not None:
+        return [json.dumps(value) for value in listed]
+    split = branches(schema)
+    if split is not None:
+        phrases: list[str] = []
+        for branch in split:
+            words = admitted(branch)
+            if words is None:
+                return None
+            phrases += words
+        return phrases
+    phrase = _kind_words(schema)
+    return None if phrase is None else [phrase]
+
+
+def _kind_words(schema: object) -> str | None:
+    """Return the phrase of a schema of one kind: its kind and its range or length, or None."""
+    if not isinstance(schema, dict) or schema.get("type") not in _KIND_WORDS:
+        return None
+    kind = schema["type"]
+    if kind in ("integer", "number"):
+        span = interval(schema)
+        return None if span is None else _KIND_WORDS[kind] + _range_words(span)
+    if kind in ("string", "array"):
+        sized = {key: schema[key] for key in schema if key not in ("pattern", "items")}
+        counted = length(sized)
+        if counted is None or ("pattern" in schema and kind != "string"):
+            return None
+        pattern = f" matching {schema['pattern']}" if "pattern" in schema else ""
+        unit = "character" if kind == "string" else "item"
+        return _KIND_WORDS[kind] + _length_words(counted, unit) + pattern
+    if kind == "object" or not set(schema) - ANNOTATIONS - {"type"}:
+        return _KIND_WORDS[kind]
+    return None
+
+
+def _number_words(value: Fraction) -> str:
+    """Return a bound as JSON writes it: an integer in full up to 2**53, else the float."""
+    whole = value.denominator == 1 and abs(value) <= EXACT_STEP
+    return str(value.numerator) if whole else repr(float(value))
+
+
+def _range_words(span: Interval) -> str:
+    """Return a range's words after its kind: `` from 1 to 5``, `` of at least 0``."""
+    low = None if span.low is None else _number_words(span.low)
+    high = None if span.high is None else _number_words(span.high)
+    if low is not None and high is not None and not (span.low_open or span.high_open):
+        words = f" from {low} to {high}"
+    else:
+        parts = []
+        if low is not None:
+            parts.append(f"greater than {low}" if span.low_open else f"at least {low}")
+        if high is not None:
+            parts.append(f"less than {high}" if span.high_open else f"at most {high}")
+        closed = len(parts) == 1 and parts[0].startswith("at ")
+        words = f" {'of ' if closed else ''}{' and '.join(parts)}" if parts else ""
+    return words if span.step is None else f"{words}, a multiple of {span.step}"
+
+
+def _length_words(span: Length, unit: str) -> str:
+    """Return a length's words after its kind: `` of 1 to 300 characters``, or none."""
+    low, high = span.least, span.most
+    if high is None:
+        if not low:
+            return ""
+        text, count = f"at least {low}", low
+    elif low == high:
+        text, count = f"{low}", low
+    else:
+        text, count = (f"{low} to {high}" if low else f"at most {high}"), high
+    return f" of {text} {unit}{'' if count == 1 else 's'}"
 
 
 def branches(schema: object) -> list[object] | None:

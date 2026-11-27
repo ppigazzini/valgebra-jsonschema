@@ -8,6 +8,12 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Added
 
+- `admitted(schema)` words what a schema admits, one phrase for each value or branch, from the
+  four readers: each listed value as its JSON text, a number as `a number from 0.2 to 0.6`, a
+  string as `a string of 1 to 300 characters matching ^[a-z]+$`, an object by its kind, and `None`
+  past them, a `format` among them. Two adopters each wrote these words by hand; on one robot's
+  input schemas the phrases join into both, `one of "mug", "bottle", "box"` and `"mug", "bottle"
+  or "box"`, and word the `minLength` one of them left out.
 - `Compiler.at(location)` returns the schema object holding the keyword a location along the
   evaluation path names, each `$ref` on the way resolved as evaluation resolved it, which a plain
   JSON Pointer walk does not do (draft 2020-12, section 12.3.1): the object python-jsonschema

@@ -755,7 +755,7 @@ class Compiler:
         instance is.
         """
         if isinstance(name, str) and name in LANGUAGES:
-            return self.guard("string", Annotated[str, Regex(LANGUAGES[name])])
+            return self.guard("string", _language(name))
         if isinstance(name, str) and name in PREDICATES:
             self.opaque.add(f"format {name}")
             return self.guard("string", opaque(str, PREDICATES[name]))
@@ -1449,7 +1449,12 @@ class Compiler:
     def _refuses(self, site: _Site, keyword: str) -> bool:
         """Return whether ``keyword`` refuses the site's value, its siblings' failures left out."""
         node, base, _, _, value = site
-        if not isinstance(node, dict) or keyword in _ENTERED or keyword in ANNOTATIONS:
+        # `format` asserts where the compiler reads it so (draft 2020-12, section 7.2.2), and
+        # its refusal is then the keyword's own.
+        asserted = keyword == "format" and self.assert_format
+        if not isinstance(node, dict) or keyword in _ENTERED:
+            return False
+        if keyword in ANNOTATIONS and not asserted:
             return False
         beside = {name: node[name] for name in _BESIDE.get(keyword, ()) if name in node}
         if self._holds({**beside, keyword: node[keyword]}, base, value) is not False:
@@ -1938,6 +1943,17 @@ def _multiple_of(c: Compiler, s: dict[str, Any]) -> Validator[Any]:
     exact = Fraction(int(step)) if isinstance(step, int) or step.is_integer() else None
     multiple = _multiples(exact if exact is not None else Fraction(str(step)))
     return c.guard("number", intersection(opaque(int | float, multiple), NOT_BOOL))
+
+
+@functools.cache
+def _language(name: str) -> Validator[Any]:
+    """Return the strings of a format a regular expression reads, built once a process.
+
+    valgebra reads a pattern into its automaton at each build, about 70 us for ``date``'s, and
+    a set is a value: every schema asserting one format holds one set, and the guard around it
+    costs a microsecond.
+    """
+    return Validator(Annotated[str, Regex(LANGUAGES[name])])
 
 
 @functools.cache

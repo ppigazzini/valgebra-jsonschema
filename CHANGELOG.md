@@ -23,6 +23,8 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ### Changed
 
+- `constraints.txt`, the set this release is tested with, pins valgebra 0.0.37. The floor stays
+  at 0.0.36, which nothing here needs past.
 - `constants` reads a `type` beside an `enum` or a `const`, keeping the listed values of its
   kinds: `{"type": "string", "enum": ["mug", "box"]}`, the spelling pydantic writes for a
   `Literal`, lists `["mug", "box"]` where it read nothing.

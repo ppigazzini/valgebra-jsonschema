@@ -4,5 +4,5 @@ annotated-types==0.8.0
     # via valgebra-jsonschema
 typing-extensions==4.16.0
     # via valgebra-jsonschema
-valgebra==0.0.36
+valgebra==0.0.37
     # via valgebra-jsonschema

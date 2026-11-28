@@ -6,6 +6,19 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 
 ## [Unreleased]
 
+## [0.0.9] - 2026-11-28
+
+A release of two answers to ask for, two readings changed and two fixes, tested on valgebra
+0.0.37. `admitted` words what a schema admits, and `Compiler.at` gives the schema object a
+failure's keyword sits in, with `absoluteKeywordLocation` beside it where a resource declares an
+absolute `$id`. `keywordLocation` is a JSON Pointer, without the `#` it began with, and `constants`
+reads a `type` beside an `enum`. An asserted `format` names the failure it makes, a schema
+asserting a format a regular expression reads compiles 14 times faster, and an `enum` too large
+for valgebra is refused before it is built. Every case of the suite gets the verdict it got, and
+the corpus and containment studies read no difference on 0.0.37. Each time below is the median of
+five rounds on CPython 3.15, against two environments of 0.0.8 on valgebra 0.0.37 that read within
+1.5% of each other.
+
 ### Added
 
 - `admitted(schema)` words what a schema admits, one phrase for each value or branch, from the
@@ -19,7 +32,9 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   JSON Pointer walk does not do (draft 2020-12, section 12.3.1): the object python-jsonschema
   gives as `ValidationError.schema`. `located` adds `absoluteKeywordLocation`, the canonical URI of
   the keyword's resource and a pointer fragment (section 12.3.2), where that resource declares an
-  absolute `$id`.
+  absolute `$id`. Finding that resource walks each location once a compiler: a repeated `located`
+  takes 12.8 µs where 0.0.8 took 12.6, and 14.3 where 14.2 past a `$ref` into a resource with an
+  absolute `$id`; a compiler's first takes 16.4 where 14.8, and 19.3 where 16.3.
 
 ### Changed
 
@@ -27,7 +42,9 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
   at 0.0.36, which nothing here needs past.
 - `constants` reads a `type` beside an `enum` or a `const`, keeping the listed values of its
   kinds: `{"type": "string", "enum": ["mug", "box"]}`, the spelling pydantic writes for a
-  `Literal`, lists `["mug", "box"]` where it read nothing.
+  `Literal`, lists `["mug", "box"]` where it read nothing. That schema reads in 0.44 µs, each
+  value asked of its kind, where 0.0.8 read no listing in 0.26, and an `enum` alone in 0.29 where
+  0.0.8 took 0.31.
 - `keywordLocation` is a JSON Pointer, as draft 2020-12 asks (section 12.3.1) and prints
   (section 12.4.2): `/properties/pos/$ref/maximum` where it was `#/properties/pos/$ref/maximum`.
   The `#` made it a URI fragment, which percent-encodes a key as a pointer does not, so a key
@@ -39,12 +56,19 @@ All notable changes to valgebra-jsonschema are recorded here. The format follows
 - A `format` the compiler asserts is named by `keywords_failed` and `located` where it refuses a
   value, as draft 2020-12's format-assertion vocabulary makes it an assertion: a date refusing
   `"soon"` is named `format` at `/properties/at/format`. It was read as the annotation it is
-  otherwise, and the failure was named by no keyword.
+  otherwise, and the failure was named by no keyword. Naming it compiles the format, and each
+  format a regular expression reads, `date`, `duration`, `ipv4` and `uuid`, is built once a
+  process: `keywords_failed` of that date takes 11.6 µs where 0.0.8 took 7.0 and named nothing, of
+  a format read as an annotation 7.0 µs as before, and `{"type": "string", "format": "date"}`
+  compiles under `assert_format` in 5.3 µs where 0.0.8 took 73.9.
 - An `enum` or a `const` whose values span more nodes than valgebra builds, `MAX_SCHEMA_NODES`,
   is refused before it is built: each scalar counts its spellings, an integer two, and the union
   of several values one, so an `enum` of 50,000 integers, 100,001 nodes, is refused in 0.05 s
   where valgebra refused it after 3.0 s of building. A container's own nodes are not counted, so
-  nothing valgebra holds is refused: 49,999 integers compile as before.
+  nothing valgebra holds is refused: 49,999 integers compile as before. The count is bounded
+  first, every scalar at two nodes, and taken only past the bound: `{"enum": ["mug", "bottle",
+  "box"]}` compiles in 10.8 µs where 0.0.8 took 10.4, a `const` of an object in 18.0 where 17.1,
+  and an `enum` of 1,000 integers in 9.31 ms where 9.30.
 
 ## [0.0.8] - 2026-11-26
 
@@ -385,7 +409,8 @@ A release of the user guide, with no change to the compiler: every schema compil
   records. Of the containment test suite's 10890 questions, 7048 are proven, 3560 refuted,
   246 undecided and 36 refused.
 
-[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.8...HEAD
+[Unreleased]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.9...HEAD
+[0.0.9]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/ppigazzini/valgebra-jsonschema/compare/v0.0.5...v0.0.6
